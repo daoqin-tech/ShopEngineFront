@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { AIImageProjects } from "@/pages/AIImageProjects"
-import { ProjectEditor } from "@/pages/ProjectEditor"
+import { AIImageGenerator } from "@/pages/AIImageGenerator"
 import { ImageEditor } from "@/pages/ImageEditor"
 
 function AppContent() {
@@ -32,7 +32,7 @@ function AppContent() {
     } else if (path.startsWith('/materials/project/')) {
       return {
         parent: { name: 'AI制图', href: '/materials/product-images' },
-        current: '项目编辑'
+        current: 'AI生图'
       }
     } else if (path === '/materials/image-editor') {
       return {
@@ -86,7 +86,7 @@ function AppContent() {
             <Route path="/" element={<AIImageProjects />} />
             <Route path="/materials" element={<AIImageProjects />} />
             <Route path="/materials/product-images" element={<AIImageProjects />} />
-            <Route path="/materials/project/:projectId/edit" element={<ProjectEditor />} />
+            <Route path="/materials/project/:projectId/edit" element={<AIImageGenerator />} />
             <Route path="/materials/image-editor" element={<ImageEditor />} />
           </Routes>
         </div>
