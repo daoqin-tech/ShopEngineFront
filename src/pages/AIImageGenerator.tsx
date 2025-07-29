@@ -328,7 +328,7 @@ export function AIImageGenerator() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-8">
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-8">
         {/* 会话头部 */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
@@ -359,171 +359,198 @@ export function AIImageGenerator() {
           </div>
         </div>
 
-        {/* AI对话生成提示词 */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">生成AI提示词</h2>
-            <p className="text-sm text-gray-600 mt-1">像使用ChatGPT一样，描述您想要生成的图片，或请AI优化提示词</p>
-          </div>
-          
-          {/* 对话区域 */}
-          <div className="space-y-4">
-            {/* 对话历史 */}
-            {session.chatMessages.length > 0 && (
-              <div className="space-y-4 max-h-96 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-                {session.chatMessages.map((msg, index) => (
-                  <div key={index} className="space-y-3">
-                    {/* 用户消息 */}
-                    <div className="flex justify-end">
-                      <div className="max-w-xs lg:max-w-md px-4 py-2 bg-blue-500 text-white rounded-lg">
-                        <p className="text-sm">{msg.user}</p>
-                      </div>
+        {/* 主要内容区域 - 左右分栏布局 */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-h-[calc(100vh-200px)]">
+          {/* 左侧：AI对话生成提示词 - 占3/5宽度 */}
+          <div className="lg:col-span-3 bg-white rounded-lg shadow-sm flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">AI商品图提示词助手</h2>
+              <p className="text-sm text-gray-600 mt-1">描述您要制作的商品图片需求，AI将为您生成专业的商品图提示词</p>
+            </div>
+            
+            {/* 对话区域 - 可滚动，占据剩余高度 */}
+            <div className="flex-1 flex flex-col">
+              {/* 对话历史 */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {session.chatMessages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>开始对话来生成商品图提示词</p>
                     </div>
-                    
-                    {/* AI回复 */}
-                    <div className="flex justify-start">
-                      <div className="max-w-xs lg:max-w-md px-4 py-2 bg-white border rounded-lg shadow-sm">
-                        <p className="text-sm text-gray-800">{msg.assistant}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {session.chatMessages.map((msg, index) => (
+                      <div key={index} className="space-y-3">
+                        {/* 用户消息 */}
+                        <div className="flex justify-end">
+                          <div className="max-w-xs lg:max-w-md px-4 py-2 bg-blue-500 text-white rounded-lg">
+                            <p className="text-sm">{msg.user}</p>
+                          </div>
+                        </div>
                         
-                        {/* 显示生成的提示词 - 可交互选择 */}
-                        {msg.prompts && msg.prompts.length > 0 && (
-                          <div className="mt-3 space-y-2">
-                            <p className="text-xs text-gray-500 font-medium">生成的提示词（点击选择）：</p>
-                            <div className="space-y-2">
-                              {msg.prompts.map((prompt, pIndex) => {
-                                const isSelected = session.prompts.find(p => p.id === prompt.id)?.selected || false;
-                                const isSelectedForOptimization = selectedPromptsForOptimization.includes(prompt.id);
-                                
-                                return (
-                                  <div 
-                                    key={pIndex} 
-                                    className={`text-xs p-3 rounded border-2 transition-all duration-200 ${
-                                      isSelected 
-                                        ? 'bg-blue-50 border-blue-300 shadow-sm' 
-                                        : 'bg-gray-100 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                  >
-                                    <div className="flex items-start gap-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => togglePromptSelection(prompt.id)}
-                                        className="w-3 h-3 text-blue-600 rounded focus:ring-1 focus:ring-blue-500 mt-0.5 flex-shrink-0"
-                                      />
-                                      <span 
-                                        className={`flex-1 cursor-pointer ${isSelected ? 'text-blue-800 font-medium' : 'text-gray-700'}`}
-                                        onClick={() => togglePromptSelection(prompt.id)}
-                                      >
-                                        {prompt.text}
-                                      </span>
-                                      <button
-                                        onClick={() => togglePromptForOptimization(prompt.id)}
-                                        className={`p-1 transition-all duration-200 flex-shrink-0 ${
-                                          isSelectedForOptimization 
-                                            ? 'text-purple-600 bg-purple-100 rounded' 
-                                            : 'text-purple-400 hover:text-purple-600'
+                        {/* AI回复 */}
+                        <div className="flex justify-start">
+                          <div className="max-w-xs lg:max-w-md px-4 py-2 bg-white border rounded-lg shadow-sm">
+                            <p className="text-sm text-gray-800">{msg.assistant}</p>
+                            
+                            {/* 显示生成的提示词 - 可交互选择 */}
+                            {msg.prompts && msg.prompts.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                <p className="text-xs text-gray-500 font-medium">生成的提示词（点击选择）：</p>
+                                <div className="space-y-2">
+                                  {msg.prompts.map((prompt, pIndex) => {
+                                    const isSelected = session.prompts.find(p => p.id === prompt.id)?.selected || false;
+                                    const isSelectedForOptimization = selectedPromptsForOptimization.includes(prompt.id);
+                                    
+                                    return (
+                                      <div 
+                                        key={pIndex} 
+                                        className={`text-xs p-3 rounded border-2 transition-all duration-200 ${
+                                          isSelected 
+                                            ? 'bg-blue-50 border-blue-300 shadow-sm' 
+                                            : 'bg-gray-100 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                         }`}
-                                        title={isSelectedForOptimization ? "取消选择优化" : "选择此提示词进行AI优化"}
                                       >
-                                        <MessageSquare className="w-3 h-3" />
-                                      </button>
+                                        <div className="flex items-start gap-2">
+                                          <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => togglePromptSelection(prompt.id)}
+                                            className="w-3 h-3 text-blue-600 rounded focus:ring-1 focus:ring-blue-500 mt-0.5 flex-shrink-0"
+                                          />
+                                          <span 
+                                            className={`flex-1 cursor-pointer ${isSelected ? 'text-blue-800 font-medium' : 'text-gray-700'}`}
+                                            onClick={() => togglePromptSelection(prompt.id)}
+                                          >
+                                            {prompt.text}
+                                          </span>
+                                          <button
+                                            onClick={() => togglePromptForOptimization(prompt.id)}
+                                            className={`p-1 transition-all duration-200 flex-shrink-0 ${
+                                              isSelectedForOptimization 
+                                                ? 'text-purple-600 bg-purple-100 rounded' 
+                                                : 'text-purple-400 hover:text-purple-600'
+                                            }`}
+                                            title={isSelectedForOptimization ? "取消选择优化" : "选择此提示词进行AI优化"}
+                                          >
+                                            <MessageSquare className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                
+                                {/* 显示选中数量和快速生成按钮 */}
+                                {session.prompts.some(p => p.selected) && (
+                                  <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-blue-700">
+                                        已选择 {session.prompts.filter(p => p.selected).length} 个提示词
+                                      </span>
+                                      <Button
+                                        size="sm"
+                                        onClick={generateImages}
+                                        disabled={isGeneratingImages}
+                                        className="text-xs px-3 py-1 h-auto"
+                                      >
+                                        {isGeneratingImages ? '生成中...' : '立即生成图片'}
+                                      </Button>
                                     </div>
                                   </div>
-                                );
-                              })}
-                            </div>
-                            
-                            {/* 显示选中数量和快速生成按钮 */}
-                            {session.prompts.some(p => p.selected) && (
-                              <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-blue-700">
-                                    已选择 {session.prompts.filter(p => p.selected).length} 个提示词
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    onClick={generateImages}
-                                    disabled={isGeneratingImages}
-                                    className="text-xs px-3 py-1 h-auto"
-                                  >
-                                    {isGeneratingImages ? '生成中...' : '立即生成图片'}
-                                  </Button>
-                                </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* 底部区域：优化状态提示 + 输入框 */}
+              <div className="border-t border-gray-200 p-6 space-y-4">
+                {/* 优化状态提示 */}
+                {selectedPromptsForOptimization.length > 0 && (
+                  <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm text-purple-700 font-medium">
+                        已选择 {selectedPromptsForOptimization.length} 个提示词待优化
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSelectedPromptsForOptimization([]);
+                          setCurrentChatInput('');
+                        }}
+                        className="ml-auto text-xs text-purple-600 hover:text-purple-800 underline"
+                      >
+                        清空选择
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-            
-            {/* 优化状态提示 */}
-            {selectedPromptsForOptimization.length > 0 && (
-              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm text-purple-700 font-medium">
-                    已选择 {selectedPromptsForOptimization.length} 个提示词待优化
-                  </span>
-                  <button
-                    onClick={() => setSelectedPromptsForOptimization([])}
-                    className="ml-auto text-xs text-purple-600 hover:text-purple-800 underline"
+                )}
+                
+                {/* 输入框 */}
+                <div className="flex gap-3">
+                  <Input
+                    value={currentChatInput}
+                    onChange={(e) => setCurrentChatInput(e.target.value)}
+                    placeholder="描述您要制作的商品图片，例如：为苹果手机制作白底产品图..."
+                    onKeyDown={(e) => e.key === 'Enter' && !isGeneratingPrompts && handleChatSubmit()}
+                    className="flex-1"
+                    disabled={isGeneratingPrompts}
+                  />
+                  <Button 
+                    onClick={handleChatSubmit} 
+                    disabled={!currentChatInput.trim() || isGeneratingPrompts}
+                    size="lg"
                   >
-                    清空选择
-                  </button>
+                    {isGeneratingPrompts ? '生成中...' : '发送'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 右侧：生成结果 - 占2/5宽度，固定显示 */}
+          <div className="lg:col-span-2 bg-white rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg font-semibold mb-4 text-gray-800">生成结果</h2>
+            
+            {session.generatedImages.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500">还没有生成图片</p>
+                <p className="text-xs text-gray-400 mt-1">选择提示词并点击生成</p>
+              </div>
+            ) : (
+              <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  {session.generatedImages.map(image => (
+                    <div key={image.id} className="space-y-3 p-3 border rounded-lg bg-gray-50">
+                      <img 
+                        src={image.imageUrl} 
+                        alt="AI生成的商品图"
+                        className="w-full h-36 object-cover rounded border shadow-sm"
+                      />
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-500 font-medium">提示词：</p>
+                        <p className="text-xs text-gray-700 leading-relaxed bg-white p-2 rounded border line-clamp-3">
+                          {image.prompt}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-            
-            {/* 输入框 */}
-            <div className="flex gap-3">
-              <Input
-                value={currentChatInput}
-                onChange={(e) => setCurrentChatInput(e.target.value)}
-                placeholder="描述您想要生成的图片，或点击提示词旁的💬让我帮您优化..."
-                onKeyDown={(e) => e.key === 'Enter' && !isGeneratingPrompts && handleChatSubmit()}
-                className="flex-1"
-                disabled={isGeneratingPrompts}
-              />
-              <Button 
-                onClick={handleChatSubmit} 
-                disabled={!currentChatInput.trim() || isGeneratingPrompts}
-                size="lg"
-              >
-                {isGeneratingPrompts ? '生成中...' : '发送'}
-              </Button>
-            </div>
           </div>
         </div>
-
-        {/* 查看生成结果 */}
-        {session.generatedImages.length > 0 && (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">查看生成结果</h2>
-            <p className="text-sm text-gray-600 mb-6">以下是基于您选择的提示词生成的AI图片</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {session.generatedImages.map(image => (
-                <div key={image.id} className="space-y-4 p-4 border rounded-lg bg-gray-50">
-                  <img 
-                    src={image.imageUrl} 
-                    alt="AI生成的商品图"
-                    className="w-full h-64 object-cover rounded-lg border shadow-sm"
-                  />
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500 font-medium">使用的提示词：</p>
-                    <p className="text-sm text-gray-700 leading-relaxed bg-white p-3 rounded border">
-                      {image.prompt}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
