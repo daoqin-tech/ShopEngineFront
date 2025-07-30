@@ -11,7 +11,6 @@ interface Project {
   updatedAt: string;
   imageCount: number;
   thumbnail?: string;
-  status: 'draft' | 'completed';
 }
 
 export function AIImageProjects() {
@@ -24,8 +23,7 @@ export function AIImageProjects() {
       createdAt: '2024-01-15',
       updatedAt: '2024-01-16',
       imageCount: 4,
-      thumbnail: 'https://picsum.photos/200/150?random=1',
-      status: 'completed'
+      thumbnail: 'https://picsum.photos/200/150?random=1'
     },
     {
       id: '2', 
@@ -34,8 +32,7 @@ export function AIImageProjects() {
       createdAt: '2024-01-14',
       updatedAt: '2024-01-15',
       imageCount: 6,
-      thumbnail: 'https://picsum.photos/200/150?random=2',
-      status: 'completed'
+      thumbnail: 'https://picsum.photos/200/150?random=2'
     },
     {
       id: '3',
@@ -43,8 +40,7 @@ export function AIImageProjects() {
       description: '精品咖啡杯商品图制作',
       createdAt: '2024-01-13',
       updatedAt: '2024-01-13',
-      imageCount: 0,
-      status: 'draft'
+      imageCount: 0
     }
   ]);
 
@@ -57,13 +53,6 @@ export function AIImageProjects() {
     navigate(`/materials/project/${projectId}/edit`);
   };
 
-  const getStatusColor = (status: string) => {
-    return status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
-  };
-
-  const getStatusText = (status: string) => {
-    return status === 'completed' ? '已完成' : '草稿';
-  };
 
   return (
     <div className="space-y-6">
@@ -112,14 +101,9 @@ export function AIImageProjects() {
 
               {/* 项目信息 */}
               <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-semibold text-lg truncate flex-1 mr-2">
-                    {project.name}
-                  </h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                    {getStatusText(project.status)}
-                  </span>
-                </div>
+                <h3 className="font-semibold text-lg truncate mb-2">
+                  {project.name}
+                </h3>
                 
                 <p className="text-gray-600 text-sm line-clamp-2">
                   {project.description}

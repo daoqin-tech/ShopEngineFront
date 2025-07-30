@@ -4,14 +4,28 @@ export interface Prompt {
   selected: boolean;
   imageUrl?: string; // 可选，因为可能还没生成图片
   imageGenerated: boolean; // 标记是否已生成图片
+  createdAt: string;
+  conversationId: string; // 来源对话轮次ID
+}
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  promptIds?: string[]; // 引用提示词ID数组，而不是存储副本
+}
+
+export interface Conversation {
+  id: string;
+  timestamp: string;
+  messages: ConversationMessage[];
 }
 
 export interface AIImageSession {
   id: string;
   name: string;
   description: string;
-  prompts: Prompt[]; // 统一的提示词数组
-  chatMessages: {user: string, assistant: string, prompts?: Prompt[]}[]; // 对话历史统一使用Prompt类型
+  prompts: Map<string, Prompt>; // 使用Map存储，key为promptId
+  conversations: Conversation[]; // 对话历史
 }
 
 export enum Step {

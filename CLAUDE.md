@@ -11,18 +11,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a modern React 19 + TypeScript + Vite project using shadcn/ui components and Tailwind CSS v4. The architecture follows these patterns:
+This is a modern React 19 + TypeScript + Vite project using shadcn/ui components and Tailwind CSS v4, focused on AI image generation for e-commerce. The application follows these architectural patterns:
 
 ### Core Stack
 - **React 19.1.0** with concurrent features and modern patterns
 - **TypeScript 5.8.3** with strict compiler settings and ES2020+ target
 - **Vite 7.0.4** for build tooling and development server
 - **Tailwind CSS 4.1.11** (latest v4) with CSS variables and dark mode support
+- **React Router DOM 7.7.1** for client-side routing
+
+### Application Structure
+This is an AI image generation platform with the following main features:
+- **AI Image Projects** - Managing AI image generation projects
+- **AI Image Generator** - Two-step workflow for prompt generation and image creation
+- **Image Editor** - Tools for optimizing generated images
+- **Sidebar Navigation** - Collapsible navigation with user/team switching
 
 ### Project Structure
-- `src/components/ui/` - shadcn/ui components (currently has Button)
+- `src/components/ui/` - shadcn/ui components (Avatar, Breadcrumb, Button, Dropdown, Input, Separator, Sheet, Sidebar, Skeleton, Tooltip)
+- `src/components/` - Application-specific components (app-sidebar, nav-main, nav-projects, nav-user, team-switcher)
+- `src/pages/` - Main application pages
+  - `AIImageGenerator/` - Multi-step AI image generation workflow
+  - `AIImageProjects.tsx` - Project management interface  
+  - `ImageEditor.tsx` - Image optimization tools
+- `src/hooks/` - Custom React hooks (use-mobile.ts for responsive detection)
 - `src/lib/` - Utility functions (utils.ts for className merging)
-- `src/assets/` - Static assets
 - `@/` alias maps to `./src/` for clean imports
 
 ### UI Framework Setup
@@ -31,31 +44,40 @@ This is a modern React 19 + TypeScript + Vite project using shadcn/ui components
 - **class-variance-authority (CVA)** for type-safe component variants
 - **Lucide React** for icons
 - **tailwind-merge + clsx** for utility class management
+- **Axios 1.11.0** for HTTP requests
 
 ### TypeScript Configuration
 Uses project references pattern:
-- `tsconfig.json` - Root config with references
+- `tsconfig.json` - Root config with references and path mapping
 - `tsconfig.app.json` - App-specific config with React JSX and strict mode
 - `tsconfig.node.json` - Build tools config
 
-Key compiler options: bundler module resolution, `"jsx": "react-jsx"`, path mapping for `@/*` imports.
+Key compiler options: bundler module resolution, `"jsx": "react-jsx"`, strict typing, path mapping for `@/*` imports.
 
 ### Styling System
 - Tailwind CSS v4 with CSS custom properties for theming
 - Dark mode support via `.dark` class
 - Design tokens using CSS variables defined in `src/index.css`
 - Component variants managed through CVA
+- Animation support via tailwindcss-animate
 
 ### ESLint Configuration
-Uses modern flat config format with TypeScript ESLint, React Hooks, and React Refresh plugins.
+Uses modern flat config format (`eslint.config.js`) with:
+- TypeScript ESLint for type-aware linting
+- React Hooks plugin for hook usage rules
+- React Refresh plugin for Vite integration
+- Ignores `dist` directory
 
-## Development Notes
+### Routing Structure
+The application uses React Router with the following main routes:
+- `/` - Home/AI Image Projects
+- `/materials` - Materials dashboard
+- `/materials/product-images` - AI Image Projects listing
+- `/materials/project/:projectId/edit` - AI Image Generator workflow
+- `/materials/image-editor` - Image Editor tools
 
-The project is in early development with minimal boilerplate. Key areas ready for expansion:
-- No routing system (React Router would be appropriate)
-- No state management beyond React's built-in state
-- No API integration or data fetching setup
-- No testing framework configured
-- Only Button component from shadcn/ui is currently implemented
-
-When adding new shadcn/ui components, use the CLI or follow the existing Button pattern in `src/components/ui/button.tsx`.
+### Key Components
+- **AIImageGenerator** - Multi-step workflow with prompt generation and image creation
+- **AppSidebar** - Main navigation with collapsible design
+- **StepIndicator** - Progress tracking for multi-step workflows
+- Custom breadcrumb navigation integrated with routing

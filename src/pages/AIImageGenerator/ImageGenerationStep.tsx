@@ -7,8 +7,8 @@ export function ImageGenerationStep({
   isGeneratingImages,
   onGenerateImages
 }: ImageGenerationStepProps) {
-  const selectedPrompts = session.prompts?.filter(p => p.selected) || [];
-  const generatedImages = session.prompts?.filter(p => p.imageGenerated && p.imageUrl) || [];
+  const selectedPrompts = Array.from(session.prompts?.values() || []).filter(p => p.selected);
+  const generatedImages = Array.from(session.prompts?.values() || []).filter(p => p.imageGenerated && p.imageUrl);
 
   return (
     <div className="space-y-6">
