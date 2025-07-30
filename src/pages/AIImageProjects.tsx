@@ -68,10 +68,10 @@ export function AIImageProjects() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">AI制图</h1>
+        <h1 className="text-2xl font-bold">AI商品制图</h1>
         <Button onClick={handleNewProject} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          新建AI制图
+          新建商品制图
         </Button>
       </div>
 
@@ -81,10 +81,10 @@ export function AIImageProjects() {
             <Image className="w-12 h-12 text-gray-400" />
           </div>
           <h2 className="text-xl font-semibold text-gray-600 mb-2">还没有制图项目</h2>
-          <p className="text-gray-500 mb-6">点击上方按钮创建您的第一个AI制图项目</p>
+          <p className="text-gray-500 mb-6">点击上方按钮创建您的第一个商品制图项目</p>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            新建AI制图
+            新建商品制图
           </Button>
         </div>
       ) : (

@@ -26,23 +26,23 @@ function AppContent() {
     
     if (path === '/materials/product-images') {
       return {
-        parent: { name: '素材制作', href: '/materials' },
-        current: 'AI制图'
+        parent: { name: '图片素材制作', href: '/materials' },
+        current: 'AI商品制图'
       }
     } else if (path.startsWith('/materials/project/')) {
       return {
-        parent: { name: 'AI制图', href: '/materials/product-images' },
+        parent: { name: 'AI商品制图', href: '/materials/product-images' },
         current: 'AI生图'
       }
     } else if (path === '/materials/image-editor') {
       return {
-        parent: { name: '素材制作', href: '/materials' },
-        current: '图片编辑'
+        parent: { name: '图片素材制作', href: '/materials' },
+        current: '商品图优化'
       }
     } else if (path === '/materials') {
       return {
         parent: null,
-        current: '素材制作'
+        current: '图片素材制作'
       }
     }
     

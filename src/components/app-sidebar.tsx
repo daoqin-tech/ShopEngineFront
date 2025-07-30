@@ -43,17 +43,17 @@ const data = {
   ],
   navMain: [
     {
-      title: "素材制作",
+      title: "图片素材制作",
       url: "/materials",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
-          title: "AI制图",
+          title: "AI商品制图",
           url: "/materials/product-images",
         },
         {
-          title: "图片编辑",
+          title: "商品图优化",
           url: "/materials/image-editor",
         },
       ],

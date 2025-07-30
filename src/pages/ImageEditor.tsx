@@ -1,163 +1,55 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Upload, Download, RotateCw, Crop, Palette } from 'lucide-react';
+import { Clock, Sparkles } from 'lucide-react';
 
 export function ImageEditor() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleProcess = async (action: string) => {
-    setIsProcessing(true);
-    // 模拟图片处理
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log(`执行${action}操作`);
-    setIsProcessing(false);
-  };
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-4">图片编辑</h1>
-        
-        {/* 图片上传区域 */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6">
-          {selectedImage ? (
-            <div className="space-y-4">
-              <img 
-                src={selectedImage} 
-                alt="上传的图片"
-                className="max-w-full max-h-96 mx-auto rounded-lg shadow-lg"
-              />
-              <div className="flex justify-center">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <Button variant="outline">
-                    <Upload className="w-4 h-4 mr-2" />
-                    重新选择图片
-                  </Button>
-                </label>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Upload className="w-16 h-16 text-gray-400 mx-auto" />
-              <div>
-                <h3 className="text-lg font-medium text-gray-600 mb-2">上传图片</h3>
-                <p className="text-gray-500 mb-4">支持 JPG、PNG、GIF 格式</p>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <Button>
-                    <Upload className="w-4 h-4 mr-2" />
-                    选择图片
-                  </Button>
-                </label>
-              </div>
-            </div>
-          )}
+    <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+      <div className="text-center space-y-6 max-w-md">
+        {/* 图标区域 */}
+        <div className="relative">
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-12 h-12 text-blue-600" />
+          </div>
+          <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+            <Clock className="w-4 h-4 text-yellow-600" />
+          </div>
         </div>
 
-        {/* 编辑工具栏 */}
-        {selectedImage && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                variant="outline" 
-                onClick={() => handleProcess('旋转')}
-                disabled={isProcessing}
-                className="flex flex-col items-center gap-2 h-20"
-              >
-                <RotateCw className="w-6 h-6" />
-                <span>旋转</span>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => handleProcess('裁剪')}
-                disabled={isProcessing}
-                className="flex flex-col items-center gap-2 h-20"
-              >
-                <Crop className="w-6 h-6" />
-                <span>裁剪</span>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => handleProcess('调色')}
-                disabled={isProcessing}
-                className="flex flex-col items-center gap-2 h-20"
-              >
-                <Palette className="w-6 h-6" />
-                <span>调色</span>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => handleProcess('下载')}
-                disabled={isProcessing}
-                className="flex flex-col items-center gap-2 h-20"
-              >
-                <Download className="w-6 h-6" />
-                <span>下载</span>
-              </Button>
-            </div>
+        {/* 标题和描述 */}
+        <div className="space-y-3">
+          <h1 className="text-2xl font-bold text-gray-800">商品图优化</h1>
+          <h2 className="text-xl font-semibold text-gray-600">敬请期待</h2>
+          <p className="text-gray-500 leading-relaxed">
+            我们正在开发强大的商品图优化功能，包括智能背景替换、一键美化、尺寸调整等专业工具，让您的商品图更加出色。
+          </p>
+        </div>
 
-            {/* 调整参数区域 */}
-            <div className="p-4 border rounded-lg space-y-4">
-              <h3 className="font-medium">图片调整</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium">亮度</label>
-                  <Input type="range" min="-100" max="100" defaultValue="0" />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium">对比度</label>
-                  <Input type="range" min="-100" max="100" defaultValue="0" />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium">饱和度</label>
-                  <Input type="range" min="-100" max="100" defaultValue="0" />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium">锐化</label>
-                  <Input type="range" min="0" max="100" defaultValue="0" />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button onClick={() => handleProcess('应用调整')} disabled={isProcessing}>
-                  {isProcessing ? '处理中...' : '应用调整'}
-                </Button>
-                <Button variant="outline">重置</Button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 功能预告 */}
+        <div className="bg-gray-50 rounded-lg p-4 text-left">
+          <h3 className="font-medium text-gray-700 mb-3">即将推出的功能：</h3>
+          <ul className="space-y-2 text-sm text-gray-600">
+            <li className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              智能背景替换和抠图
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              一键商品图美化和增强
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              多平台尺寸批量适配
+            </li>
+            <li className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              品牌水印和Logo添加
+            </li>
+          </ul>
+        </div>
+
+        {/* 提示信息 */}
+        <div className="text-xs text-gray-400">
+          如有任何建议或需求，欢迎联系我们
+        </div>
       </div>
     </div>
   );
