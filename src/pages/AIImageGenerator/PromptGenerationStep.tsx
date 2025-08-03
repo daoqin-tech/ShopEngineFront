@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Edit3, ArrowRight, Check, Square } from 'lucide-react';
+import { MessageSquare, Edit3, ArrowRight, Check, Square, RotateCcw } from 'lucide-react';
 import { PromptGenerationStepProps } from './types';
+
+interface OriginalPromptState {
+  id: string;
+  text: string;
+  selected: boolean;
+}
 
 export function PromptGenerationStep({
   session,
@@ -21,6 +27,9 @@ export function PromptGenerationStep({
   const selectedPrompts = Array.from(session.prompts?.values() || []).filter(p => p.selected);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
+  
+  // 跟踪提示词的原始状态
+  const [originalPromptStates, setOriginalPromptStates] = useState<Map<string, OriginalPromptState>>(new Map());
 
   const handleStartEdit = (prompt: {id: string, text: string}) => {
     setEditingPromptId(prompt.id);
@@ -40,6 +49,115 @@ export function PromptGenerationStep({
     setEditingText('');
   };
 
+  // 初始化和更新原始状态跟踪
+  useEffect(() => {
+    const currentPrompts = Array.from(session.prompts?.values() || []);
+    
+    setOriginalPromptStates(prevOriginal => {
+      const newOriginal = new Map(prevOriginal);
+      
+      // 为新的提示词添加原始状态记录
+      currentPrompts.forEach(prompt => {
+        if (!newOriginal.has(prompt.id)) {
+          newOriginal.set(prompt.id, {
+            id: prompt.id,
+            text: prompt.text,
+            selected: prompt.selected
+          });
+        }
+      });
+      
+      // 移除已不存在的提示词的原始状态记录
+      Array.from(newOriginal.keys()).forEach(id => {
+        if (!session.prompts?.has(id)) {
+          newOriginal.delete(id);
+        }
+      });
+      
+      return newOriginal;
+    });
+  }, [session.prompts]);
+
+  // 计算修改统计和分类提示词
+  const calculateChangeStats = () => {
+    const currentPrompts = Array.from(session.prompts?.values() || []);
+    let newlyAdded = 0;
+    let deselected = 0;
+    let edited = 0;
+    let unchanged = 0;
+    let toRegenerate = 0;
+    let toDelete = 0;
+
+    const newlyAddedPrompts: Array<{id: string, text: string}> = [];
+    const editedPrompts: Array<{id: string, text: string, originalText: string}> = [];
+    const deselectedPrompts: Array<{id: string, text: string}> = [];
+
+    currentPrompts.forEach(current => {
+      const original = originalPromptStates.get(current.id);
+      if (!original) {
+        // 新添加的提示词
+        if (current.selected) {
+          newlyAdded++;
+          toRegenerate++;
+          newlyAddedPrompts.push({id: current.id, text: current.text});
+        }
+      } else {
+        // 现有提示词的变化
+        const textChanged = current.text !== original.text;
+        const selectionChanged = current.selected !== original.selected;
+        
+        if (textChanged && current.selected) {
+          edited++;
+          toRegenerate++;
+          editedPrompts.push({id: current.id, text: current.text, originalText: original.text});
+        } else if (selectionChanged) {
+          if (current.selected && !original.selected) {
+            // 重新选择
+            newlyAdded++;
+            toRegenerate++;
+            newlyAddedPrompts.push({id: current.id, text: current.text});
+          } else if (!current.selected && original.selected) {
+            // 取消选择
+            deselected++;
+            toDelete++;
+            deselectedPrompts.push({id: current.id, text: original.text});
+          }
+        } else if (current.selected && !textChanged && !selectionChanged) {
+          unchanged++;
+        }
+      }
+    });
+
+    return {
+      newlyAdded,
+      deselected,
+      edited,
+      unchanged,
+      toRegenerate,
+      toDelete,
+      newlyAddedPrompts,
+      editedPrompts,
+      deselectedPrompts
+    };
+  };
+
+  // 恢复原始状态
+  const handleRestoreOriginal = () => {
+    originalPromptStates.forEach(original => {
+      const current = session.prompts?.get(original.id);
+      if (current) {
+        if (current.selected !== original.selected) {
+          onTogglePromptSelection(original.id);
+        }
+        if (current.text !== original.text) {
+          onUpdatePromptText(original.id, original.text);
+        }
+      }
+    });
+  };
+
+  const changeStats = calculateChangeStats();
+  
   return (
     <div className="space-y-6">
       {/* 对话区域 - 可滚动，占据剩余高度 */}
@@ -47,7 +165,7 @@ export function PromptGenerationStep({
         <div className="flex flex-col h-[65vh]">
           {/* 对话历史 */}
           <div className="flex-1 overflow-y-auto p-6">
-            {session.conversations.length === 0 ? (
+            {session.conversation.messages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-500">
                 <div className="text-center">
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -57,9 +175,8 @@ export function PromptGenerationStep({
               </div>
             ) : (
               <div className="space-y-4">
-                {session.conversations.map((conversation) => 
-                  conversation.messages.map((message, msgIndex) => (
-                    <div key={`${conversation.id}-${msgIndex}`} className="space-y-3">
+                {session.conversation.messages.map((message, msgIndex) => (
+                    <div key={`${session.conversation.id}-${msgIndex}`} className="space-y-3">
                       {message.role === 'user' ? (
                         // 用户消息
                         <div className="flex justify-end">
@@ -145,23 +262,54 @@ export function PromptGenerationStep({
                                             onChange={() => onTogglePromptSelection(promptId)}
                                             className="w-3 h-3 text-blue-600 rounded focus:ring-1 focus:ring-blue-500 mt-0.5 flex-shrink-0"
                                           />
-                                          <span 
-                                            className={`flex-1 cursor-pointer ${isSelected ? 'text-blue-800 font-medium' : 'text-gray-700'}`}
-                                            onClick={() => onTogglePromptSelection(promptId)}
-                                          >
-                                            {prompt.text}
-                                          </span>
-                                          <button
-                                            onClick={() => onTogglePromptForOptimization(promptId)}
-                                            className={`p-1 transition-all duration-200 flex-shrink-0 ${
-                                              isSelectedForOptimization 
-                                                ? 'text-purple-600 bg-purple-100 rounded' 
-                                                : 'text-purple-400 hover:text-purple-600'
-                                            }`}
-                                            title={isSelectedForOptimization ? "取消选择优化" : "选择此提示词进行AI优化"}
-                                          >
-                                            <MessageSquare className="w-3 h-3" />
-                                          </button>
+                                          {editingPromptId === prompt.id ? (
+                                            <div className="flex-1 space-y-2">
+                                              <textarea
+                                                value={editingText}
+                                                onChange={(e) => setEditingText(e.target.value)}
+                                                className="w-full text-xs text-gray-700 leading-relaxed border rounded p-2 resize-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                rows={2}
+                                                autoFocus
+                                              />
+                                              <div className="flex gap-1">
+                                                <Button size="sm" onClick={handleSaveEdit} className="text-xs h-6 px-2">
+                                                  保存
+                                                </Button>
+                                                <Button size="sm" variant="outline" onClick={handleCancelEdit} className="text-xs h-6 px-2">
+                                                  取消
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <span 
+                                              className={`flex-1 cursor-pointer ${isSelected ? 'text-blue-800 font-medium' : 'text-gray-700'}`}
+                                              onClick={() => onTogglePromptSelection(promptId)}
+                                            >
+                                              {prompt.text}
+                                            </span>
+                                          )}
+                                          {editingPromptId !== prompt.id && (
+                                            <div className="flex gap-1">
+                                              <button
+                                                onClick={() => handleStartEdit({id: prompt.id, text: prompt.text})}
+                                                className="p-1 transition-all duration-200 flex-shrink-0 text-gray-400 hover:text-blue-600"
+                                                title="编辑提示词"
+                                              >
+                                                <Edit3 className="w-3 h-3" />
+                                              </button>
+                                              <button
+                                                onClick={() => onTogglePromptForOptimization(promptId)}
+                                                className={`p-1 transition-all duration-200 flex-shrink-0 ${
+                                                  isSelectedForOptimization 
+                                                    ? 'text-purple-600 bg-purple-100 rounded' 
+                                                    : 'text-purple-400 hover:text-purple-600'
+                                                }`}
+                                                title={isSelectedForOptimization ? "取消选择优化" : "选择此提示词进行AI优化"}
+                                              >
+                                                <MessageSquare className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     );
@@ -174,7 +322,7 @@ export function PromptGenerationStep({
                       )}
                     </div>
                   ))
-                )}
+                }
               </div>
             )}
           </div>
@@ -221,64 +369,85 @@ export function PromptGenerationStep({
         </div>
       </div>
 
-      {/* 选中提示词编辑区域 */}
+      {/* 选中提示词统计区域 */}
       {selectedPrompts.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-medium text-gray-800">
-              已选中的提示词 ({selectedPrompts.length}个)
+              提示词修改情况
             </h4>
-            {canGoToNextStep && (
-              <Button onClick={onNextStep} size="sm" className="bg-green-600 hover:bg-green-700">
-                <ArrowRight className="w-4 h-4 mr-2" />
-                下一步：生成图片
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleRestoreOriginal} 
+                size="sm" 
+                variant="outline"
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                恢复原状态
               </Button>
-            )}
+              {canGoToNextStep && (
+                <Button onClick={onNextStep} size="sm" className="bg-green-600 hover:bg-green-700">
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  下一步：生成图片
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="space-y-4 max-h-80 overflow-y-auto">
-            {selectedPrompts.map((prompt, index) => (
-              <div key={prompt.id} className="p-4 bg-gray-50 border rounded-lg hover:bg-gray-100 transition-colors">
-                <div className="flex items-start gap-3">
-                  <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    {editingPromptId === prompt.id ? (
-                      <div className="space-y-3">
-                        <textarea
-                          value={editingText}
-                          onChange={(e) => setEditingText(e.target.value)}
-                          className="w-full text-sm text-gray-700 leading-relaxed border rounded-lg p-3 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          rows={3}
-                          autoFocus
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={handleSaveEdit}>
-                            保存
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                            取消
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm text-gray-700 leading-relaxed flex-1">
-                          {prompt.text}
-                        </p>
-                        <button
-                          onClick={() => handleStartEdit(prompt)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-white"
-                          title="编辑提示词"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+          
+          {/* 修改统计信息 */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="text-sm font-medium text-green-800">
+                  重新生成 {changeStats.toRegenerate} 张照片
+                  {(changeStats.newlyAdded > 0 || changeStats.edited > 0) && (
+                    <span className="text-xs font-normal ml-1">
+                      (
+                      {changeStats.newlyAdded > 0 && `新增${changeStats.newlyAdded}个`}
+                      {changeStats.newlyAdded > 0 && changeStats.edited > 0 && ','}
+                      {changeStats.edited > 0 && `修改${changeStats.edited}个`}
+                      )
+                    </span>
+                  )}
                 </div>
+                
+                {/* 具体提示词列表 */}
+                {changeStats.toRegenerate > 0 && (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {changeStats.newlyAddedPrompts.map((prompt) => (
+                      <div key={prompt.id} className="text-xs text-green-700 bg-white p-2 rounded border-l-2 border-green-400">
+                        <span className="font-medium text-green-600">[新增]</span> {prompt.text}
+                      </div>
+                    ))}
+                    {changeStats.editedPrompts.map((prompt) => (
+                      <div key={prompt.id} className="text-xs text-green-700 bg-white p-2 rounded border-l-2 border-green-400">
+                        <div><span className="font-medium text-green-600">[修改]</span> {prompt.text}</div>
+                        <div className="text-gray-500 mt-1"><span className="font-medium">原文：</span>{prompt.originalText}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+              
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <div className="text-sm font-medium text-red-800">
+                  删除 {changeStats.toDelete} 张照片
+                  <span className="text-xs font-normal ml-1">(取消选择的提示词)</span>
+                </div>
+                
+                {/* 具体提示词列表 */}
+                {changeStats.toDelete > 0 && (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {changeStats.deselectedPrompts.map((prompt) => (
+                      <div key={prompt.id} className="text-xs text-red-700 bg-white p-2 rounded border-l-2 border-red-400">
+                        <span className="font-medium text-red-600">[取消选择]</span> {prompt.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

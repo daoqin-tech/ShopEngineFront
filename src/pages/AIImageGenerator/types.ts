@@ -22,10 +22,9 @@ export interface Conversation {
 
 export interface AIImageSession {
   id: string;
-  name: string;
-  description: string;
+  projectId: string; // 关联的项目ID
   prompts: Map<string, Prompt>; // 使用Map存储，key为promptId
-  conversations: Conversation[]; // 对话历史
+  conversation: Conversation; // 当前对话
 }
 
 export enum Step {

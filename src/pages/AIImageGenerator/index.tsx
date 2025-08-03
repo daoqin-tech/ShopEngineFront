@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 
@@ -8,18 +7,23 @@ import { StepIndicator } from './StepIndicator';
 import { PromptGenerationStep } from './PromptGenerationStep';
 import { ImageGenerationStep } from './ImageGenerationStep';
 import { AIImageSession, Step, Prompt } from './types';
+import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 
 export function AIImageGenerator() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   
+  const [project, setProject] = useState<AIImageProject | null>(null);
   const [currentStep, setCurrentStep] = useState<Step>(Step.PROMPT_GENERATION);
   const [session, setSession] = useState<AIImageSession>({
     id: projectId || '',
-    name: '',
-    description: '',
+    projectId: projectId || '',
     prompts: new Map(),
-    conversations: []
+    conversation: {
+      id: 'conv-1',
+      timestamp: new Date().toISOString(),
+      messages: []
+    }
   });
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
@@ -29,16 +33,26 @@ export function AIImageGenerator() {
   const [selectedPromptsForOptimization, setSelectedPromptsForOptimization] = useState<string[]>([]);
 
   useEffect(() => {
-    if (projectId && !projectId.startsWith('new-')) {
-      loadSession(projectId);
-    } else {
-      setSession(prev => ({
-        ...prev,
-        name: '新建AI生图会话',
-        description: '请输入会话描述'
-      }));
+    if (projectId) {
+      loadProject(projectId);
+      if (!projectId.startsWith('new-')) {
+        loadSession(projectId);
+      } else {
+        setSession(prev => ({
+          ...prev
+        }));
+      }
     }
   }, [projectId]);
+
+  const loadProject = async (id: string) => {
+    try {
+      const projectData = await AIImageProjectsAPI.getAIImageProject(id);
+      setProject(projectData);
+    } catch (err) {
+      console.error('Error loading project:', err);
+    }
+  };
 
   const loadSession = async (id: string) => {
     const conversationId = 'conv-1';
@@ -66,26 +80,23 @@ export function AIImageGenerator() {
 
     const mockSession: AIImageSession = {
       id,
-      name: '苹果手机AI生图',
-      description: '为新款iPhone制作商品主图',
+      projectId: id,
       prompts: promptsMap,
-      conversations: [
-        {
-          id: conversationId,
-          timestamp,
-          messages: [
-            {
-              role: 'user',
-              content: '我需要为苹果手机制作一些产品摄影风格的图片'
-            },
-            {
-              role: 'assistant',
-              content: '好的，我将为您生成一些苹果手机产品摄影风格的AI提示词。这些提示词将帮助您创建高质量的产品图片。',
-              promptIds: ['1', '2']
-            }
-          ]
-        }
-      ]
+      conversation: {
+        id: conversationId,
+        timestamp,
+        messages: [
+          {
+            role: 'user',
+            content: '我需要为苹果手机制作一些产品摄影风格的图片'
+          },
+          {
+            role: 'assistant',
+            content: '好的，我将为您生成一些苹果手机产品摄影风格的AI提示词。这些提示词将帮助您创建高质量的产品图片。',
+            promptIds: ['1', '2']
+          }
+        ]
+      }
     };
     setSession(mockSession);
   };
@@ -291,10 +302,9 @@ export function AIImageGenerator() {
               return {
                 ...prev,
                 prompts: newPromptsMap,
-                conversations: [...prev.conversations, {
-                  id: conversationId,
-                  timestamp,
-                  messages: [
+                conversation: {
+                  ...prev.conversation,
+                  messages: [...prev.conversation.messages,
                     { role: 'user', content: userMessage },
                     { 
                       role: 'assistant', 
@@ -302,7 +312,7 @@ export function AIImageGenerator() {
                       promptIds: optimizedPrompts.map(p => p.id)
                     }
                   ]
-                }]
+                }
               };
             });
           }
@@ -318,7 +328,6 @@ export function AIImageGenerator() {
         setTimeout(() => {
           if (newPrompts && newPrompts.length > 0) {
             const conversationId = `conv-${Date.now()}`;
-            const timestamp = new Date().toISOString();
             
             // 更新提示词的conversationId
             const updatedPrompts = newPrompts.map(prompt => ({
@@ -337,10 +346,9 @@ export function AIImageGenerator() {
               return {
                 ...prev,
                 prompts: newPromptsMap,
-                conversations: [...prev.conversations, {
-                  id: conversationId,
-                  timestamp,
-                  messages: [
+                conversation: {
+                  ...prev.conversation,
+                  messages: [...prev.conversation.messages,
                     { role: 'user', content: userMessage },
                     { 
                       role: 'assistant', 
@@ -348,23 +356,19 @@ export function AIImageGenerator() {
                       promptIds: updatedPrompts.map(p => p.id)
                     }
                   ]
-                }]
+                }
               };
             });
           } else {
-            const conversationId = `conv-${Date.now()}`;
-            const timestamp = new Date().toISOString();
-            
             setSession(prev => ({
               ...prev,
-              conversations: [...prev.conversations, {
-                id: conversationId,
-                timestamp,
-                messages: [
+              conversation: {
+                ...prev.conversation,
+                messages: [...prev.conversation.messages,
                   { role: 'user', content: userMessage },
                   { role: 'assistant', content: '抱歉，生成提示词时出现问题，请重试。' }
                 ]
-              }]
+              }
             }));
           }
           setHasUnsavedChanges(true);
@@ -398,11 +402,6 @@ export function AIImageGenerator() {
     } else {
       navigate('/materials/product-images');
     }
-  };
-
-  const updateSessionField = (field: keyof AIImageSession, value: string) => {
-    setSession(prev => ({ ...prev, [field]: value }));
-    setHasUnsavedChanges(true);
   };
 
   const handleStepClick = (step: Step) => {
@@ -440,7 +439,6 @@ export function AIImageGenerator() {
     setHasUnsavedChanges(true);
   };
 
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
@@ -454,18 +452,12 @@ export function AIImageGenerator() {
                 返回
               </Button>
               <div>
-                <Input
-                  value={session.name}
-                  onChange={(e) => updateSessionField('name', e.target.value)}
-                  className="text-lg font-bold border-none p-0 h-auto bg-transparent"
-                  placeholder="AI生图会话名称"
-                />
-                <Input
-                  value={session.description}
-                  onChange={(e) => updateSessionField('description', e.target.value)}
-                  className="text-sm text-gray-600 border-none p-0 h-auto bg-transparent"
-                  placeholder="会话描述"
-                />
+                <h1 className="text-lg font-bold">
+                  {project?.name || '加载中...'}
+                </h1>
+                <p className="text-sm text-gray-600">
+                  AI生图项目
+                </p>
               </div>
             </div>
             <Button onClick={handleSave} disabled={isSaving || !hasUnsavedChanges}>

@@ -17,6 +17,7 @@ import {
 import { AIImageProjects } from "@/pages/AIImageProjects"
 import { AIImageGenerator } from "@/pages/AIImageGenerator"
 import { ImageEditor } from "@/pages/ImageEditor"
+import { Toaster } from "sonner"
 
 function AppContent() {
   const location = useLocation()
@@ -99,6 +100,7 @@ function App() {
   return (
     <Router>
       <AppContent />
+      <Toaster position="top-right" richColors />
     </Router>
   )
 }
