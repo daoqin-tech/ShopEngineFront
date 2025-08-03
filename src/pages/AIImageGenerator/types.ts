@@ -1,17 +1,39 @@
+export enum PromptSource {
+  CONVERSATION = 'conversation', // 来自对话生成
+  SYSTEM = 'system', // 系统预设
+  IMPORTED = 'imported', // 用户导入
+  TEMPLATE = 'template' // 模板库
+}
+
 export interface Prompt {
   id: string;
   text: string;
-  selected: boolean;
-  imageUrl?: string; // 可选，因为可能还没生成图片
-  imageGenerated: boolean; // 标记是否已生成图片
+  source: PromptSource; // 提示词来源
   createdAt: string;
-  conversationId: string; // 来源对话轮次ID
+}
+
+export interface PromptWithSelection extends Prompt {
+  selected: boolean; // UI状态：是否被选中
+}
+
+export interface GeneratedImage {
+  id: string;
+  promptId: string; // 关联的提示词ID
+  imageUrl: string;
+  createdAt: string;
+  status: 'generating' | 'completed' | 'failed'; // 生成状态
+  metadata?: {
+    width?: number;
+    height?: number;
+    model?: string; // AI模型名称
+    seed?: number; // 随机种子
+  };
 }
 
 export interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
-  promptIds?: string[]; // 引用提示词ID数组，而不是存储副本
+  prompts?: PromptWithSelection[]; // 关联的提示词对象数组
 }
 
 export interface Conversation {
@@ -23,7 +45,8 @@ export interface Conversation {
 export interface AIImageSession {
   id: string;
   projectId: string; // 关联的项目ID
-  prompts: Map<string, Prompt>; // 使用Map存储，key为promptId
+  prompts: Map<string, PromptWithSelection>; // 使用Map存储，key为promptId
+  images: Map<string, GeneratedImage>; // 使用Map存储生成的图片，key为imageId
   conversation: Conversation; // 当前对话
 }
 
@@ -51,6 +74,7 @@ export interface PromptGenerationStepProps {
   onChatSubmit: () => void;
   onNextStep: () => void;
   canGoToNextStep: boolean;
+  getImagesForPrompt: (promptId: string) => GeneratedImage[];
 }
 
 

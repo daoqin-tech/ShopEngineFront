@@ -6,8 +6,9 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { StepIndicator } from './StepIndicator';
 import { PromptGenerationStep } from './PromptGenerationStep';
 import { ImageGenerationStep } from './ImageGenerationStep';
-import { AIImageSession, Step, Prompt } from './types';
+import { AIImageSession, Step, PromptWithSelection, PromptSource } from './types';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
+import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 
 export function AIImageGenerator() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -19,6 +20,7 @@ export function AIImageGenerator() {
     id: projectId || '',
     projectId: projectId || '',
     prompts: new Map(),
+    images: new Map(),
     conversation: {
       id: 'conv-1',
       timestamp: new Date().toISOString(),
@@ -55,50 +57,13 @@ export function AIImageGenerator() {
   };
 
   const loadSession = async (id: string) => {
-    const conversationId = 'conv-1';
-    const timestamp = new Date().toISOString();
-    
-    // 创建提示词Map
-    const promptsMap = new Map();
-    promptsMap.set('1', {
-      id: '1',
-      text: '高质量苹果手机产品摄影，白色背景，专业灯光',
-      selected: true,
-      imageGenerated: true,
-      imageUrl: 'https://picsum.photos/400/400?random=1',
-      createdAt: timestamp,
-      conversationId
-    });
-    promptsMap.set('2', {
-      id: '2',
-      text: '苹果手机商业摄影，简约风格，柔和阴影',
-      selected: false,
-      imageGenerated: false,
-      createdAt: timestamp,
-      conversationId
-    });
-
-    const mockSession: AIImageSession = {
-      id,
-      projectId: id,
-      prompts: promptsMap,
-      conversation: {
-        id: conversationId,
-        timestamp,
-        messages: [
-          {
-            role: 'user',
-            content: '我需要为苹果手机制作一些产品摄影风格的图片'
-          },
-          {
-            role: 'assistant',
-            content: '好的，我将为您生成一些苹果手机产品摄影风格的AI提示词。这些提示词将帮助您创建高质量的产品图片。',
-            promptIds: ['1', '2']
-          }
-        ]
-      }
-    };
-    setSession(mockSession);
+    try {
+      const sessionData = await AIImageSessionsAPI.getProjectSession(id);
+      setSession(sessionData);
+    } catch (err) {
+      console.error('Error loading session:', err);
+      // 后端保证会话存在，如果到这里说明网络或其他错误
+    }
   };
 
   const extractNumberFromText = (text: string): number | null => {
@@ -157,10 +122,9 @@ export function AIImageGenerator() {
       const newPrompts = basePrompts.map((text, index) => ({
         id: String(Date.now() + index),
         text,
-        selected: false,
-        imageGenerated: false,
+        source: PromptSource.CONVERSATION,
         createdAt: new Date().toISOString(),
-        conversationId: '' // 将在使用时设置
+        selected: false
       }));
       
       return newPrompts;
@@ -200,21 +164,31 @@ export function AIImageGenerator() {
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // 更新选中的提示词，设置图片URL和生成状态
+      // 为选中的提示词生成图片，创建独立的图片对象
       setSession(prev => {
-        const newPromptsMap = new Map(prev.prompts);
-        for (const [id, prompt] of newPromptsMap) {
-          if (prompt.selected) {
-            newPromptsMap.set(id, {
-              ...prompt,
-              imageGenerated: true,
-              imageUrl: `https://picsum.photos/400/400?random=${Math.random()}`
-            });
-          }
-        }
+        const newImagesMap = new Map(prev.images);
+        
+        selectedPrompts.forEach(prompt => {
+          const imageId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const newImage = {
+            id: imageId,
+            promptId: prompt.id,
+            imageUrl: `https://picsum.photos/400/400?random=${Math.random()}`,
+            createdAt: new Date().toISOString(),
+            status: 'completed' as const,
+            metadata: {
+              width: 400,
+              height: 400,
+              model: 'DALL-E-3',
+              seed: Math.floor(Math.random() * 1000000)
+            }
+          };
+          newImagesMap.set(imageId, newImage);
+        });
+        
         return {
           ...prev,
-          prompts: newPromptsMap
+          images: newImagesMap
         };
       });
       setHasUnsavedChanges(true);
@@ -233,7 +207,7 @@ export function AIImageGenerator() {
       
       // 自动更新输入框内容
       if (newSelection.length > 0) {
-        const selectedPrompts = Array.from(session.prompts.values()).filter(p => newSelection.includes(p.id));
+        const selectedPrompts = newSelection.map(id => session.prompts.get(id)).filter((p): p is PromptWithSelection => p !== undefined);
         const promptTexts = selectedPrompts.map(p => `"${p.text}"`).join('、');
         
         const optimizationRequest = `请帮我优化这${selectedPrompts.length}个提示词：${promptTexts}`;
@@ -271,11 +245,10 @@ export function AIImageGenerator() {
           // 从提示词Map中查找要优化的提示词
           const originalPrompts = selectedPromptsForOptimization
             .map(id => session.prompts.get(id))
-            .filter(Boolean) as Array<Prompt>;
+            .filter(Boolean) as Array<PromptWithSelection>;
           
           if (originalPrompts.length > 0) {
             // 模拟AI优化多个提示词
-            const conversationId = `conv-${Date.now()}`;
             const timestamp = new Date().toISOString();
             
             const optimizedPrompts = originalPrompts.map((prompt, index) => {
@@ -284,10 +257,9 @@ export function AIImageGenerator() {
               return {
                 id: `optimized-${Date.now()}-${index}`,
                 text: optimizedText,
-                selected: false,
-                imageGenerated: false,
+                source: PromptSource.CONVERSATION,
                 createdAt: timestamp,
-                conversationId
+                selected: false
               };
             });
             
@@ -309,7 +281,7 @@ export function AIImageGenerator() {
                     { 
                       role: 'assistant', 
                       content: assistantResponse,
-                      promptIds: optimizedPrompts.map(p => p.id)
+                      prompts: optimizedPrompts
                     }
                   ]
                 }
@@ -327,13 +299,8 @@ export function AIImageGenerator() {
         
         setTimeout(() => {
           if (newPrompts && newPrompts.length > 0) {
-            const conversationId = `conv-${Date.now()}`;
-            
-            // 更新提示词的conversationId
-            const updatedPrompts = newPrompts.map(prompt => ({
-              ...prompt,
-              conversationId
-            }));
+            // 使用生成的提示词
+            const updatedPrompts = newPrompts;
             
             const assistantResponse = `我理解您的需求，已为您生成了${newPrompts.length}个AI提示词。您可以选择合适的提示词来生成图片。`;
             
@@ -353,7 +320,7 @@ export function AIImageGenerator() {
                     { 
                       role: 'assistant', 
                       content: assistantResponse,
-                      promptIds: updatedPrompts.map(p => p.id)
+                      prompts: updatedPrompts
                     }
                   ]
                 }
@@ -384,11 +351,13 @@ export function AIImageGenerator() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const savedSession = await AIImageSessionsAPI.saveAIImageSession(session);
+      setSession(savedSession);
       setHasUnsavedChanges(false);
-      console.log('AI生图会话已保存:', session);
+      console.log('AI生图会话已保存:', savedSession);
     } catch (error) {
       console.error('保存失败:', error);
+      // 可以添加toast提示用户保存失败
     } finally {
       setIsSaving(false);
     }
@@ -405,14 +374,16 @@ export function AIImageGenerator() {
   };
 
   const handleStepClick = (step: Step) => {
-    if (step === Step.IMAGE_GENERATION && Array.from(session.prompts.values()).filter(p => p.selected).length === 0) {
+    const selectedCount = Array.from(session.prompts.values()).filter(p => p.selected).length;
+    if (step === Step.IMAGE_GENERATION && selectedCount === 0) {
       return; // 不允许跳转到第二步如果没有选中的提示词
     }
     setCurrentStep(step);
   };
 
   const goToStep2 = () => {
-    if (currentStep === Step.PROMPT_GENERATION && Array.from(session.prompts.values()).filter(p => p.selected).length > 0) {
+    const selectedCount = Array.from(session.prompts.values()).filter(p => p.selected).length;
+    if (currentStep === Step.PROMPT_GENERATION && selectedCount > 0) {
       setCurrentStep(Step.IMAGE_GENERATION);
     }
   };
@@ -426,9 +397,7 @@ export function AIImageGenerator() {
       if (prompt) {
         newPromptsMap.set(id, {
           ...prompt,
-          text: newText,
-          imageGenerated: false,
-          imageUrl: undefined
+          text: newText
         });
       }
       return {
@@ -437,6 +406,11 @@ export function AIImageGenerator() {
       };
     });
     setHasUnsavedChanges(true);
+  };
+
+  // 辅助函数：获取某个提示词的图片
+  const getImagesForPrompt = (promptId: string) => {
+    return Array.from(session.images.values()).filter(img => img.promptId === promptId);
   };
 
   return (
@@ -491,6 +465,7 @@ export function AIImageGenerator() {
             onChatSubmit={handleChatSubmit}
             onNextStep={goToStep2}
             canGoToNextStep={canAccessStep2}
+            getImagesForPrompt={getImagesForPrompt}
           />
         )}
 

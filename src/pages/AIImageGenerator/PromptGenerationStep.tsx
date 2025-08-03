@@ -104,25 +104,26 @@ export function PromptGenerationStep({
       } else {
         // 现有提示词的变化
         const textChanged = current.text !== original.text;
-        const selectionChanged = current.selected !== original.selected;
+        const currentSelected = current.selected;
+        const selectionChanged = currentSelected !== original.selected;
         
-        if (textChanged && current.selected) {
+        if (textChanged && currentSelected) {
           edited++;
           toRegenerate++;
           editedPrompts.push({id: current.id, text: current.text, originalText: original.text});
         } else if (selectionChanged) {
-          if (current.selected && !original.selected) {
+          if (currentSelected && !original.selected) {
             // 重新选择
             newlyAdded++;
             toRegenerate++;
             newlyAddedPrompts.push({id: current.id, text: current.text});
-          } else if (!current.selected && original.selected) {
+          } else if (!currentSelected && original.selected) {
             // 取消选择
             deselected++;
             toDelete++;
             deselectedPrompts.push({id: current.id, text: original.text});
           }
-        } else if (current.selected && !textChanged && !selectionChanged) {
+        } else if (currentSelected && !textChanged && !selectionChanged) {
           unchanged++;
         }
       }
@@ -146,7 +147,8 @@ export function PromptGenerationStep({
     originalPromptStates.forEach(original => {
       const current = session.prompts?.get(original.id);
       if (current) {
-        if (current.selected !== original.selected) {
+        const currentSelected = current.selected;
+        if (currentSelected !== original.selected) {
           onTogglePromptSelection(original.id);
         }
         if (current.text !== original.text) {
@@ -191,14 +193,14 @@ export function PromptGenerationStep({
                             <p className="text-sm text-gray-800">{message.content}</p>
                             
                             {/* 显示生成的提示词 - 可交互选择 */}
-                            {message.promptIds && message.promptIds.length > 0 && (
+                            {message.prompts && message.prompts.length > 0 && (
                               <div className="mt-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <p className="text-xs text-gray-500 font-medium">生成的提示词（点击选择）：</p>
                                   {(() => {
                                     // 获取当前消息关联的提示词
-                                    const messagePrompts = message.promptIds?.map(id => session.prompts.get(id)).filter(Boolean) || [];
-                                    const allSelected = messagePrompts.every(p => p?.selected);
+                                    const messagePrompts = message.prompts || [];
+                                    const allSelected = messagePrompts.every(p => p && p.selected);
                                     
                                     return (
                                       <button
@@ -239,12 +241,10 @@ export function PromptGenerationStep({
                                   })()}
                                 </div>
                                 <div className="space-y-2">
-                                  {message.promptIds?.map((promptId, pIndex) => {
-                                    const prompt = session.prompts.get(promptId);
-                                    if (!prompt) return null;
+                                  {message.prompts?.map((prompt, pIndex) => {
                                     
                                     const isSelected = prompt.selected;
-                                    const isSelectedForOptimization = selectedPromptsForOptimization.includes(promptId);
+                                    const isSelectedForOptimization = selectedPromptsForOptimization.includes(prompt.id);
                                     
                                     return (
                                       <div 
@@ -259,7 +259,7 @@ export function PromptGenerationStep({
                                           <input
                                             type="checkbox"
                                             checked={isSelected}
-                                            onChange={() => onTogglePromptSelection(promptId)}
+                                            onChange={() => onTogglePromptSelection(prompt.id)}
                                             className="w-3 h-3 text-blue-600 rounded focus:ring-1 focus:ring-blue-500 mt-0.5 flex-shrink-0"
                                           />
                                           {editingPromptId === prompt.id ? (
@@ -283,7 +283,7 @@ export function PromptGenerationStep({
                                           ) : (
                                             <span 
                                               className={`flex-1 cursor-pointer ${isSelected ? 'text-blue-800 font-medium' : 'text-gray-700'}`}
-                                              onClick={() => onTogglePromptSelection(promptId)}
+                                              onClick={() => onTogglePromptSelection(prompt.id)}
                                             >
                                               {prompt.text}
                                             </span>
@@ -298,7 +298,7 @@ export function PromptGenerationStep({
                                                 <Edit3 className="w-3 h-3" />
                                               </button>
                                               <button
-                                                onClick={() => onTogglePromptForOptimization(promptId)}
+                                                onClick={() => onTogglePromptForOptimization(prompt.id)}
                                                 className={`p-1 transition-all duration-200 flex-shrink-0 ${
                                                   isSelectedForOptimization 
                                                     ? 'text-purple-600 bg-purple-100 rounded' 
