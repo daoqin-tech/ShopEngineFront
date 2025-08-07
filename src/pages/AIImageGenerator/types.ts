@@ -10,9 +10,6 @@ export interface Prompt {
   text: string;
   source: PromptSource; // 提示词来源
   createdAt: string;
-}
-
-export interface PromptWithSelection extends Prompt {
   selected: boolean; // UI状态：是否被选中
 }
 
@@ -30,24 +27,18 @@ export interface GeneratedImage {
   };
 }
 
-export interface ConversationMessage {
+export interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
-  prompts?: PromptWithSelection[]; // 关联的提示词对象数组
-}
-
-export interface Conversation {
-  id: string;
-  timestamp: string;
-  messages: ConversationMessage[];
+  prompts?: Prompt[]; // 关联的提示词对象数组
+  isThinking?: boolean; // 标记AI正在思考状态
 }
 
 export interface AIImageSession {
   id: string;
   projectId: string; // 关联的项目ID
-  prompts: Map<string, PromptWithSelection>; // 使用Map存储，key为promptId
-  images: Map<string, GeneratedImage>; // 使用Map存储生成的图片，key为imageId
-  conversation: Conversation; // 当前对话
+  messages: Message[]; // 消息数组
 }
 
 export enum Step {
@@ -61,8 +52,13 @@ export interface StepIndicatorProps {
   canClickStep2: boolean;
 }
 
+export interface ExtendedAIImageSession extends AIImageSession {
+  prompts: Map<string, Prompt>;
+  images: Map<string, GeneratedImage>;
+}
+
 export interface PromptGenerationStepProps {
-  session: AIImageSession;
+  session: ExtendedAIImageSession;
   isGeneratingPrompts: boolean;
   currentChatInput: string;
   setCurrentChatInput: (value: string) => void;

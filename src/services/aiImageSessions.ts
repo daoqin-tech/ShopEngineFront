@@ -1,13 +1,13 @@
 import { apiClient } from '@/lib/api';
-import { AIImageSession, PromptWithSelection, GeneratedImage, Conversation } from '@/pages/AIImageGenerator/types';
+import { AIImageSession, Prompt, GeneratedImage, Message } from '@/pages/AIImageGenerator/types';
 
 // API响应的数据结构（来自后端）
 export interface AIImageSessionResponse {
   id: string;
   projectId: string;
-  prompts: PromptWithSelection[];
+  prompts: Prompt[];
   images: GeneratedImage[];
-  conversation: Conversation;
+  messages: Message[];
   createdAt: string;
   updatedAt: string;
 }
@@ -15,94 +15,63 @@ export interface AIImageSessionResponse {
 
 // 更新会话的请求数据
 export interface UpdateAIImageSessionRequest {
-  prompts?: PromptWithSelection[];
+  prompts?: Prompt[];
   images?: GeneratedImage[];
-  conversation?: Conversation;
+  messages?: Message[];
 }
 
 export class AIImageSessionsAPI {
-  // 获取会话详情
-  static async getAIImageSession(sessionId: string): Promise<AIImageSession> {
-    const response = await apiClient.get(`/sessions/${sessionId}`);
-    const sessionData: AIImageSessionResponse = response.data;
-    
-    // 将数组转换为Map结构，以适配前端组件
-    const promptsMap = new Map<string, PromptWithSelection>();
-    sessionData.prompts.forEach(prompt => {
-      promptsMap.set(prompt.id, prompt);
-    });
-    
-    const imagesMap = new Map<string, GeneratedImage>();
-    sessionData.images.forEach(image => {
-      imagesMap.set(image.id, image);
-    });
-    
-    return {
-      id: sessionData.id,
-      projectId: sessionData.projectId,
-      prompts: promptsMap,
-      images: imagesMap,
-      conversation: sessionData.conversation
-    };
-  }
-
   // 获取项目会话（不存在则自动创建）
   static async getProjectSession(projectId: string): Promise<AIImageSession> {
     const response = await apiClient.get(`/sessions/by-project/${projectId}`);
     const sessionData: AIImageSessionResponse = response.data;
-    
-    // 将数组转换为Map结构
-    const promptsMap = new Map<string, PromptWithSelection>();
-    sessionData.prompts.forEach(prompt => {
-      promptsMap.set(prompt.id, prompt);
-    });
-    
-    const imagesMap = new Map<string, GeneratedImage>();
-    sessionData.images.forEach(image => {
-      imagesMap.set(image.id, image);
-    });
-    
     return {
       id: sessionData.id,
       projectId: sessionData.projectId,
-      prompts: promptsMap,
-      images: imagesMap,
-      conversation: sessionData.conversation
+      messages: sessionData.messages
     };
   }
-
 
   // 更新会话
   static async updateAIImageSession(sessionId: string, data: UpdateAIImageSessionRequest): Promise<AIImageSession> {
     const response = await apiClient.put(`/sessions/${sessionId}`, data);
     const sessionData: AIImageSessionResponse = response.data;
     
-    // 将数组转换为Map结构
-    const promptsMap = new Map<string, PromptWithSelection>();
-    sessionData.prompts.forEach(prompt => {
-      promptsMap.set(prompt.id, prompt);
-    });
-    
-    const imagesMap = new Map<string, GeneratedImage>();
-    sessionData.images.forEach(image => {
-      imagesMap.set(image.id, image);
-    });
-    
     return {
       id: sessionData.id,
       projectId: sessionData.projectId,
-      prompts: promptsMap,
-      images: imagesMap,
-      conversation: sessionData.conversation
+      messages: sessionData.messages
     };
   }
 
-  // 保存会话（将Map结构转换为数组发送给后端）
-  static async saveAIImageSession(session: AIImageSession): Promise<AIImageSession> {
+  // 快速添加用户消息到会话中（立即返回，不等待AI处理）
+  static async addUserMessage(sessionId: string, content: string, prompts?: Prompt[]): Promise<Message> {
+    const messageData = {
+      role: 'user' as const,
+      content,
+      ...(prompts && prompts.length > 0 && { prompts })
+    };
+    
+    const response = await apiClient.post(`/sessions/${sessionId}/addUserMessage`, messageData);
+    return response.data; // 直接返回添加的消息对象
+  }
+
+  // 触发AI处理最新的用户消息
+  static async processAIResponse(sessionId: string): Promise<Message> {
+    const response = await apiClient.post(`/sessions/${sessionId}/chat`);
+    return response.data; // 直接返回AI回复的消息对象
+  }
+
+  // 保存会话
+  static async saveAIImageSession(
+    session: AIImageSession, 
+    prompts: Map<string, Prompt>, 
+    images: Map<string, GeneratedImage>
+  ): Promise<AIImageSession> {
     const updateData: UpdateAIImageSessionRequest = {
-      prompts: Array.from(session.prompts.values()),
-      images: Array.from(session.images.values()),
-      conversation: session.conversation
+      prompts: Array.from(prompts.values()),
+      images: Array.from(images.values()),
+      messages: session.messages
     };
     
     return this.updateAIImageSession(session.id, updateData);

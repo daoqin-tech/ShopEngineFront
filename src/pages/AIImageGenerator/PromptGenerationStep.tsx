@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageSquare, Edit3, ArrowRight, Check, Square, RotateCcw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { PromptGenerationStepProps } from './types';
 
 interface OriginalPromptState {
@@ -9,6 +10,50 @@ interface OriginalPromptState {
   text: string;
   selected: boolean;
 }
+
+// 辅助函数：处理全选/取消全选
+const handleToggleAllPrompts = (messagePrompts: any[], allSelected: boolean, onTogglePromptSelection: (id: string) => void) => {
+  messagePrompts.forEach(prompt => {
+    if (prompt) {
+      if (allSelected && prompt.selected) {
+        // 如果全部已选中，则取消全选
+        onTogglePromptSelection(prompt.id);
+      } else if (!allSelected && !prompt.selected) {
+        // 如果不是全部选中，则选中未选中的
+        onTogglePromptSelection(prompt.id);
+      }
+    }
+  });
+};
+
+// 辅助函数：渲染全选按钮
+const renderSelectAllButton = (messagePrompts: any[], onTogglePromptSelection: (id: string) => void) => {
+  const allSelected = messagePrompts.every(p => p && p.selected);
+  
+  return (
+    <button
+      onClick={() => handleToggleAllPrompts(messagePrompts, allSelected, onTogglePromptSelection)}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+        allSelected 
+          ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:border-green-300' 
+          : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+      }`}
+      title={allSelected ? '取消选择所有提示词' : '选择所有提示词'}
+    >
+      {allSelected ? (
+        <>
+          <Check className="w-3 h-3" />
+          取消全选
+        </>
+      ) : (
+        <>
+          <Square className="w-3 h-3" />
+          全选
+        </>
+      )}
+    </button>
+  );
+};
 
 export function PromptGenerationStep({
   session,
@@ -159,6 +204,7 @@ export function PromptGenerationStep({
   };
 
   const changeStats = calculateChangeStats();
+
   
   return (
     <div className="space-y-6">
@@ -167,7 +213,7 @@ export function PromptGenerationStep({
         <div className="flex flex-col h-[65vh]">
           {/* 对话历史 */}
           <div className="flex-1 overflow-y-auto p-6">
-            {session.conversation.messages.length === 0 ? (
+            {session.messages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-500">
                 <div className="text-center">
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -177,78 +223,69 @@ export function PromptGenerationStep({
               </div>
             ) : (
               <div className="space-y-4">
-                {session.conversation.messages.map((message, msgIndex) => (
-                    <div key={`${session.conversation.id}-${msgIndex}`} className="space-y-3">
+                {session.messages.map((message) => (
+                    <div key={message.id} className="space-y-3">
                       {message.role === 'user' ? (
                         // 用户消息
                         <div className="flex justify-end">
                           <div className="max-w-2xl px-4 py-2 bg-blue-500 text-white rounded-lg">
-                            <p className="text-sm">{message.content}</p>
+                            <div className="text-sm prose prose-sm prose-invert max-w-none">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
+                            
+                            {/* 显示用户消息中的提示词（仅展示，不可编辑） */}
+                            {message.prompts && message.prompts.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs text-blue-100">包含的提示词：</p>
+                                <div className="space-y-1">
+                                  {message.prompts.map((prompt) => (
+                                    <div 
+                                      key={prompt.id}
+                                      className="text-xs p-2 bg-gray-100 border-gray-200 border rounded"
+                                    >
+                                      <span className="text-gray-700">{prompt.text}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : (
                         // AI回复
                         <div className="flex justify-start">
                           <div className="max-w-2xl px-4 py-2 bg-white border rounded-lg shadow-sm">
-                            <p className="text-sm text-gray-800">{message.content}</p>
+                            {message.isThinking ? (
+                              // AI思考中状态
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <div className="flex space-x-1">
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                                </div>
+                                <span>AI正在思考中...</span>
+                              </div>
+                            ) : (
+                              <div className="text-sm prose prose-sm max-w-none">
+                                <ReactMarkdown>{message.content}</ReactMarkdown>
+                              </div>
+                            )}
                             
                             {/* 显示生成的提示词 - 可交互选择 */}
-                            {message.prompts && message.prompts.length > 0 && (
+                            {!message.isThinking && message.prompts && message.prompts.length > 0 && (
                               <div className="mt-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <p className="text-xs text-gray-500 font-medium">生成的提示词（点击选择）：</p>
-                                  {(() => {
-                                    // 获取当前消息关联的提示词
-                                    const messagePrompts = message.prompts || [];
-                                    const allSelected = messagePrompts.every(p => p && p.selected);
-                                    
-                                    return (
-                                      <button
-                                        onClick={() => {
-                                          messagePrompts.forEach(prompt => {
-                                            if (prompt) {
-                                              const isCurrentlySelected = prompt.selected;
-                                              if (allSelected && isCurrentlySelected) {
-                                                // 如果全部已选中，则取消全选
-                                                onTogglePromptSelection(prompt.id);
-                                              } else if (!allSelected && !isCurrentlySelected) {
-                                                // 如果不是全部选中，则选中未选中的
-                                                onTogglePromptSelection(prompt.id);
-                                              }
-                                            }
-                                          });
-                                        }}
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          allSelected 
-                                            ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:border-green-300' 
-                                            : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-                                        }`}
-                                        title={allSelected ? '取消选择所有提示词' : '选择所有提示词'}
-                                      >
-                                        {allSelected ? (
-                                          <>
-                                            <Check className="w-3 h-3" />
-                                            取消全选
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Square className="w-3 h-3" />
-                                            全选
-                                          </>
-                                        )}
-                                      </button>
-                                    );
-                                  })()}
+                                  {renderSelectAllButton(message.prompts || [], onTogglePromptSelection)}
                                 </div>
                                 <div className="space-y-2">
-                                  {message.prompts?.map((prompt, pIndex) => {
-                                    
+                                  {message.prompts?.map((prompt) => {
                                     const isSelected = prompt.selected;
                                     const isSelectedForOptimization = selectedPromptsForOptimization.includes(prompt.id);
                                     
                                     return (
                                       <div 
-                                        key={pIndex} 
+                                        key={prompt.id} 
                                         className={`text-xs p-3 rounded border-2 transition-all duration-200 ${
                                           isSelected 
                                             ? 'bg-blue-50 border-blue-300 shadow-sm' 
@@ -329,13 +366,13 @@ export function PromptGenerationStep({
           
           {/* 底部区域：优化状态提示 + 输入框 */}
           <div className="border-t border-gray-200 p-6 space-y-4">
-            {/* 优化状态提示 */}
+            {/* 优化提示词标签显示 */}
             {selectedPromptsForOptimization.length > 0 && (
-              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg space-y-2">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-purple-600" />
                   <span className="text-sm text-purple-700 font-medium">
-                    已选择 {selectedPromptsForOptimization.length} 个提示词待优化
+                    待优化的提示词：
                   </span>
                   <button
                     onClick={() => setSelectedPromptsForOptimization([])}
@@ -343,6 +380,28 @@ export function PromptGenerationStep({
                   >
                     清空选择
                   </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedPromptsForOptimization.map(promptId => {
+                    const prompt = session.prompts?.get(promptId);
+                    if (!prompt) return null;
+                    
+                    return (
+                      <div
+                        key={promptId}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-purple-200 rounded-full text-sm text-purple-700"
+                      >
+                        <span className="max-w-32 truncate">{prompt.text}</span>
+                        <button
+                          onClick={() => onTogglePromptForOptimization(promptId)}
+                          className="w-4 h-4 rounded-full bg-purple-200 hover:bg-purple-300 flex items-center justify-center"
+                          title="移除此提示词"
+                        >
+                          <span className="text-xs text-purple-600">×</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -352,7 +411,11 @@ export function PromptGenerationStep({
               <Input
                 value={currentChatInput}
                 onChange={(e) => setCurrentChatInput(e.target.value)}
-                placeholder="描述您要制作的商品图片，例如：为苹果手机制作白底产品图..."
+                placeholder={
+                  selectedPromptsForOptimization.length > 0 
+                    ? `请输入优化指令，例如：请优化这${selectedPromptsForOptimization.length}个提示词...`
+                    : "描述您要制作的商品图片，例如：为苹果手机制作白底产品图..."
+                }
                 onKeyDown={(e) => e.key === 'Enter' && !isGeneratingPrompts && onChatSubmit()}
                 className="flex-1"
                 disabled={isGeneratingPrompts}
@@ -362,7 +425,7 @@ export function PromptGenerationStep({
                 disabled={!currentChatInput.trim() || isGeneratingPrompts}
                 size="lg"
               >
-                {isGeneratingPrompts ? '生成中...' : '发送'}
+                {isGeneratingPrompts ? '生成中...' : (selectedPromptsForOptimization.length > 0 ? '优化' : '发送')}
               </Button>
             </div>
           </div>

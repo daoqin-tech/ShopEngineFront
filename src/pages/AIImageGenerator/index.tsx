@@ -6,7 +6,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { StepIndicator } from './StepIndicator';
 import { PromptGenerationStep } from './PromptGenerationStep';
 import { ImageGenerationStep } from './ImageGenerationStep';
-import { AIImageSession, Step, PromptWithSelection, PromptSource } from './types';
+import { AIImageSession, Step, Prompt, GeneratedImage, ExtendedAIImageSession } from './types';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 
@@ -19,14 +19,12 @@ export function AIImageGenerator() {
   const [session, setSession] = useState<AIImageSession>({
     id: projectId || '',
     projectId: projectId || '',
-    prompts: new Map(),
-    images: new Map(),
-    conversation: {
-      id: 'conv-1',
-      timestamp: new Date().toISOString(),
-      messages: []
-    }
+    messages: []
   });
+  
+  // 前端UI状态管理
+  const [promptsMap, setPromptsMap] = useState<Map<string, Prompt>>(new Map());
+  const [imagesMap, setImagesMap] = useState<Map<string, GeneratedImage>>(new Map());
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [currentChatInput, setCurrentChatInput] = useState('');
@@ -60,104 +58,62 @@ export function AIImageGenerator() {
     try {
       const sessionData = await AIImageSessionsAPI.getProjectSession(id);
       setSession(sessionData);
+      
+      // 从messages中提取prompts
+      const extractedPromptsMap = new Map<string, Prompt>();
+      if (sessionData.messages) {
+        sessionData.messages.forEach(message => {
+          // 如果消息包含prompts数组，将它们添加到promptsMap中
+          if (message.prompts && Array.isArray(message.prompts)) {
+            message.prompts.forEach(prompt => {
+              extractedPromptsMap.set(prompt.id, prompt);
+            });
+          }
+        });
+      }
+      setPromptsMap(extractedPromptsMap);
+      
+      // imagesMap 暂时保持为空，如你所说后续会处理
+      setImagesMap(new Map());
     } catch (err) {
       console.error('Error loading session:', err);
       // 后端保证会话存在，如果到这里说明网络或其他错误
     }
   };
 
-  const extractNumberFromText = (text: string): number | null => {
-    const match = text.match(/(\\d+)/);
-    return match ? parseInt(match[1]) : null;
-  };
-
-  const generatePromptsFromChat = async (userInput: string) => {
-    if (!userInput.trim()) return;
-    
-    setIsGeneratingPrompts(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // 根据用户输入智能生成提示词
-      const keywords = userInput.toLowerCase();
-      let basePrompts: string[] = [];
-      
-      if (keywords.includes('手机') || keywords.includes('iphone') || keywords.includes('苹果')) {
-        basePrompts = [
-          '高质量苹果手机产品摄影，白色背景，专业灯光',
-          '苹果手机商业摄影，简约风格，柔和阴影',
-          '苹果手机电商主图，清晰细节，中性色调',
-          '苹果手机产品展示，现代简约，高端质感'
-        ];
-      } else if (keywords.includes('鞋') || keywords.includes('运动')) {
-        basePrompts = [
-          '高质量运动鞋产品摄影，白色背景，专业灯光',
-          '运动鞋商业摄影，简约风格，柔和阴影',
-          '运动鞋电商主图，清晰细节，中性色调',
-          '运动鞋产品展示，现代简约，高端质感'
-        ];
-      } else if (keywords.includes('english') || keywords.includes('英文')) {
-        basePrompts = [
-          'High-quality product photography, white background, professional lighting',
-          'Commercial photography, minimalist style, soft shadows',
-          'E-commerce main image, clear details, neutral tones',
-          'Product showcase, modern minimalist, premium texture'
-        ];
-      } else {
-        // 通用提示词生成，根据用户输入的数量决定
-        const requestedCount = extractNumberFromText(userInput) || 4;
-        basePrompts = [
-          '高质量产品摄影，白色背景，专业灯光',
-          '商业摄影，简约风格，柔和阴影',
-          '电商主图，清晰细节，中性色调',
-          '产品展示，现代简约，高端质感',
-          '特写镜头，突出质感，工作室灯光',
-          '平面广告，创意构图，视觉冲击',
-          'lifestyle场景，自然环境，生活化',
-          'minimalist风格，极简设计，留白艺术',
-          '360度展示，多角度，全方位视角'
-        ].slice(0, requestedCount);
-      }
-      
-      const newPrompts = basePrompts.map((text, index) => ({
-        id: String(Date.now() + index),
-        text,
-        source: PromptSource.CONVERSATION,
-        createdAt: new Date().toISOString(),
-        selected: false
-      }));
-      
-      return newPrompts;
-    } catch (error) {
-      console.error('生成提示词失败:', error);
-      return [];
-    } finally {
-      setIsGeneratingPrompts(false);
-    }
-  };
 
   const togglePromptSelection = (id: string) => {
-    setSession(prev => {
-      const newPromptsMap = new Map(prev.prompts);
-      const prompt = newPromptsMap.get(id);
-      
-      if (prompt) {
-        newPromptsMap.set(id, {
-          ...prompt,
-          selected: !prompt.selected
-        });
-      }
+    const prompt = promptsMap.get(id);
+    if (!prompt) return;
 
-      return {
-        ...prev,
-        prompts: newPromptsMap
-      };
+    const updatedPrompt = {
+      ...prompt,
+      selected: !prompt.selected
+    };
+
+    // 更新 promptsMap
+    setPromptsMap(prev => {
+      const newPromptsMap = new Map(prev);
+      newPromptsMap.set(id, updatedPrompt);
+      return newPromptsMap;
     });
+
+    // 更新session.messages中对应的prompt数据
+    setSession(prevSession => ({
+      ...prevSession,
+      messages: prevSession.messages.map(message => ({
+        ...message,
+        prompts: message.prompts?.map(p => 
+          p.id === id ? updatedPrompt : p
+        )
+      }))
+    }));
+
     setHasUnsavedChanges(true);
   };
 
   const generateImages = async () => {
-    const selectedPrompts = Array.from(session.prompts.values()).filter(p => p.selected);
+    const selectedPrompts = Array.from(promptsMap.values()).filter(p => p.selected);
     if (selectedPrompts.length === 0) return;
     
     setIsGeneratingImages(true);
@@ -165,11 +121,11 @@ export function AIImageGenerator() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // 为选中的提示词生成图片，创建独立的图片对象
-      setSession(prev => {
-        const newImagesMap = new Map(prev.images);
+      setImagesMap(prev => {
+        const newImagesMap = new Map(prev);
         
         selectedPrompts.forEach(prompt => {
-          const imageId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const imageId = `img-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
           const newImage = {
             id: imageId,
             promptId: prompt.id,
@@ -186,10 +142,7 @@ export function AIImageGenerator() {
           newImagesMap.set(imageId, newImage);
         });
         
-        return {
-          ...prev,
-          images: newImagesMap
-        };
+        return newImagesMap;
       });
       setHasUnsavedChanges(true);
     } catch (error) {
@@ -205,26 +158,6 @@ export function AIImageGenerator() {
         ? prev.filter(id => id !== promptId)
         : [...prev, promptId];
       
-      // 自动更新输入框内容
-      if (newSelection.length > 0) {
-        const selectedPrompts = newSelection.map(id => session.prompts.get(id)).filter((p): p is PromptWithSelection => p !== undefined);
-        const promptTexts = selectedPrompts.map(p => `"${p.text}"`).join('、');
-        
-        const optimizationRequest = `请帮我优化这${selectedPrompts.length}个提示词：${promptTexts}`;
-        
-        setCurrentChatInput(optimizationRequest);
-        
-        // 聚焦到输入框但不滚动
-        setTimeout(() => {
-          const inputElement = document.querySelector('input[placeholder*="描述"]') as HTMLInputElement;
-          if (inputElement) {
-            inputElement.focus({ preventScroll: true });
-          }
-        }, 100);
-      } else {
-        setCurrentChatInput('');
-      }
-      
       return newSelection;
     });
   };
@@ -233,117 +166,77 @@ export function AIImageGenerator() {
     if (!currentChatInput.trim()) return;
     
     const userMessage = currentChatInput;
-    const isOptimizationRequest = selectedPromptsForOptimization.length > 0 && (userMessage.includes('优化') || userMessage.includes('optimize'));
-    
     setCurrentChatInput('');
     setIsGeneratingPrompts(true);
     
+    // 获取选中用于优化的提示词
+    const selectedOptimizationPrompts = selectedPromptsForOptimization.length > 0 
+      ? selectedPromptsForOptimization.map(id => promptsMap.get(id)).filter((p): p is Prompt => p !== undefined)
+      : undefined;
+
+    // 立即调用后端接口添加用户消息
     try {
-      if (isOptimizationRequest && selectedPromptsForOptimization.length > 0) {
-        // 处理多个提示词优化请求
-        setTimeout(() => {
-          // 从提示词Map中查找要优化的提示词
-          const originalPrompts = selectedPromptsForOptimization
-            .map(id => session.prompts.get(id))
-            .filter(Boolean) as Array<PromptWithSelection>;
-          
-          if (originalPrompts.length > 0) {
-            // 模拟AI优化多个提示词
-            const timestamp = new Date().toISOString();
-            
-            const optimizedPrompts = originalPrompts.map((prompt, index) => {
-              const optimizedText = `${prompt.text}，4K超高清，专业摄影设备拍摄，完美光影效果，电影级质感`;
-              
-              return {
-                id: `optimized-${Date.now()}-${index}`,
-                text: optimizedText,
-                source: PromptSource.CONVERSATION,
-                createdAt: timestamp,
-                selected: false
-              };
-            });
-            
-            const assistantResponse = `我已经为您优化了这${originalPrompts.length}个提示词，为每个都增加了更多专业细节和质感描述。优化后的版本应该能产生更高质量的图片效果。`;
-            
-            setSession(prev => {
-              const newPromptsMap = new Map(prev.prompts);
-              optimizedPrompts.forEach(prompt => {
-                newPromptsMap.set(prompt.id, prompt);
-              });
-              
-              return {
-                ...prev,
-                prompts: newPromptsMap,
-                conversation: {
-                  ...prev.conversation,
-                  messages: [...prev.conversation.messages,
-                    { role: 'user', content: userMessage },
-                    { 
-                      role: 'assistant', 
-                      content: assistantResponse,
-                      prompts: optimizedPrompts
-                    }
-                  ]
-                }
-              };
-            });
-          }
-          
-          setSelectedPromptsForOptimization([]);
-          setHasUnsavedChanges(true);
-          setIsGeneratingPrompts(false);
-        }, 1500);
-      } else {
-        // 处理常规对话和提示词生成
-        const newPrompts = await generatePromptsFromChat(userMessage);
-        
-        setTimeout(() => {
-          if (newPrompts && newPrompts.length > 0) {
-            // 使用生成的提示词
-            const updatedPrompts = newPrompts;
-            
-            const assistantResponse = `我理解您的需求，已为您生成了${newPrompts.length}个AI提示词。您可以选择合适的提示词来生成图片。`;
-            
-            setSession(prev => {
-              const newPromptsMap = new Map(prev.prompts);
-              updatedPrompts.forEach(prompt => {
-                newPromptsMap.set(prompt.id, prompt);
-              });
-              
-              return {
-                ...prev,
-                prompts: newPromptsMap,
-                conversation: {
-                  ...prev.conversation,
-                  messages: [...prev.conversation.messages,
-                    { role: 'user', content: userMessage },
-                    { 
-                      role: 'assistant', 
-                      content: assistantResponse,
-                      prompts: updatedPrompts
-                    }
-                  ]
-                }
-              };
-            });
-          } else {
-            setSession(prev => ({
-              ...prev,
-              conversation: {
-                ...prev.conversation,
-                messages: [...prev.conversation.messages,
-                  { role: 'user', content: userMessage },
-                  { role: 'assistant', content: '抱歉，生成提示词时出现问题，请重试。' }
-                ]
-              }
-            }));
-          }
-          setHasUnsavedChanges(true);
-          setIsGeneratingPrompts(false);
-        }, 1500);
+      const userMessageObj = await AIImageSessionsAPI.addUserMessage(session.id, userMessage, selectedOptimizationPrompts);
+      
+      setSession(prev => ({
+        ...prev,
+        messages: [...prev.messages, userMessageObj]
+      }));
+    } catch (error) {
+      console.error('添加用户消息失败:', error);
+      setIsGeneratingPrompts(false);
+      return;
+    }
+
+    // 添加AI正在思考的占位消息
+    const thinkingMessageId = `msg-${Date.now()}-thinking`;
+    setSession(prev => ({
+      ...prev,
+      messages: [...prev.messages, {
+        id: thinkingMessageId,
+        role: 'assistant' as const,
+        content: '',
+        isThinking: true // 标记为思考状态
+      }]
+    }));
+    
+    try {
+      // 触发AI处理最新的用户消息
+      const aiMessage = await AIImageSessionsAPI.processAIResponse(session.id);
+      
+      // 移除思考占位消息，添加实际的AI回复
+      setSession(prev => {
+        const messagesWithoutThinking = prev.messages.filter(msg => msg.id !== thinkingMessageId);
+        return {
+          ...prev,
+          messages: [...messagesWithoutThinking, aiMessage]
+        };
+      });
+      
+      // 从AI消息中提取新的 prompts
+      if (aiMessage.prompts && Array.isArray(aiMessage.prompts)) {
+        setPromptsMap(prev => {
+          const newPromptsMap = new Map(prev);
+          aiMessage.prompts!.forEach(prompt => {
+            newPromptsMap.set(prompt.id, prompt);
+          });
+          return newPromptsMap;
+        });
       }
+      
+      // 清除优化选择状态
+      setSelectedPromptsForOptimization([]);
+      setHasUnsavedChanges(true);
     } catch (error) {
       console.error('处理对话失败:', error);
+      // 移除思考占位消息，添加错误消息
+      setSession(prev => ({
+        ...prev,
+        messages: prev.messages.filter(msg => msg.id !== thinkingMessageId).concat([
+          { id: `msg-${Date.now()}-error`, role: 'assistant', content: '抱歉，处理消息时出现问题，请重试。' }
+        ])
+      }));
+    } finally {
       setIsGeneratingPrompts(false);
     }
   };
@@ -351,7 +244,7 @@ export function AIImageGenerator() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const savedSession = await AIImageSessionsAPI.saveAIImageSession(session);
+      const savedSession = await AIImageSessionsAPI.saveAIImageSession(session, promptsMap, imagesMap);
       setSession(savedSession);
       setHasUnsavedChanges(false);
       console.log('AI生图会话已保存:', savedSession);
@@ -374,7 +267,7 @@ export function AIImageGenerator() {
   };
 
   const handleStepClick = (step: Step) => {
-    const selectedCount = Array.from(session.prompts.values()).filter(p => p.selected).length;
+    const selectedCount = Array.from(promptsMap.values()).filter(p => p.selected).length;
     if (step === Step.IMAGE_GENERATION && selectedCount === 0) {
       return; // 不允许跳转到第二步如果没有选中的提示词
     }
@@ -382,17 +275,17 @@ export function AIImageGenerator() {
   };
 
   const goToStep2 = () => {
-    const selectedCount = Array.from(session.prompts.values()).filter(p => p.selected).length;
+    const selectedCount = Array.from(promptsMap.values()).filter(p => p.selected).length;
     if (currentStep === Step.PROMPT_GENERATION && selectedCount > 0) {
       setCurrentStep(Step.IMAGE_GENERATION);
     }
   };
 
-  const canAccessStep2 = Array.from(session.prompts.values()).filter(p => p.selected).length > 0;
+  const canAccessStep2 = Array.from(promptsMap.values()).filter(p => p.selected).length > 0;
 
   const updatePromptText = (id: string, newText: string) => {
-    setSession(prev => {
-      const newPromptsMap = new Map(prev.prompts);
+    setPromptsMap(prev => {
+      const newPromptsMap = new Map(prev);
       const prompt = newPromptsMap.get(id);
       if (prompt) {
         newPromptsMap.set(id, {
@@ -400,17 +293,21 @@ export function AIImageGenerator() {
           text: newText
         });
       }
-      return {
-        ...prev,
-        prompts: newPromptsMap
-      };
+      return newPromptsMap;
     });
     setHasUnsavedChanges(true);
   };
 
   // 辅助函数：获取某个提示词的图片
   const getImagesForPrompt = (promptId: string) => {
-    return Array.from(session.images.values()).filter(img => img.promptId === promptId);
+    return Array.from(imagesMap.values()).filter(img => img.promptId === promptId);
+  };
+
+  // 为子组件创建扩展的session对象，保持兼容性
+  const extendedSession: ExtendedAIImageSession = {
+    ...session,
+    prompts: promptsMap,
+    images: imagesMap
   };
 
   return (
@@ -453,7 +350,7 @@ export function AIImageGenerator() {
         {/* 条件渲染的步骤内容 */}
         {currentStep === Step.PROMPT_GENERATION && (
           <PromptGenerationStep 
-            session={session}
+            session={extendedSession}
             isGeneratingPrompts={isGeneratingPrompts}
             currentChatInput={currentChatInput}
             setCurrentChatInput={setCurrentChatInput}
@@ -471,7 +368,7 @@ export function AIImageGenerator() {
 
         {currentStep === Step.IMAGE_GENERATION && (
           <ImageGenerationStep 
-            session={session}
+            session={extendedSession}
             isGeneratingImages={isGeneratingImages}
             onGenerateImages={generateImages}
           />
