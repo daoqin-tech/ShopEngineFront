@@ -22,6 +22,15 @@ import { Toaster } from "sonner"
 function AppContent() {
   const location = useLocation()
   
+  // Check if current route is AIImageGenerator - render without sidebar
+  if (location.pathname.startsWith('/materials/project/') && location.pathname.endsWith('/edit')) {
+    return (
+      <Routes>
+        <Route path="/materials/project/:projectId/edit" element={<AIImageGenerator />} />
+      </Routes>
+    )
+  }
+  
   const getBreadcrumbItems = () => {
     const path = location.pathname
     
@@ -29,11 +38,6 @@ function AppContent() {
       return {
         parent: { name: '图片素材制作', href: '/materials' },
         current: 'AI商品制图'
-      }
-    } else if (path.startsWith('/materials/project/')) {
-      return {
-        parent: { name: 'AI商品制图', href: '/materials/product-images' },
-        current: 'AI生图'
       }
     } else if (path === '/materials/image-editor') {
       return {
@@ -87,7 +91,6 @@ function AppContent() {
             <Route path="/" element={<AIImageProjects />} />
             <Route path="/materials" element={<AIImageProjects />} />
             <Route path="/materials/product-images" element={<AIImageProjects />} />
-            <Route path="/materials/project/:projectId/edit" element={<AIImageGenerator />} />
             <Route path="/materials/image-editor" element={<ImageEditor />} />
           </Routes>
         </div>

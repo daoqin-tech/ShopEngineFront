@@ -5,26 +5,31 @@ export enum PromptSource {
   TEMPLATE = 'template' // 模板库
 }
 
+export enum PromptStatus {
+  PENDING = 'pending', // 刚创建，未提交
+  QUEUED = 'queued', // 已提交到队列，排队等待
+  PROCESSING = 'processing', // 处理中
+  COMPLETED = 'completed', // 生成成功
+  FAILED = 'failed' // 生成失败
+}
+
 export interface Prompt {
   id: string;
   text: string;
   source: PromptSource; // 提示词来源
   createdAt: string;
-  selected: boolean; // UI状态：是否被选中
+  status: PromptStatus; // 生成状态
 }
 
 export interface GeneratedImage {
   id: string;
   promptId: string; // 关联的提示词ID
+  promptText: string; // 提示词文本
   imageUrl: string;
   createdAt: string;
-  status: 'generating' | 'completed' | 'failed'; // 生成状态
-  metadata?: {
-    width?: number;
-    height?: number;
-    model?: string; // AI模型名称
-    seed?: number; // 随机种子
-  };
+  status: PromptStatus; // 生成状态，与PromptStatus一致
+  width: number; // 图片宽度
+  height: number; // 图片高度
 }
 
 export interface Message {
@@ -59,6 +64,7 @@ export interface ExtendedAIImageSession extends AIImageSession {
 
 export interface PromptGenerationStepProps {
   session: ExtendedAIImageSession;
+  selectedPromptIds: Set<string>; // UI状态：选中的提示词ID
   isGeneratingPrompts: boolean;
   currentChatInput: string;
   setCurrentChatInput: (value: string) => void;
@@ -66,16 +72,78 @@ export interface PromptGenerationStepProps {
   setSelectedPromptsForOptimization: (value: string[]) => void;
   onTogglePromptSelection: (id: string) => void;
   onTogglePromptForOptimization: (id: string) => void;
-  onUpdatePromptText: (id: string, newText: string) => void;
   onChatSubmit: () => void;
-  onNextStep: () => void;
-  canGoToNextStep: boolean;
-  getImagesForPrompt: (promptId: string) => GeneratedImage[];
 }
 
 
+// 图片比例预设
+export interface AspectRatio {
+  name: string;
+  label: string;
+  width: number;
+  height: number;
+  description: string;
+}
+
+// 图片生成参数（UI层面）
+export interface ImageGenerationParams {
+  width: number;
+  height: number;
+  aspectRatio: string;
+}
+
+// 图片生成API请求参数
+export interface ImageGenerationRequest {
+  projectId: string;
+  promptIds: string[];
+  width: number;
+  height: number;
+}
+
+// 图片生成API响应
+export interface GenerateImageBatchResponse {
+  taskIDs: string[];
+  totalTasks: number;
+}
+
+// 批量状态查询响应
+export interface BatchStatusResponse {
+  project_id: string;
+  results: PromptGenerationResult[];
+}
+
+// 提示词生成结果
+export interface PromptGenerationResult {
+  prompt_id: string;
+  status: string;
+  task_id?: string;
+  images?: GeneratedImageInfo[];
+  error?: string;
+}
+
+// 生成的图片信息
+export interface GeneratedImageInfo {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  file_size: number;
+}
+
+// 单个提示词生成状态 (保留旧的接口以兼容现有代码)
+export interface PromptGenerationStatus {
+  promptId: string;
+  status: PromptStatus;
+  progress?: number; // 0-100
+  imageUrl?: string;
+  error?: string;
+  completedAt?: string;
+}
+
 export interface ImageGenerationStepProps {
-  session: AIImageSession;
-  isGeneratingImages: boolean;
-  onGenerateImages: () => void;
+  session: ExtendedAIImageSession;
+  selectedPromptIds: Set<string>; // UI状态：选中的提示词ID
+  onGenerateImages: (params: ImageGenerationParams) => void;
+  refreshTrigger?: number; // 触发历史数据重新加载
+  projectName?: string; // 项目名称，用于导出文件命名
 }

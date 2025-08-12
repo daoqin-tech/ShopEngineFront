@@ -1,12 +1,10 @@
 import { apiClient } from '@/lib/api';
-import { AIImageSession, Prompt, GeneratedImage, Message } from '@/pages/AIImageGenerator/types';
+import { AIImageSession, Prompt, GeneratedImage, Message, ImageGenerationRequest, BatchStatusResponse, GenerateImageBatchResponse } from '@/pages/AIImageGenerator/types';
 
 // API响应的数据结构（来自后端）
 export interface AIImageSessionResponse {
   id: string;
   projectId: string;
-  prompts: Prompt[];
-  images: GeneratedImage[];
   messages: Message[];
   createdAt: string;
   updatedAt: string;
@@ -21,15 +19,11 @@ export interface UpdateAIImageSessionRequest {
 }
 
 export class AIImageSessionsAPI {
-  // 获取项目会话（不存在则自动创建）
-  static async getProjectSession(projectId: string): Promise<AIImageSession> {
+
+  // 获取会话的完整数据
+  static async getFullSessionData(projectId: string): Promise<AIImageSessionResponse> {
     const response = await apiClient.get(`/sessions/by-project/${projectId}`);
-    const sessionData: AIImageSessionResponse = response.data;
-    return {
-      id: sessionData.id,
-      projectId: sessionData.projectId,
-      messages: sessionData.messages
-    };
+    return response.data;
   }
 
   // 更新会话
@@ -59,7 +53,7 @@ export class AIImageSessionsAPI {
   // 触发AI处理最新的用户消息
   static async processAIResponse(sessionId: string): Promise<Message> {
     const response = await apiClient.post(`/sessions/${sessionId}/chat`);
-    return response.data; // 直接返回AI回复的消息对象
+    return response.data; // 直接返回AI回复的消息对象（包含prompts，默认status为PENDING）
   }
 
   // 保存会话
@@ -77,9 +71,21 @@ export class AIImageSessionsAPI {
     return this.updateAIImageSession(session.id, updateData);
   }
 
-  // 删除会话
-  static async deleteAIImageSession(sessionId: string): Promise<null> {
-    const response = await apiClient.delete(`/sessions/${sessionId}`);
+  // 提交图片生成任务（异步，立即返回）
+  static async startImageGeneration(request: ImageGenerationRequest): Promise<GenerateImageBatchResponse> {
+    const response = await apiClient.post('/images/generate', request);
+    return response.data;
+  }
+
+  // 批量查询提示词生成状态
+  static async getBatchGenerationStatus(projectId: string, promptIds: string[]): Promise<BatchStatusResponse> {
+    const response = await apiClient.post(`/images/${projectId}/generation-status`, { promptIds });
+    return response.data;
+  }
+
+  // 获取项目的所有图片
+  static async loadImages(projectId: string): Promise<GeneratedImage[]> {
+    const response = await apiClient.get(`/images/project/${projectId}`);
     return response.data;
   }
 }
