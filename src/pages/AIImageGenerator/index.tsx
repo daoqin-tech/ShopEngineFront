@@ -322,12 +322,6 @@ export function AIImageGenerator() {
   const [showImageGeneration, setShowImageGeneration] = useState(false);
   
   
-  // 默认生成参数 (符合FLUX API要求)
-  const getDefaultGenerationParams = (): ImageGenerationParams => ({
-    width: 1024,
-    height: 768,
-    aspectRatio: 'cinema'
-  });
 
 
 
@@ -460,22 +454,6 @@ export function AIImageGenerator() {
                       {hasSelectedPrompts ? `下一步 (${selectedPromptIds.size} 个提示词)` : '下一步'}
                     </Button>
                   )}
-                  {showImageGeneration && hasSelectedPrompts && (
-                    <Button 
-                      onClick={() => generateImages(getDefaultGenerationParams())}
-                      disabled={isGeneratingImages}
-                      className="bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isGeneratingImages ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          提交中...
-                        </>
-                      ) : (
-                        '提交任务'
-                      )}
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
@@ -503,6 +481,7 @@ export function AIImageGenerator() {
                 onGenerateImages={generateImages}
                 refreshTrigger={historyRefreshTrigger}
                 projectName={project?.name}
+                isGeneratingImages={isGeneratingImages}
               />
             )}
           </div>

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical } from 'lucide-react';
 import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
+import { FileUploadAPI } from '@/services/fileUpload';
 
 // 预设的图片比例和尺寸 (符合FLUX API要求: 256-1440px, 32的倍数)
 const ASPECT_RATIOS: AspectRatio[] = [
@@ -25,10 +26,10 @@ const validateDimension = (value: number): number => {
 export function ImageGenerationStep({ 
   session,
   selectedPromptIds,
-  // @ts-expect-error - onGenerateImages is passed by parent component but not used in current card design
-  onGenerateImages, // eslint-disable-line @typescript-eslint/no-unused-vars
+  onGenerateImages,
   refreshTrigger,
-  projectName
+  projectName,
+  isGeneratingImages
 }: ImageGenerationStepProps) {
   const selectedPrompts = Array.from(session.prompts?.values() || []).filter(p => selectedPromptIds.has(p.id));
   
@@ -56,6 +57,10 @@ export function ImageGenerationStep({
   const [showPdfDialog, setShowPdfDialog] = useState(false);
   const [pdfImages, setPdfImages] = useState<GeneratedImage[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // 文件上传相关状态
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 历史图片状态
   const [historicalImages, setHistoricalImages] = useState<GeneratedImage[]>([]);
@@ -67,7 +72,7 @@ export function ImageGenerationStep({
       
       AIImageSessionsAPI.loadImages(session.projectId)
         .then((images) => {
-          setHistoricalImages(images);
+          setHistoricalImages(images || []);
         })
         .catch((error) => {
           console.error('Error loading images:', error);
@@ -85,7 +90,7 @@ export function ImageGenerationStep({
       
       AIImageSessionsAPI.loadImages(session.projectId)
         .then((images) => {
-          setHistoricalImages(images);
+          setHistoricalImages(images || []);
         })
         .catch((error) => {
           console.error('Error refreshing images:', error);
@@ -111,7 +116,7 @@ export function ImageGenerationStep({
   }, [previewImage]);
 
   // 获取可导出的图片（只有COMPLETED状态的图片）
-  const completedImages = historicalImages.filter(img => img.status === PromptStatus.COMPLETED);
+  const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
   
   // 不再默认全选图片
 
@@ -217,6 +222,55 @@ export function ImageGenerationStep({
     const [removed] = newPdfImages.splice(dragIndex, 1);
     newPdfImages.splice(dropIndex, 0, removed);
     setPdfImages(newPdfImages);
+  };
+
+  // 处理上传点击
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // 处理文件上传
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    
+    try {
+      // 验证所有文件
+      files.forEach(file => {
+        FileUploadAPI.validateFile(file, 10 * 1024 * 1024); // 10MB限制
+      });
+
+      // 上传文件到腾讯云
+      const uploadedUrls = await FileUploadAPI.uploadFiles(files);
+      
+      // 将上传的图片转换为GeneratedImage格式并添加到PDF图片列表
+      const uploadedImages: GeneratedImage[] = uploadedUrls.map((url, index) => ({
+        id: `uploaded-${Date.now()}-${index}`,
+        promptId: 'uploaded',
+        promptText: '用户上传的图片',
+        imageUrl: url,
+        createdAt: new Date().toISOString(),
+        status: PromptStatus.COMPLETED,
+        width: 0, // 实际宽高需要从图片文件获取，这里先设为0
+        height: 0
+      }));
+      
+      // 添加到PDF图片列表
+      setPdfImages(prev => [...prev, ...uploadedImages]);
+      
+      // 清空文件输入
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+    } catch (error) {
+      console.error('文件上传失败:', error);
+      alert(error instanceof Error ? error.message : '文件上传失败，请重试');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // 生成PDF
@@ -517,16 +571,34 @@ export function ImageGenerationStep({
                     选中的提示词将生成对应的图片
                   </p>
                 </div>
+                <Button 
+                  onClick={() => onGenerateImages({
+                    width: useCustomSize ? customWidth : selectedAspectRatio.width,
+                    height: useCustomSize ? customHeight : selectedAspectRatio.height,
+                    aspectRatio: selectedAspectRatio.name
+                  })}
+                  disabled={isGeneratingImages}
+                  className="disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingImages ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                      生成中...
+                    </>
+                  ) : (
+                    '生成图片'
+                  )}
+                </Button>
               </div>
               
-              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
                 {selectedPrompts.map((prompt) => {
                   return (
                     <div key={prompt.id} className="group relative border border-dashed border-gray-300 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-all duration-200">
                       <div className="p-4">
                         <div className="space-y-3">
                           {/* 提示词文本 */}
-                          <div className="relative">
+                          <div className="relative cursor-default">
                             <div 
                               className="text-sm text-gray-700 leading-relaxed relative"
                               title={prompt.text}
@@ -641,14 +713,6 @@ export function ImageGenerationStep({
                 <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-lg text-gray-900 font-medium mb-2">加载历史数据中...</p>
                 <p className="text-sm text-gray-500">正在检查已生成的图片</p>
-              </div>
-            ) : historicalImages.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="w-10 h-10 text-gray-400" />
-                </div>
-                <p className="text-lg text-gray-900 font-medium mb-2">暂无历史图片</p>
-                <p className="text-sm text-gray-500">生成的图片将在这里显示</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
@@ -765,15 +829,6 @@ export function ImageGenerationStep({
             )}
           </div>
 
-          {selectedPrompts.length === 0 && historicalImages.length === 0 && !isLoadingHistoricalData && (
-            <div className="text-center py-20">
-              <div className="w-24 h-24 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center mx-auto mb-6">
-                <MessageSquare className="w-12 h-12 text-gray-400" />
-              </div>
-              <p className="text-lg text-gray-900 font-medium mb-2">暂无内容</p>
-              <p className="text-sm text-gray-500">请先在上一步选择提示词，或等待历史图片加载</p>
-            </div>
-          )}
           
         </div>
 
@@ -849,12 +904,30 @@ export function ImageGenerationStep({
                         <Button 
                           variant="outline" 
                           size="sm"
-                          disabled={true}
+                          onClick={handleUploadClick}
+                          disabled={isUploading}
                           className="border-gray-300 text-gray-700"
                         >
-                          <Upload className="w-4 h-4 mr-2" />
-                          上传图片
+                          {isUploading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              上传中...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              上传图片
+                            </>
+                          )}
                         </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
                       </div>
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
                         <p className="text-sm text-gray-600">
@@ -888,7 +961,7 @@ export function ImageGenerationStep({
                             <img 
                               src={image.imageUrl}
                               alt={`页面 ${index + 1}`}
-                              className="w-full h-32 object-contain rounded border border-gray-100"
+                              className="w-full h-32 rounded border border-gray-100"
                             />
                           </div>
 

@@ -146,4 +146,5 @@ export interface ImageGenerationStepProps {
   onGenerateImages: (params: ImageGenerationParams) => void;
   refreshTrigger?: number; // 触发历史数据重新加载
   projectName?: string; // 项目名称，用于导出文件命名
+  isGeneratingImages?: boolean; // 是否正在生成图片
 }
