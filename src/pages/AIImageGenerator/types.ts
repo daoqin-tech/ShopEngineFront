@@ -85,6 +85,16 @@ export interface AspectRatio {
   description: string;
 }
 
+// 预设的图片比例和尺寸 (符合FLUX API要求: 256-1440px, 32的倍数)
+export const ASPECT_RATIOS: AspectRatio[] = [
+  { name: 'square', label: '1:1', width: 1024, height: 1024, description: '正方形 - 适合头像、LOGO' },
+  { name: 'landscape', label: '16:9', width: 1440, height: 832, description: '横向 - 适合横幅、背景' },
+  { name: 'portrait', label: '9:16', width: 832, height: 1440, description: '竖向 - 适合海报、封面' },
+  { name: 'widescreen', label: '21:9', width: 1344, height: 576, description: '超宽屏 - 适合全景图' },
+  { name: 'standard', label: '4:3', width: 1152, height: 864, description: '标准 - 适合产品图' },
+  { name: 'cinema', label: '3:2', width: 1152, height: 768, description: '电影比例 - 适合风景图' }
+];
+
 // 图片生成参数（UI层面）
 export interface ImageGenerationParams {
   width: number;

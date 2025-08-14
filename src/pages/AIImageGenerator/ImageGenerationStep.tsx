@@ -1,19 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical } from 'lucide-react';
-import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage } from './types';
+import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage, ASPECT_RATIOS } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
 
-// 预设的图片比例和尺寸 (符合FLUX API要求: 256-1440px, 32的倍数)
-const ASPECT_RATIOS: AspectRatio[] = [
-  { name: 'square', label: '1:1', width: 1024, height: 1024, description: '正方形 - 适合头像、LOGO' },
-  { name: 'landscape', label: '16:9', width: 1440, height: 832, description: '横向 - 适合横幅、背景' },
-  { name: 'portrait', label: '9:16', width: 832, height: 1440, description: '竖向 - 适合海报、封面' },
-  { name: 'widescreen', label: '21:9', width: 1344, height: 576, description: '超宽屏 - 适合全景图' },
-  { name: 'standard', label: '4:3', width: 1152, height: 864, description: '标准 - 适合产品图' },
-  { name: 'cinema', label: '3:2', width: 1152, height: 768, description: '电影比例 - 适合风景图' }
-];
 
 // 验证尺寸是否符合API要求
 const validateDimension = (value: number): number => {
@@ -21,6 +12,28 @@ const validateDimension = (value: number): number => {
   const clamped = Math.max(256, Math.min(1440, value));
   // 确保是32的倍数
   return Math.round(clamped / 32) * 32;
+};
+
+// 获取图片实际尺寸
+const getImageDimensions = (file: File): Promise<{width: number, height: number}> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl); // 清理临时URL
+      resolve({
+        width: img.naturalWidth,
+        height: img.naturalHeight
+      });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl); // 清理临时URL
+      // 如果无法获取尺寸，返回默认值
+      resolve({ width: 800, height: 600 });
+    };
+    img.src = objectUrl;
+  });
 };
 
 export function ImageGenerationStep({ 
@@ -163,12 +176,23 @@ export function ImageGenerationStep({
       // 下载并添加图片到压缩包
       const downloadPromises = selectedImages.map(async (image, index) => {
         try {
-          const response = await fetch(image.imageUrl);
+          const response = await fetch(image.imageUrl, {
+            mode: 'cors',
+            headers: {
+              'Accept': 'image/*',
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
           const blob = await response.blob();
           const filename = `image-${index + 1}-${image.id}.jpg`;
           zip.file(filename, blob);
         } catch (error) {
-          console.error(`下载图片失败: ${image.id}`, error);
+          console.warn(`跳过图片 ${image.id}，CORS限制或网络错误:`, error);
+          // 如果某个图片下载失败，跳过它继续处理其他图片
         }
       });
 
@@ -245,17 +269,22 @@ export function ImageGenerationStep({
       // 上传文件到腾讯云
       const uploadedUrls = await FileUploadAPI.uploadFiles(files);
       
-      // 将上传的图片转换为GeneratedImage格式并添加到PDF图片列表
-      const uploadedImages: GeneratedImage[] = uploadedUrls.map((url, index) => ({
-        id: `uploaded-${Date.now()}-${index}`,
-        promptId: 'uploaded',
-        promptText: '用户上传的图片',
-        imageUrl: url,
-        createdAt: new Date().toISOString(),
-        status: PromptStatus.COMPLETED,
-        width: 0, // 实际宽高需要从图片文件获取，这里先设为0
-        height: 0
-      }));
+      // 获取每个图片的实际尺寸
+      const uploadedImages: GeneratedImage[] = await Promise.all(
+        uploadedUrls.map(async (url, index) => {
+          const { width, height } = await getImageDimensions(files[index]);
+          return {
+            id: `uploaded-${Date.now()}-${index}`,
+            promptId: 'uploaded',
+            promptText: '用户上传的图片',
+            imageUrl: url,
+            createdAt: new Date().toISOString(),
+            status: PromptStatus.COMPLETED,
+            width,
+            height
+          };
+        })
+      );
       
       // 添加到PDF图片列表
       setPdfImages(prev => [...prev, ...uploadedImages]);
@@ -299,7 +328,17 @@ export function ImageGenerationStep({
         
         try {
           // 获取图片数据
-          const response = await fetch(image.imageUrl);
+          const response = await fetch(image.imageUrl, {
+            mode: 'cors',
+            headers: {
+              'Accept': 'image/*',
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
           const blob = await response.blob();
           const imageDataUrl = await new Promise<string>((resolve) => {
             const reader = new FileReader();
@@ -313,8 +352,15 @@ export function ImageGenerationStep({
           }
 
           // 计算图片显示尺寸，保持比例
-          const imgWidth = image.width;
-          const imgHeight = image.height;
+          const imgWidth = image.width || 800; // 如果没有宽度信息，使用默认值
+          const imgHeight = image.height || 600; // 如果没有高度信息，使用默认值
+          
+          // 确保尺寸为正数
+          if (imgWidth <= 0 || imgHeight <= 0) {
+            console.warn(`图片 ${image.id} 尺寸无效，跳过`);
+            continue;
+          }
+          
           const ratio = Math.min(availableWidth / imgWidth, availableHeight / imgHeight);
           const displayWidth = imgWidth * ratio;
           const displayHeight = imgHeight * ratio;
@@ -326,7 +372,7 @@ export function ImageGenerationStep({
           pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
 
         } catch (error) {
-          console.error(`处理图片失败: ${image.id}`, error);
+          console.warn(`跳过图片 ${image.id}，CORS限制或网络错误:`, error);
         }
       }
 
@@ -349,18 +395,14 @@ export function ImageGenerationStep({
   };
 
   // 下载图片
-  const handleDownloadImage = async (imageUrl: string, filename?: string) => {
+  const handleDownloadImage = (imageUrl: string, filename?: string) => {
     try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href = imageUrl;
       link.download = filename || `generated-image-${Date.now()}.jpg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('下载图片失败:', error);
       alert('下载失败，请重试');
@@ -552,6 +594,40 @@ export function ImageGenerationStep({
               </span>
             </div>
           </div>
+          
+          {/* 生成图片按钮 */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <Button 
+              onClick={() => onGenerateImages({
+                width: useCustomSize ? customWidth : selectedAspectRatio.width,
+                height: useCustomSize ? customHeight : selectedAspectRatio.height,
+                aspectRatio: selectedAspectRatio.name
+              })}
+              disabled={selectedPrompts.length === 0 || isGeneratingImages}
+              className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingImages ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  生成中...
+                </>
+              ) : (
+                <>
+                  生成图片
+                  {selectedPrompts.length > 0 && (
+                    <span className="ml-2 text-sm opacity-75">
+                      ({selectedPrompts.length}个)
+                    </span>
+                  )}
+                </>
+              )}
+            </Button>
+            {selectedPrompts.length === 0 && (
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                请先在上一步选择提示词
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -562,33 +638,13 @@ export function ImageGenerationStep({
           {/* 待生成提示词区域 */}
           {selectedPrompts.length > 0 && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    待生成图片 ({selectedPrompts.length}个)
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    选中的提示词将生成对应的图片
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => onGenerateImages({
-                    width: useCustomSize ? customWidth : selectedAspectRatio.width,
-                    height: useCustomSize ? customHeight : selectedAspectRatio.height,
-                    aspectRatio: selectedAspectRatio.name
-                  })}
-                  disabled={isGeneratingImages}
-                  className="disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isGeneratingImages ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      生成中...
-                    </>
-                  ) : (
-                    '生成图片'
-                  )}
-                </Button>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  待生成图片 ({selectedPrompts.length}个)
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  选中的提示词将生成对应的图片，点击左侧生成按钮开始生成
+                </p>
               </div>
               
               <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
@@ -766,7 +822,7 @@ export function ImageGenerationStep({
                                 <img 
                                   src={image.imageUrl} 
                                   alt="历史生成图片"
-                                  className="w-full h-full"
+                                  className="w-full h-full object-cover"
                                 />
                                 {/* 毛玻璃全覆盖层 - 渐显效果 */}
                                 <div className="absolute inset-0 bg-white/20 backdrop-blur-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 rounded-lg">

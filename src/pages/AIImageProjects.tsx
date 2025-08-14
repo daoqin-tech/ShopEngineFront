@@ -63,7 +63,7 @@ export function AIImageProjects() {
       const newProject = await AIImageProjectsAPI.createAIImageProject({
         name: '新建项目',
       });
-      navigate(`/materials/project/${newProject.id}/edit`);
+      navigate(`/workspace/materials/project/${newProject.id}/edit`);
     } catch (err) {
       toast.error('创建项目失败', {
         description: '请稍后再试'
@@ -123,7 +123,7 @@ export function AIImageProjects() {
   };
 
   const handleOpenProject = (projectId: string) => {
-    navigate(`/materials/project/${projectId}/edit`);
+    navigate(`/workspace/materials/project/${projectId}/edit`);
   };
 
 

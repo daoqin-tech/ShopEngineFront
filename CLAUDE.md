@@ -36,6 +36,7 @@ This is an AI image generation platform with the following main features:
   - `ImageEditor.tsx` - Image optimization tools
 - `src/hooks/` - Custom React hooks (use-mobile.ts for responsive detection)
 - `src/lib/` - Utility functions (utils.ts for className merging)
+- `src/services/` - API service layers (aiImageProjects.ts, aiImageSessions.ts, fileUpload.ts)
 - `@/` alias maps to `./src/` for clean imports
 
 ### UI Framework Setup
@@ -81,3 +82,29 @@ The application uses React Router with the following main routes:
 - **AppSidebar** - Main navigation with collapsible design
 - **StepIndicator** - Progress tracking for multi-step workflows
 - Custom breadcrumb navigation integrated with routing
+
+### AI Image Generation Workflow
+The core feature is a two-step AI image generation process:
+
+1. **Prompt Generation Step** (`src/pages/AIImageGenerator/PromptGenerationStep.tsx`)
+   - Chat-based interface for generating and optimizing prompts
+   - Prompt selection and management using Map-based state
+   - Integration with AI conversation sessions
+
+2. **Image Generation Step** (`src/pages/AIImageGenerator/ImageGenerationStep.tsx`)
+   - Batch image generation from selected prompts
+   - Real-time status tracking and progress updates
+   - Support for multiple aspect ratios (1:1, 16:9, 9:16, 21:9, 4:3, 3:2)
+   - Export capabilities (individual images, ZIP archives, PDF documents)
+
+### State Management Patterns
+- Extended session model (`ExtendedAIImageSession`) with Map-based collections for prompts and images
+- Centralized type definitions in `src/pages/AIImageGenerator/types.ts`
+- Service layer separation for API interactions
+- Real-time status polling for async operations
+
+### Key Libraries
+- **jspdf** - PDF generation for image exports
+- **jszip** - Archive creation for batch downloads
+- **sonner** - Toast notifications
+- **react-markdown** - Markdown rendering for AI responses

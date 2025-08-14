@@ -17,62 +17,72 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "电商引擎",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "图片素材制作",
-      url: "/materials",
-      icon: SquareTerminal,
-      isActive: true,
-      items: [
-        {
-          title: "AI商品制图",
-          url: "/materials/product-images",
-        },
-        {
-          title: "商品图优化",
-          url: "/materials/image-editor",
-        },
-      ],
-    },
-  ],
-  projects: [],
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  workspaceId?: string
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+// This is sample data.
+const userData = {
+  name: "shadcn",
+  email: "m@example.com",
+  avatar: "/avatars/shadcn.jpg",
+}
+
+const teams = [
+  {
+    name: "电商引擎",
+    logo: GalleryVerticalEnd,
+    plan: "Enterprise",
+  },
+  {
+    name: "Acme Corp.",
+    logo: AudioWaveform,
+    plan: "Startup",
+  },
+  {
+    name: "Evil Corp.",
+    logo: Command,
+    plan: "Free",
+  },
+]
+
+export function AppSidebar({ workspaceId, ...props }: AppSidebarProps) {
+  // 根据是否在工作区中动态生成导航菜单
+  const getNavItems = () => {
+    if (!workspaceId) return []
+    
+    const basePath = `/workspace/${workspaceId}`
+    
+    return [
+      {
+        title: "图片素材制作",
+        url: `${basePath}/materials`,
+        icon: SquareTerminal,
+        isActive: true,
+        items: [
+          {
+            title: "AI商品制图",
+            url: `${basePath}/materials/product-images`,
+          },
+          {
+            title: "商品图优化",
+            url: `${basePath}/materials/image-editor`,
+          },
+        ],
+      },
+    ]
+  }
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={getNavItems()} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

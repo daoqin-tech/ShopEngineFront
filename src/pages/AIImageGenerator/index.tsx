@@ -96,28 +96,22 @@ export function AIImageGenerator() {
   }, [pollingInterval]);
 
   // 开始轮询管理器
-  const startPolling = () => {
+  const startPolling = (promptIdsToMonitor: string[]) => {
     // 清理之前的轮询
     if (pollingInterval) {
       clearInterval(pollingInterval);
     }
 
+    if (promptIdsToMonitor.length === 0) {
+      return;
+    }
 
     const interval = setInterval(async () => {
       if (!projectId) return;
 
       try {
-        // 只查询正在生成中的提示词状态
-        const generatingIds = Array.from(promptsMap.values())
-          .filter(prompt => prompt.status === PromptStatus.PENDING || prompt.status === PromptStatus.QUEUED || prompt.status === PromptStatus.PROCESSING)
-          .map(prompt => prompt.id);
-
-        if (generatingIds.length === 0) {
-          // 没有正在生成的提示词，停止轮询
-          clearInterval(interval);
-          setPollingInterval(null);
-          return;
-        }
+        // 直接使用传入的提示词ID进行轮询
+        const generatingIds = promptIdsToMonitor;
 
         // 批量查询正在生成的提示词状态
         const statusResponse = await AIImageSessionsAPI.getBatchGenerationStatus(projectId, generatingIds);
@@ -125,9 +119,9 @@ export function AIImageGenerator() {
         // 更新提示词状态和图片
         updatePromptsFromStatusResponse(statusResponse);
 
-        // 检查是否还有正在处理的任务，如果没有则停止轮询
-        const hasActivePrompts = Array.from(promptsMap.values()).some(prompt => 
-          prompt.status === PromptStatus.QUEUED || prompt.status === PromptStatus.PROCESSING
+        // 检查响应中是否还有正在处理的任务
+        const hasActivePrompts = statusResponse.results?.some(result => 
+          result.status === 'queued' || result.status === 'processing'
         );
 
         if (!hasActivePrompts) {
@@ -146,6 +140,7 @@ export function AIImageGenerator() {
   // 根据状态响应更新提示词状态
   const updatePromptsFromStatusResponse = (statusResponse: BatchStatusResponse) => {
     const updatedPromptsMap = new Map(promptsMap);
+    let hasCompletedTasks = false;
 
     statusResponse.results.forEach(result => {
       const existingPrompt = updatedPromptsMap.get(result.prompt_id);
@@ -156,9 +151,19 @@ export function AIImageGenerator() {
         ...existingPrompt,
         status: result.status as PromptStatus
       });
+
+      // 如果任务完成，标记需要刷新历史图片
+      if (result.status === 'completed') {
+        hasCompletedTasks = true;
+      }
     });
 
     setPromptsMap(updatedPromptsMap);
+    
+    // 如果有任务完成，触发历史图片刷新
+    if (hasCompletedTasks) {
+      setHistoryRefreshTrigger(prev => prev + 1);
+    }
   };
 
   const togglePromptSelection = (id: string) => {
@@ -210,8 +215,8 @@ export function AIImageGenerator() {
       // 触发历史图片数据重新加载
       setHistoryRefreshTrigger(prev => prev + 1);
       
-      // 开始轮询状态
-      startPolling();
+      // 开始轮询状态 - 直接传入需要轮询的提示词ID
+      startPolling(Array.from(selectedPromptIds));
       
     } catch (error) {
       console.error('提交生成任务失败:', error);
@@ -315,7 +320,7 @@ export function AIImageGenerator() {
 
 
   const handleBack = () => {
-    navigate('/materials/product-images');
+    navigate('/workspace/materials/product-images');
   };
 
   const hasSelectedPrompts = selectedPromptIds.size > 0;
@@ -432,28 +437,28 @@ export function AIImageGenerator() {
                         {project?.name || '加载中...'}
                       </h1>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      {!showImageGeneration ? '创建提示词' : '生成AI图片'}
-                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 ml-4">
+                    {showImageGeneration && (
+                      <Button 
+                        onClick={() => setShowImageGeneration(false)}
+                        className="bg-gray-900 hover:bg-gray-800 text-white"
+                      >
+                        上一步
+                      </Button>
+                    )}
+                    {!showImageGeneration && (
+                      <Button 
+                        onClick={() => setShowImageGeneration(true)}
+                        className="bg-gray-900 hover:bg-gray-800 text-white"
+                      >
+                        {hasSelectedPrompts ? `下一步 (${selectedPromptIds.size} 个提示词)` : '下一步'}
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {showImageGeneration && (
-                    <Button 
-                      onClick={() => setShowImageGeneration(false)}
-                      className="bg-gray-900 hover:bg-gray-800 text-white"
-                    >
-                      上一步
-                    </Button>
-                  )}
-                  {!showImageGeneration && (
-                    <Button 
-                      onClick={() => setShowImageGeneration(true)}
-                      className="bg-gray-900 hover:bg-gray-800 text-white"
-                    >
-                      {hasSelectedPrompts ? `下一步 (${selectedPromptIds.size} 个提示词)` : '下一步'}
-                    </Button>
-                  )}
+                  {/* 右侧预留空间，可以放置其他操作按钮 */}
                 </div>
               </div>
             </div>

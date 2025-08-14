@@ -1,8 +1,16 @@
 import axios from 'axios';
 
+// 根据环境设置不同的baseURL
+const getBaseURL = () => {
+  if (import.meta.env.MODE === 'production') {
+    return 'https://api.echohome.cn/api/v1/';
+  }
+  return 'http://127.0.0.1:8080/api/v1';
+};
+
 // 创建axios实例
 export const apiClient = axios.create({
-  baseURL: 'http://127.0.0.1:8080/api/v1',
+  baseURL: getBaseURL(),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -12,11 +20,11 @@ export const apiClient = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
-    // 这里可以添加认证token等
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    // 添加认证token
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -33,8 +41,15 @@ apiClient.interceptors.response.use(
   (error) => {
     // 统一错误处理
     if (error.response?.status === 401) {
-      // 处理认证失败
+      // 处理认证失败 - 清除token并重定向到登录页
       console.log('认证失败，请重新登录');
+      localStorage.removeItem('token');
+      
+      // 只在生产环境重定向到登录页
+      if (import.meta.env.MODE === 'production') {
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `/login?returnTo=${encodeURIComponent(currentPath)}`;
+      }
     }
     return Promise.reject(error);
   }

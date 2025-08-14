@@ -1,16 +1,11 @@
 import { apiClient } from '@/lib/api';
 import { uploadToTencentCloud } from '@/lib/tencentCloud';
 
-export interface PresignedURLResponse {
-  presignedURL: string;
-  objectKey: string;
-}
-
 export class FileUploadAPI {
   // 获取预签名URL
-  static async generatePresignedURL(objectKey: string): Promise<PresignedURLResponse> {
+  static async generatePresignedURL(objectKey: string): Promise<string> {
     try {
-      const response = await apiClient.get('/file/generate-presigned-url', {
+      const response = await apiClient.get('/upload/generatePresignedURL', {
         params: {
           objectKey
         }
@@ -29,8 +24,7 @@ export class FileUploadAPI {
       const finalObjectKey = objectKey || `pdfUploads/${Date.now()}-${file.name}`;
       
       // 1. 获取预签名URL
-      const { presignedURL } = await this.generatePresignedURL(finalObjectKey);
-      
+      const presignedURL = await this.generatePresignedURL(finalObjectKey);
       // 2. 上传文件到腾讯云
       await uploadToTencentCloud(presignedURL, file);
       
