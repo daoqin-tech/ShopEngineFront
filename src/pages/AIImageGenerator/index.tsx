@@ -132,7 +132,7 @@ export function AIImageGenerator() {
       } catch (error) {
         console.error('轮询状态更新失败:', error);
       }
-    }, 5000); // 每5秒轮询一次
+    }, 15000); // 每5秒轮询一次
 
     setPollingInterval(interval);
   };
