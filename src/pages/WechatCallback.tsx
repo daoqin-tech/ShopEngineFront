@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
@@ -8,10 +8,16 @@ export function WechatCallback() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
+    // 防止重复执行
+    if (hasProcessed.current) return;
+    
     const handleCallback = async () => {
       try {
+        hasProcessed.current = true;
+        
         const searchParams = new URLSearchParams(location.search);
         const code = searchParams.get('code');
         const state = searchParams.get('state');
