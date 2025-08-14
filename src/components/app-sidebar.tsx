@@ -24,17 +24,17 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
     return [
       {
         title: "图片素材制作",
-        url: "/materials",
+        url: "/workspace",
         icon: SquareTerminal,
         isActive: true,
         items: [
           {
             title: "AI商品制图",
-            url: "/materials/product-images",
+            url: "/workspace/product-images",
           },
           {
             title: "商品图优化",
-            url: "/materials/image-editor",
+            url: "/workspace/image-editor",
           },
         ],
       },

@@ -320,7 +320,7 @@ export function AIImageGenerator() {
 
 
   const handleBack = () => {
-    navigate('/materials/product-images');
+    navigate('/workspace/product-images');
   };
 
   const hasSelectedPrompts = selectedPromptIds.size > 0;

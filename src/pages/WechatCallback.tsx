@@ -47,7 +47,7 @@ export function WechatCallback() {
           localStorage.removeItem('wxLoginState');
           
           // 获取返回路径并导航
-          const returnPath = localStorage.getItem('returnTo') || "/materials";
+          const returnPath = localStorage.getItem('returnTo') || "/workspace";
           localStorage.removeItem('returnTo');
           navigate(decodeURIComponent(returnPath));
           

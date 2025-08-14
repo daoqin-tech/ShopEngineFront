@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { WorkspaceLayout } from "@/components/WorkspaceLayout"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/contexts/AuthContext"
@@ -11,51 +11,45 @@ import { AIImageGenerator } from "@/pages/AIImageGenerator"
 import { ImageEditor } from "@/pages/ImageEditor"
 import { Toaster } from "sonner"
 
-// 应用内容组件
-function AppContent() {
-  const location = useLocation()
-
-  // 检查是否为AI图片生成器页面 - 不显示侧边栏
-  if (location.pathname.includes('/project/') && location.pathname.endsWith('/edit')) {
-    return (
-      <Routes>
-        <Route path="/materials/project/:projectId/edit" element={<AIImageGenerator />} />
-      </Routes>
-    )
-  }
-
-  // 其他页面显示侧边栏
-  return (
-    <WorkspaceLayout>
-      <Routes>
-        <Route path="/materials" element={<AIImageProjects />} />
-        <Route path="/materials/product-images" element={<AIImageProjects />} />
-        <Route path="/materials/image-editor" element={<ImageEditor />} />
-      </Routes>
-    </WorkspaceLayout>
-  )
-}
-
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* 登录相关路由 - 优先级最高 */}
           <Route path="/login" element={<Login />} />
           <Route path="/auth/wechat/callback" element={<WechatCallback />} />
-          
-          {/* 公共路由 */}
           <Route path="/" element={<Home />} />
           
-          {/* 受保护的应用路由 */}
-          <Route path="/materials/*" element={
+          <Route path="/workspace" element={
             <ProtectedRoute>
-              <AppContent />
+              <WorkspaceLayout>
+                <AIImageProjects />
+              </WorkspaceLayout>
             </ProtectedRoute>
           } />
           
-          {/* 404 页面 - 必须放在最后 */}
+          <Route path="/workspace/product-images" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <AIImageProjects />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/workspace/project/:projectId/edit" element={
+            <ProtectedRoute>
+              <AIImageGenerator />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/workspace/image-editor" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <ImageEditor />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster position="top-right" richColors />

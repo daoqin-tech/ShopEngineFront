@@ -25,26 +25,26 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const getBreadcrumbItems = () => {
     const path = location.pathname
     
-    if (path === '/materials/product-images') {
+    if (path === '/workspace/product-images') {
       return {
-        parent: { name: '图片素材制作', href: '/materials' },
+        parent: { name: '工作台', href: '/workspace' },
         current: 'AI商品制图'
       }
-    } else if (path === '/materials/image-editor') {
+    } else if (path === '/workspace/image-editor') {
       return {
-        parent: { name: '图片素材制作', href: '/materials' },
+        parent: { name: '工作台', href: '/workspace' },
         current: '商品图优化'
       }
-    } else if (path === '/materials') {
+    } else if (path === '/workspace') {
       return {
         parent: null,
-        current: '图片素材制作'
+        current: '工作台'
       }
     }
     
     return {
       parent: null,
-      current: '图片素材制作'
+      current: '工作台'
     }
   }
 
