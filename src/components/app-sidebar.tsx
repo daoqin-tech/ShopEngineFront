@@ -1,14 +1,11 @@
 import * as React from "react"
 import {
-  AudioWaveform,
-  Command,
-  GalleryVerticalEnd,
   SquareTerminal,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { useAuth } from "@/contexts/AuthContext"
 import {
   Sidebar,
   SidebarContent,
@@ -17,56 +14,27 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  workspaceId?: string
-}
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
 
-// This is sample data.
-const userData = {
-  name: "shadcn",
-  email: "m@example.com",
-  avatar: "/avatars/shadcn.jpg",
-}
-
-const teams = [
-  {
-    name: "电商引擎",
-    logo: GalleryVerticalEnd,
-    plan: "Enterprise",
-  },
-  {
-    name: "Acme Corp.",
-    logo: AudioWaveform,
-    plan: "Startup",
-  },
-  {
-    name: "Evil Corp.",
-    logo: Command,
-    plan: "Free",
-  },
-]
-
-export function AppSidebar({ workspaceId, ...props }: AppSidebarProps) {
-  // 根据是否在工作区中动态生成导航菜单
+export function AppSidebar({ ...props }: AppSidebarProps) {
+  const { user } = useAuth()
+  
+  // 导航菜单
   const getNavItems = () => {
-    if (!workspaceId) return []
-    
-    const basePath = `/workspace/${workspaceId}`
-    
     return [
       {
         title: "图片素材制作",
-        url: `${basePath}/materials`,
+        url: "/materials",
         icon: SquareTerminal,
         isActive: true,
         items: [
           {
             title: "AI商品制图",
-            url: `${basePath}/materials/product-images`,
+            url: "/materials/product-images",
           },
           {
             title: "商品图优化",
-            url: `${basePath}/materials/image-editor`,
+            url: "/materials/image-editor",
           },
         ],
       },
@@ -76,13 +44,21 @@ export function AppSidebar({ workspaceId, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={teams} />
+        <div className="flex items-center space-x-2 px-3 py-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-4 h-4 bg-white rounded-sm"></div>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900">ShopEngine</h2>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={getNavItems()} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={userData} />
+        <NavUser user={{
+          name: user?.name || '未登录',
+          avatar: user?.avatar || ''
+        }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

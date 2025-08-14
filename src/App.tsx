@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, useParams } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { WorkspaceLayout } from "@/components/WorkspaceLayout"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/contexts/AuthContext"
@@ -11,28 +11,26 @@ import { AIImageGenerator } from "@/pages/AIImageGenerator"
 import { ImageEditor } from "@/pages/ImageEditor"
 import { Toaster } from "sonner"
 
-// 工作区路由组件 - 默认工作区为 "default"
-function WorkspaceRoutes() {
-  const { workspaceId = "default" } = useParams<{ workspaceId: string }>()
+// 应用内容组件
+function AppContent() {
   const location = useLocation()
 
-  // Check if current route is AIImageGenerator - render without sidebar
+  // 检查是否为AI图片生成器页面 - 不显示侧边栏
   if (location.pathname.includes('/project/') && location.pathname.endsWith('/edit')) {
     return (
       <Routes>
-        <Route path="project/:projectId/edit" element={<AIImageGenerator />} />
+        <Route path="/materials/project/:projectId/edit" element={<AIImageGenerator />} />
       </Routes>
     )
   }
 
+  // 其他页面显示侧边栏
   return (
-    <WorkspaceLayout workspaceId={workspaceId}>
+    <WorkspaceLayout>
       <Routes>
-        <Route path="" element={<AIImageProjects />} />
-        <Route path="materials" element={<AIImageProjects />} />
-        <Route path="materials/product-images" element={<AIImageProjects />} />
-        <Route path="materials/project/:projectId/edit" element={<AIImageGenerator />} />
-        <Route path="materials/image-editor" element={<ImageEditor />} />
+        <Route path="/materials" element={<AIImageProjects />} />
+        <Route path="/materials/product-images" element={<AIImageProjects />} />
+        <Route path="/materials/image-editor" element={<ImageEditor />} />
       </Routes>
     </WorkspaceLayout>
   )
@@ -50,10 +48,10 @@ function App() {
           {/* 公共路由 */}
           <Route path="/" element={<Home />} />
           
-          {/* 工作区路由 - 直接进入默认工作区 */}
-          <Route path="/workspace/*" element={
+          {/* 受保护的应用路由 */}
+          <Route path="/materials/*" element={
             <ProtectedRoute>
-              <WorkspaceRoutes />
+              <AppContent />
             </ProtectedRoute>
           } />
           

@@ -17,43 +17,34 @@ import {
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode
-  workspaceId: string
 }
 
-export function WorkspaceLayout({ children, workspaceId }: WorkspaceLayoutProps) {
+export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const location = useLocation()
   
   const getBreadcrumbItems = () => {
     const path = location.pathname
     
-    // 基础工作区路径
-    const basePath = `/workspace/${workspaceId}`
-    
-    if (path === `${basePath}/materials/product-images`) {
+    if (path === '/materials/product-images') {
       return {
-        parent: { name: '图片素材制作', href: `${basePath}/materials` },
+        parent: { name: '图片素材制作', href: '/materials' },
         current: 'AI商品制图'
       }
-    } else if (path === `${basePath}/materials/image-editor`) {
+    } else if (path === '/materials/image-editor') {
       return {
-        parent: { name: '图片素材制作', href: `${basePath}/materials` },
+        parent: { name: '图片素材制作', href: '/materials' },
         current: '商品图优化'
       }
-    } else if (path === `${basePath}/materials`) {
+    } else if (path === '/materials') {
       return {
         parent: null,
         current: '图片素材制作'
-      }
-    } else if (path === basePath) {
-      return {
-        parent: null,
-        current: '工作台'
       }
     }
     
     return {
       parent: null,
-      current: '工作台'
+      current: '图片素材制作'
     }
   }
 
@@ -61,7 +52,7 @@ export function WorkspaceLayout({ children, workspaceId }: WorkspaceLayoutProps)
 
   return (
     <SidebarProvider>
-      <AppSidebar workspaceId={workspaceId} />
+      <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
