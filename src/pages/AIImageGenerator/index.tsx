@@ -274,33 +274,67 @@ export function AIImageGenerator() {
     }));
     
     try {
-      // 触发AI处理最新的用户消息
-      const aiMessage = await AIImageSessionsAPI.processAIResponse(session.id);
+      // 启动AI处理任务
+      const processResponse = await AIImageSessionsAPI.processAIResponse(session.id);
       
-      // 移除思考占位消息，添加实际的AI回复
-      setSession(prev => {
-        const messagesWithoutThinking = prev.messages.filter(msg => msg.id !== thinkingMessageId);
-        return {
-          ...prev,
-          messages: [...messagesWithoutThinking, aiMessage]
-        };
-      });
+      // 开始轮询任务状态
+      const pollTaskStatus = async () => {
+        try {
+          const statusResponse = await AIImageSessionsAPI.getAIProcessStatus(processResponse.taskId);
+          
+          if (statusResponse.status === 'completed' && statusResponse.result) {
+            const aiMessage = statusResponse.result;
+            
+            // 移除思考占位消息，添加实际的AI回复
+            setSession(prev => {
+              const messagesWithoutThinking = prev.messages.filter(msg => msg.id !== thinkingMessageId);
+              return {
+                ...prev,
+                messages: [...messagesWithoutThinking, aiMessage]
+              };
+            });
+            
+            // 从AI消息中提取新的 prompts
+            if (aiMessage.prompts && Array.isArray(aiMessage.prompts)) {
+              const newPromptIds: string[] = [];
+              
+              setPromptsMap(prev => {
+                const newPromptsMap = new Map(prev);
+                aiMessage.prompts!.forEach(prompt => {
+                  newPromptsMap.set(prompt.id, prompt);
+                  newPromptIds.push(prompt.id);
+                });
+                return newPromptsMap;
+              });
+              
+              // 不自动选中新生成的提示词，让用户手动选择
+            }
+          } else if (statusResponse.status === 'failed') {
+            // 处理失败情况
+            console.error('AI处理失败:', statusResponse.error);
+            // 移除思考占位消息
+            setSession(prev => ({
+              ...prev,
+              messages: prev.messages.filter(msg => msg.id !== thinkingMessageId)
+            }));
+            throw new Error(statusResponse.error || 'AI处理失败');
+          } else {
+            // 继续轮询
+            setTimeout(pollTaskStatus, 5000);
+          }
+        } catch (error) {
+          console.error('轮询任务状态失败:', error);
+          // 移除思考占位消息
+          setSession(prev => ({
+            ...prev,
+            messages: prev.messages.filter(msg => msg.id !== thinkingMessageId)
+          }));
+          throw error;
+        }
+      };
       
-      // 从AI消息中提取新的 prompts
-      if (aiMessage.prompts && Array.isArray(aiMessage.prompts)) {
-        const newPromptIds: string[] = [];
-        
-        setPromptsMap(prev => {
-          const newPromptsMap = new Map(prev);
-          aiMessage.prompts!.forEach(prompt => {
-            newPromptsMap.set(prompt.id, prompt);
-            newPromptIds.push(prompt.id);
-          });
-          return newPromptsMap;
-        });
-        
-        // 不自动选中新生成的提示词，让用户手动选择
-      }
+      // 开始轮询
+      await pollTaskStatus();
       
       // 清除优化选择状态
       setSelectedPromptsForOptimization([]);

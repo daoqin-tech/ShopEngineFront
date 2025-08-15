@@ -337,9 +337,8 @@ export function ImageGenerationStep({
       // 页面尺寸（单位：mm）
       const pageWidth = pageSize.width;
       const pageHeight = pageSize.height;
-      const margin = 20;
-      const availableWidth = pageWidth - 2 * margin;
-      const availableHeight = pageHeight - 2 * margin;
+      const availableWidth = pageWidth;
+      const availableHeight = pageHeight;
 
       for (let i = 0; i < pdfImages.length; i++) {
         const image = pdfImages[i];
@@ -383,9 +382,9 @@ export function ImageGenerationStep({
           const displayWidth = imgWidth * ratio;
           const displayHeight = imgHeight * ratio;
 
-          // 居中显示图片
-          const x = (pageWidth - displayWidth) / 2;
-          const y = (pageHeight - displayHeight) / 2;
+          // 铺满页面显示图片
+          const x = 0;
+          const y = 0;
 
           pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
 

@@ -11,7 +11,7 @@ const getBaseURL = () => {
 // 创建axios实例
 export const apiClient = axios.create({
   baseURL: getBaseURL(),
-  timeout: 300000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },

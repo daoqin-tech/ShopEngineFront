@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api';
-import { AIImageSession, Prompt, GeneratedImage, Message, ImageGenerationRequest, BatchStatusResponse, GenerateImageBatchResponse } from '@/pages/AIImageGenerator/types';
+import { AIImageSession, Prompt, GeneratedImage, Message, ImageGenerationRequest, BatchStatusResponse, GenerateImageBatchResponse, ProcessChatResponse, AIProcessStatusResponse } from '@/pages/AIImageGenerator/types';
 
 // API响应的数据结构（来自后端）
 export interface AIImageSessionResponse {
@@ -50,10 +50,16 @@ export class AIImageSessionsAPI {
     return response.data; // 直接返回添加的消息对象
   }
 
-  // 触发AI处理最新的用户消息
-  static async processAIResponse(sessionId: string): Promise<Message> {
+  // 触发AI处理最新的用户消息（异步）
+  static async processAIResponse(sessionId: string): Promise<ProcessChatResponse> {
     const response = await apiClient.post(`/sessions/${sessionId}/chat`);
-    return response.data; // 直接返回AI回复的消息对象（包含prompts，默认status为PENDING）
+    return response.data; // 返回任务ID和状态
+  }
+
+  // 轮询AI处理状态和结果
+  static async getAIProcessStatus(taskId: string): Promise<AIProcessStatusResponse> {
+    const response = await apiClient.get(`/sessions/chat-tasks/${taskId}/status`);
+    return response.data;
   }
 
   // 保存会话

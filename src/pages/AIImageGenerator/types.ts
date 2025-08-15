@@ -40,6 +40,21 @@ export interface Message {
   isThinking?: boolean; // 标记AI正在思考状态
 }
 
+// ProcessChatResponse - processAIResponse接口的响应类型
+export interface ProcessChatResponse {
+  taskId: string;
+  status: string;
+  message: string;
+}
+
+// AIProcessStatusResponse - 查询AI处理状态和结果的响应类型
+export interface AIProcessStatusResponse {
+  taskId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  result?: Message; // MessageResponse类型，即Message
+  error?: string;
+}
+
 export interface AIImageSession {
   id: string;
   projectId: string; // 关联的项目ID
