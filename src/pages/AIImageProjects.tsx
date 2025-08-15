@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Calendar, Image, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Image, X, Check } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { toast } from 'sonner';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,23 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 
 export function AIImageProjects() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<AIImageProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<AIImageProject | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   // 获取项目列表
   const fetchProjects = async () => {
@@ -78,12 +65,6 @@ export function AIImageProjects() {
     setDeleteDialogOpen(true);
   };
 
-  const handleEditProject = (project: AIImageProject, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedProject(project);
-    setEditingName(project.name);
-    setEditDialogOpen(true);
-  };
 
   const confirmDelete = async () => {
     if (!selectedProject) return;
@@ -102,28 +83,40 @@ export function AIImageProjects() {
     }
   };
 
-  const confirmEdit = async () => {
-    if (!selectedProject || !editingName.trim()) return;
-    
-    try {
-      await AIImageProjectsAPI.updateAIImageProject(selectedProject.id, {
-        name: editingName.trim()
-      });
-      toast.success('项目名称更新成功');
-      setEditDialogOpen(false);
-      setSelectedProject(null);
-      setEditingName('');
-      fetchProjects(); // 重新获取项目列表
-    } catch (err) {
-      toast.error('更新项目失败', {
-        description: '请稍后再试'
-      });
-      console.error('Error updating project:', err);
-    }
-  };
 
   const handleOpenProject = (projectId: string) => {
     navigate(`/workspace/project/${projectId}/edit`);
+  };
+
+  const handleStartEditName = (project: AIImageProject) => {
+    setEditingProjectId(project.id);
+    setEditingName(project.name);
+  };
+
+  const handleSaveEditName = async (projectId: string) => {
+    if (!editingName.trim()) {
+      setEditingProjectId(null);
+      return;
+    }
+    
+    try {
+      await AIImageProjectsAPI.updateAIImageProject(projectId, {
+        name: editingName.trim()
+      });
+      toast.success('项目名称更新成功');
+      setEditingProjectId(null);
+      fetchProjects(); // 重新获取项目列表
+    } catch (err) {
+      toast.error('更新项目名称失败', {
+        description: '请稍后再试'
+      });
+      console.error('Error updating project name:', err);
+    }
+  };
+
+  const handleCancelEditName = () => {
+    setEditingProjectId(null);
+    setEditingName('');
   };
 
 
@@ -155,36 +148,19 @@ export function AIImageProjects() {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white relative"
-              onClick={() => handleOpenProject(project.id)}
+              className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white relative group"
+              onClick={() => editingProjectId !== project.id && handleOpenProject(project.id)}
             >
-              {/* 操作按钮 */}
-              <div className="absolute top-2 right-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={(e) => handleEditProject(project, e)}>
-                      <Edit2 className="mr-2 h-4 w-4" />
-                      编辑名称
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={(e) => handleDeleteProject(project, e)}
-                      className="text-red-600"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      删除项目
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              {/* 删除按钮 - hover时显示 */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-red-500 bg-red-50 hover:text-red-700 hover:bg-red-100"
+                  onClick={(e) => handleDeleteProject(project, e)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
               {/* 缩略图区域 */}
               <div className="aspect-video bg-gray-100 rounded-lg mb-4 overflow-hidden">
@@ -203,9 +179,47 @@ export function AIImageProjects() {
 
               {/* 项目信息 */}
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg truncate mb-4">
-                  {project.name}
-                </h3>
+                {editingProjectId === project.id ? (
+                  <div className="flex items-center gap-2 mb-4">
+                    <Input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveEditName(project.id);
+                        } else if (e.key === 'Escape') {
+                          handleCancelEditName();
+                        }
+                      }}
+                      onBlur={() => handleSaveEditName(project.id)}
+                      className="text-lg font-semibold"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveEditName(project.id);
+                      }}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <h3 
+                    className="font-semibold text-lg truncate mb-4 hover:bg-gray-50 px-2 py-1 rounded cursor-text"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartEditName(project);
+                    }}
+                    title="点击编辑名称"
+                  >
+                    {project.name}
+                  </h3>
+                )}
 
                 <div className="flex justify-between items-center text-sm text-gray-500">
                   <div className="flex items-center gap-1">
@@ -241,34 +255,6 @@ export function AIImageProjects() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 编辑项目名称对话框 */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>编辑项目名称</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              placeholder="请输入项目名称"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  confirmEdit();
-                }
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={confirmEdit} disabled={!editingName.trim()}>
-              保存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

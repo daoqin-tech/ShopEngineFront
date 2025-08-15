@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical } from 'lucide-react';
 import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage, ASPECT_RATIOS } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
@@ -12,6 +13,14 @@ const validateDimension = (value: number): number => {
   const clamped = Math.max(256, Math.min(1440, value));
   // 确保是32的倍数
   return Math.round(clamped / 32) * 32;
+};
+
+// PDF页面尺寸配置（单位：mm）
+const PAGE_SIZES = {
+  a4: { width: 210, height: 297, label: 'A4 (21.0 × 29.7 cm)' },
+  a3: { width: 297, height: 420, label: 'A3 (29.7 × 42.0 cm)' },
+  letter: { width: 216, height: 279, label: 'Letter (21.6 × 27.9 cm)' },
+  custom: { width: 210, height: 297, label: '自定义尺寸' }
 };
 
 // 获取图片实际尺寸
@@ -68,6 +77,8 @@ export function ImageGenerationStep({
   
   // PDF导出相关状态
   const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [pdfPageSize, setPdfPageSize] = useState<'a4' | 'a3' | 'letter' | 'custom'>('a4');
+  const [customPageSize, setCustomPageSize] = useState({ width: 210, height: 297 });
   const [pdfImages, setPdfImages] = useState<GeneratedImage[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
@@ -314,11 +325,18 @@ export function ImageGenerationStep({
     try {
       // 动态导入jsPDF
       const jsPDF = (await import('jspdf')).default;
-      const pdf = new jsPDF();
       
-      // A4纸张尺寸（单位：mm）
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      // 获取页面尺寸
+      const pageSize = pdfPageSize === 'custom' ? customPageSize : PAGE_SIZES[pdfPageSize];
+      const pdf = new jsPDF({
+        orientation: pageSize.height > pageSize.width ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [pageSize.width, pageSize.height]
+      });
+      
+      // 页面尺寸（单位：mm）
+      const pageWidth = pageSize.width;
+      const pageHeight = pageSize.height;
       const margin = 20;
       const availableWidth = pageWidth - 2 * margin;
       const availableHeight = pageHeight - 2 * margin;
@@ -952,6 +970,68 @@ export function ImageGenerationStep({
               {/* 内容区域 */}
               <div className="flex-1 overflow-auto p-6">
                 <div className="space-y-6">
+                  {/* 页面设置区域 */}
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">页面设置</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 页面尺寸选择 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          页面尺寸
+                        </label>
+                        <select 
+                          value={pdfPageSize} 
+                          onChange={(e) => setPdfPageSize(e.target.value as 'a4' | 'a3' | 'letter' | 'custom')}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
+                          <option value="a4">{PAGE_SIZES.a4.label}</option>
+                          <option value="a3">{PAGE_SIZES.a3.label}</option>
+                          <option value="letter">{PAGE_SIZES.letter.label}</option>
+                          <option value="custom">{PAGE_SIZES.custom.label}</option>
+                        </select>
+                      </div>
+                      
+                      {/* 自定义尺寸输入 */}
+                      {pdfPageSize === 'custom' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            自定义尺寸 (cm)
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              type="number"
+                              placeholder="宽度"
+                              value={customPageSize.width / 10}
+                              onChange={(e) => setCustomPageSize(prev => ({ 
+                                ...prev, 
+                                width: Math.max(1, Number(e.target.value) * 10) 
+                              }))}
+                              className="flex-1"
+                              min="1"
+                              step="0.1"
+                            />
+                            <span className="text-gray-500">×</span>
+                            <Input
+                              type="number"
+                              placeholder="高度"
+                              value={customPageSize.height / 10}
+                              onChange={(e) => setCustomPageSize(prev => ({ 
+                                ...prev, 
+                                height: Math.max(1, Number(e.target.value) * 10) 
+                              }))}
+                              className="flex-1"
+                              min="1"
+                              step="0.1"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            当前尺寸: {(customPageSize.width / 10).toFixed(1)} × {(customPageSize.height / 10).toFixed(1)} cm
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
                   {/* 图片排序区域 */}
                   <div>
                     <div className="mb-4">
