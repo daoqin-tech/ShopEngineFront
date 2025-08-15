@@ -108,3 +108,4 @@ The core feature is a two-step AI image generation process:
 - **jszip** - Archive creation for batch downloads
 - **sonner** - Toast notifications
 - **react-markdown** - Markdown rendering for AI responses
+- 你不用测试,我会测试,也不用帮我运行项目

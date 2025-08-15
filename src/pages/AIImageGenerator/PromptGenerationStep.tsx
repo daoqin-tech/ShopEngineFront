@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Check, Square } from 'lucide-react';
+import { MessageSquare, Check, Square, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { PromptGenerationStepProps, Prompt, PromptStatus } from './types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 
 
 // 辅助函数：处理全选/取消全选（只处理可选择的提示词）
@@ -72,6 +74,17 @@ export function PromptGenerationStep({
 }: PromptGenerationStepProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lastMessageCount, setLastMessageCount] = useState(0);
+  const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [hasOpenedHelp, setHasOpenedHelp] = useState(false);
+  
+  // 当帮助对话框第一次打开时，自动展开第一个部分
+  useEffect(() => {
+    if (isHelpDialogOpen && !hasOpenedHelp) {
+      setOpenSections(prev => ({ ...prev, features: true }));
+      setHasOpenedHelp(true);
+    }
+  }, [isHelpDialogOpen, hasOpenedHelp]);
   
   // 自动调整textarea高度
   const adjustTextareaHeight = (textarea: HTMLTextAreaElement) => {
@@ -126,7 +139,144 @@ export function PromptGenerationStep({
 
   
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)]">
+    <div className="flex flex-col h-[calc(100vh-80px)] relative">
+      {/* 右上角帮助按钮 */}
+      <div className="absolute top-4 right-6 z-10">
+        <Dialog open={isHelpDialogOpen} onOpenChange={setIsHelpDialogOpen}>
+          <DialogTrigger asChild>
+            <button
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-white hover:shadow-md transition-all duration-200"
+              title="使用说明"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>AI提示词生成器使用说明</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* 基础功能 */}
+              <Collapsible 
+                open={openSections['features']} 
+                onOpenChange={(open) => setOpenSections(prev => ({...prev, features: open}))}
+              >
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <span className="font-medium">AI提示词生成器能做什么？</span>
+                  {openSections['features'] ? 
+                    <ChevronDown className="w-4 h-4" /> : 
+                    <ChevronRight className="w-4 h-4" />
+                  }
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3">
+                  <div className="space-y-3 pt-3 text-sm text-gray-600">
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                        <div>
+                          <div className="font-medium text-gray-900">智能生成提示词</div>
+                          <div>根据您的商品描述，自动生成专业的AI绘图提示词，支持多种风格和场景</div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                        <div>
+                          <div className="font-medium text-gray-900">AI优化提示词</div>
+                          <div>选择已生成的提示词进行深度优化，让描述更精准、更有效果</div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                        <div>
+                          <div className="font-medium text-gray-900">批量操作管理</div>
+                          <div>支持全选、批量选择和批量优化，提高工作效率</div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                        <div>
+                          <div className="font-medium text-gray-900">自由对话交互</div>
+                          <div>支持自然语言对话，可随时调整需求和优化方向</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* 优化操作指南 */}
+              <Collapsible 
+                open={openSections['optimization']} 
+                onOpenChange={(open) => setOpenSections(prev => ({...prev, optimization: open}))}
+              >
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <span className="font-medium">如何优化提示词？</span>
+                  {openSections['optimization'] ? 
+                    <ChevronDown className="w-4 h-4" /> : 
+                    <ChevronRight className="w-4 h-4" />
+                  }
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3">
+                  <div className="space-y-3 pt-3 text-sm text-gray-600">
+                    <div className="flex items-start gap-3">
+                      <span className="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">1</span>
+                      <div>
+                        <div className="font-medium text-gray-900">选择要优化的提示词</div>
+                        <div>点击提示词右侧的 💬 图标，选中的提示词会显示在输入框上方</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">2</span>
+                      <div>
+                        <div className="font-medium text-gray-900">输入优化指令</div>
+                        <div>在输入框中详细描述您希望如何优化，例如：</div>
+                        <div className="mt-1 space-y-1 text-xs bg-gray-50 p-2 rounded">
+                          <div>• "让背景更简洁，突出产品"</div>
+                          <div>• "增加光影效果，提升质感"</div>
+                          <div>• "调整为白色背景，商业摄影风格"</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="bg-purple-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">3</span>
+                      <div>
+                        <div className="font-medium text-gray-900">查看优化结果</div>
+                        <div>AI会根据您的指令生成优化后的提示词，您可以继续迭代优化</div>
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+
+              {/* 复制功能 */}
+              <Collapsible 
+                open={openSections['copy']} 
+                onOpenChange={(open) => setOpenSections(prev => ({...prev, copy: open}))}
+              >
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <span className="font-medium">如何生成相同的提示词？</span>
+                  {openSections['copy'] ? 
+                    <ChevronDown className="w-4 h-4" /> : 
+                    <ChevronRight className="w-4 h-4" />
+                  }
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-3 pb-3">
+                  <div className="pt-3 text-sm text-gray-600">
+                    <div className="bg-gray-50 p-3 rounded-lg text-center">
+                      <div className="text-gray-400 mb-2">🚀</div>
+                      <div className="font-medium text-gray-500">敬请期待</div>
+                      <div className="text-xs text-gray-400 mt-1">复制功能正在开发中</div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {/* 对话历史区域 - 占据剩余空间，无边框 */}
       <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="max-w-4xl mx-auto px-6 py-6">
