@@ -88,6 +88,7 @@ export interface PromptGenerationStepProps {
   onTogglePromptSelection: (id: string) => void;
   onTogglePromptForOptimization: (id: string) => void;
   onChatSubmit: () => void;
+  onCopyPrompt?: (promptId: string, count: number, messageId: string) => Promise<void>; // 复制提示词回调
 }
 
 

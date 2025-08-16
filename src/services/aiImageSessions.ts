@@ -94,4 +94,14 @@ export class AIImageSessionsAPI {
     const response = await apiClient.get(`/images/project/${projectId}`);
     return response.data;
   }
+
+  // 复制提示词
+  static async copyPrompt(sessionId: string, promptId: string, count: number, messageId: string): Promise<Prompt[]> {
+    const response = await apiClient.post(`/sessions/${sessionId}/copyPrompt`, {
+      promptId,
+      count,
+      messageId
+    });
+    return response.data; // 返回新增的提示词数组
+  }
 }

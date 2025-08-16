@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical } from 'lucide-react';
+import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Search } from 'lucide-react';
 import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage, ASPECT_RATIOS } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -70,6 +70,9 @@ export function ImageGenerationStep({
   
   // 图片预览状态
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  
+  // 搜索相关状态
+  const [searchTerm, setSearchTerm] = useState('');
   
   // 批量导出相关状态
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
@@ -142,7 +145,11 @@ export function ImageGenerationStep({
   // 获取可导出的图片（只有COMPLETED状态的图片）
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
   
-  // 不再默认全选图片
+  // 根据搜索词筛选所有图片（包括所有状态）
+  const filteredImages = (historicalImages || []).filter(img => {
+    if (!searchTerm.trim()) return true;
+    return img.promptText?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // 切换图片选择状态
   const toggleImageSelection = (imageId: string) => {
@@ -157,14 +164,27 @@ export function ImageGenerationStep({
     });
   };
 
-  // 全选/取消全选
+  // 全选/取消全选（只针对已完成的图片）
   const toggleSelectAll = () => {
-    if (selectedImageIds.size === completedImages.length) {
-      // 当前全选，则取消全选
-      setSelectedImageIds(new Set());
+    // 只对已完成且符合搜索条件的图片进行全选操作
+    const filteredCompletedImages = filteredImages.filter(img => img.status === PromptStatus.COMPLETED);
+    const filteredCompletedIds = filteredCompletedImages.map(img => img.id);
+    const allFilteredSelected = filteredCompletedIds.every(id => selectedImageIds.has(id));
+    
+    if (allFilteredSelected && filteredCompletedImages.length > 0) {
+      // 当前筛选结果全选，则取消选择筛选的图片
+      setSelectedImageIds(prev => {
+        const newSet = new Set(prev);
+        filteredCompletedIds.forEach(id => newSet.delete(id));
+        return newSet;
+      });
     } else {
-      // 否则全选
-      setSelectedImageIds(new Set(completedImages.map(img => img.id)));
+      // 否则选择所有筛选的已完成图片
+      setSelectedImageIds(prev => {
+        const newSet = new Set(prev);
+        filteredCompletedIds.forEach(id => newSet.add(id));
+        return newSet;
+      });
     }
   };
 
@@ -726,19 +746,37 @@ export function ImageGenerationStep({
                 )}
               </div>
               {completedImages.length > 0 && (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* 搜索框 */}
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="搜索提示词..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-8 text-sm border-gray-300"
+                    />
+                  </div>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={toggleSelectAll}
                     className="text-gray-600 hover:text-gray-900"
                   >
-                    {selectedImageIds.size === completedImages.length && selectedImageIds.size > 0 ? (
-                      <CheckSquare className="w-4 h-4 mr-1" />
-                    ) : (
-                      <Square className="w-4 h-4 mr-1" />
-                    )}
-                    {selectedImageIds.size === completedImages.length && selectedImageIds.size > 0 ? '取消全选' : '全选'}
+                    {(() => {
+                      const filteredCompletedImages = filteredImages.filter(img => img.status === PromptStatus.COMPLETED);
+                      const allSelected = filteredCompletedImages.length > 0 && filteredCompletedImages.every(img => selectedImageIds.has(img.id));
+                      return allSelected ? (
+                        <CheckSquare className="w-4 h-4 mr-1" />
+                      ) : (
+                        <Square className="w-4 h-4 mr-1" />
+                      );
+                    })()}
+                    {(() => {
+                      const filteredCompletedImages = filteredImages.filter(img => img.status === PromptStatus.COMPLETED);
+                      const allSelected = filteredCompletedImages.length > 0 && filteredCompletedImages.every(img => selectedImageIds.has(img.id));
+                      return allSelected ? '取消全选' : '全选';
+                    })()}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -789,7 +827,7 @@ export function ImageGenerationStep({
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-                {historicalImages.map((image) => {
+                {filteredImages.map((image) => {
                   const isCompleted = image.status === PromptStatus.COMPLETED;
                   const isSelected = selectedImageIds.has(image.id);
                   
