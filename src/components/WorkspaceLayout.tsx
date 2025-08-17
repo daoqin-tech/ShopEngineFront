@@ -30,7 +30,7 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
         parent: { name: '工作台', href: '/workspace' },
         current: '图像生成'
       }
-    } else if (path === '/workspace/image-editor') {
+    } else if (path === '/workspace/ocr-recognition') {
       return {
         parent: { name: '工作台', href: '/workspace' },
         current: '以图识文'

@@ -1,6 +1,6 @@
 import { Clock, Sparkles } from 'lucide-react';
 
-export function ImageEditor() {
+export function OCRRecognition() {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
       <div className="text-center space-y-6 max-w-md">

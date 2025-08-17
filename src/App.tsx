@@ -8,7 +8,7 @@ import { WechatCallback } from "@/pages/WechatCallback"
 import { NotFound } from "@/pages/NotFound"
 import { AIImageProjects } from "@/pages/AIImageProjects"
 import { AIImageGenerator } from "@/pages/AIImageGenerator"
-import { ImageEditor } from "@/pages/ImageEditor"
+import { OCRRecognition } from "@/pages/OCRRecognition"
 import { Toaster } from "sonner"
 
 function App() {
@@ -42,10 +42,10 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/workspace/image-editor" element={
+          <Route path="/workspace/ocr-recognition" element={
             <ProtectedRoute>
               <WorkspaceLayout>
-                <ImageEditor />
+                <OCRRecognition />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />
