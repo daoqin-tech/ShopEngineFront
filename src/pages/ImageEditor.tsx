@@ -16,10 +16,10 @@ export function ImageEditor() {
 
         {/* 标题和描述 */}
         <div className="space-y-3">
-          <h1 className="text-2xl font-bold text-gray-800">商品图优化</h1>
+          <h1 className="text-2xl font-bold text-gray-800">以图识文</h1>
           <h2 className="text-xl font-semibold text-gray-600">敬请期待</h2>
           <p className="text-gray-500 leading-relaxed">
-            我们正在开发强大的商品图优化功能，包括智能背景替换、一键美化、尺寸调整等专业工具，让您的商品图更加出色。
+            我们正在开发强大的以图识文功能，包括智能文字识别、OCR文本提取、多语言识别等专业工具，让您轻松从图片中提取文字信息。
           </p>
         </div>
 
@@ -29,19 +29,19 @@ export function ImageEditor() {
           <ul className="space-y-2 text-sm text-gray-600">
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-              智能背景替换和抠图
+              智能文字识别和提取
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-              一键商品图美化和增强
+              多语言OCR文本识别
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-              多平台尺寸批量适配
+              手写文字智能识别
             </li>
             <li className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-              品牌水印和Logo添加
+              文本结构化提取和导出
             </li>
           </ul>
         </div>

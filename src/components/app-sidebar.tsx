@@ -29,11 +29,11 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         isActive: true,
         items: [
           {
-            title: "AI商品制图",
+            title: "图像生成",
             url: "/workspace/product-images",
           },
           {
-            title: "商品图优化",
+            title: "以图识文",
             url: "/workspace/image-editor",
           },
         ],

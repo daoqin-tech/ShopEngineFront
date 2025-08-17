@@ -123,7 +123,7 @@ export function AIImageProjects() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">AI商品制图</h1>
+        <h1 className="text-2xl font-bold">AI生图</h1>
         <Button onClick={handleNewProject} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           新建商品制图

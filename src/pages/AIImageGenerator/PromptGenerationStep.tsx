@@ -329,7 +329,7 @@ export function PromptGenerationStep({
                       <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">3</span>
                       <div>
                         <div className="font-medium text-gray-900">选择复制数量</div>
-                        <div>可选择快捷数量（4、8、12、20、32）或在自定义框中直接输入数量</div>
+                        <div>可选择快捷数量（4、8、12、24、36）或在自定义框中直接输入数量</div>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -525,7 +525,7 @@ export function PromptGenerationStep({
                                         
                                         {/* 快捷数量选择 */}
                                         <div className="flex gap-2">
-                                          {[4, 8, 12, 20, 32].map(count => (
+                                          {[4, 8, 12, 24, 36].map(count => (
                                             <button
                                               key={count}
                                               onClick={() => handleQuickCopy(prompt.id, count, message.id)}

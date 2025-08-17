@@ -28,12 +28,12 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     if (path === '/workspace/product-images') {
       return {
         parent: { name: '工作台', href: '/workspace' },
-        current: 'AI商品制图'
+        current: '图像生成'
       }
     } else if (path === '/workspace/image-editor') {
       return {
         parent: { name: '工作台', href: '/workspace' },
-        current: '商品图优化'
+        current: '以图识文'
       }
     } else if (path === '/workspace') {
       return {
