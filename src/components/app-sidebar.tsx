@@ -34,7 +34,11 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           },
           {
             title: "以图识文",
-            url: "/workspace/ocr-recognition",
+            url: "/workspace/ocr-projects",
+          },
+          {
+            title: "AI编辑图片",
+            url: "/workspace/image-edit-projects",
           },
         ],
       },

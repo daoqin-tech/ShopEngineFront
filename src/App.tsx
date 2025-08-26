@@ -9,6 +9,10 @@ import { NotFound } from "@/pages/NotFound"
 import { AIImageProjects } from "@/pages/AIImageProjects"
 import { AIImageGenerator } from "@/pages/AIImageGenerator"
 import { OCRRecognition } from "@/pages/OCRRecognition"
+import { ImageEditor } from "@/pages/ImageEdit"
+import { ImageEditProjects } from "@/pages/ImageEditProjects"
+import { OcrEditor } from "@/pages/Ocr"
+import { OcrProjects } from "@/pages/OcrProjects"
 import { Toaster } from "sonner"
 
 function App() {
@@ -47,6 +51,34 @@ function App() {
               <WorkspaceLayout>
                 <OCRRecognition />
               </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/workspace/ocr-projects" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <OcrProjects />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/workspace/ocr-project/:projectId" element={
+            <ProtectedRoute>
+              <OcrEditor />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/workspace/image-edit-projects" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <ImageEditProjects />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/workspace/image-edit-project/:projectId/edit" element={
+            <ProtectedRoute>
+              <ImageEditor />
             </ProtectedRoute>
           } />
           
