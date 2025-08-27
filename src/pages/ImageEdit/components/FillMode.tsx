@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import { Upload, ArrowLeft, Download, Eye, Edit, RotateCcw } from 'lucide-react'
+import { Upload, ArrowLeft, Download, Eye, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { FileUploadAPI } from '@/services/fileUpload'

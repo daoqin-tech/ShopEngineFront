@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Clock, Image, AlertCircle, Download, Eye, Copy, FileText, Loader2 } from 'lucide-react'
+import { Clock, Image, Download, Eye, Copy, FileText, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
