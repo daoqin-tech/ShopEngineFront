@@ -10,9 +10,11 @@ export interface OcrProject {
 // OCR结果记录
 export interface OcrRecord {
   id: string
+  projectId: string
+  userId: string
   imageUrl: string
-  extractedText: string
-  createdAt: Date | string
+  description: string
+  createdAt: string
 }
 
 // 以图识文项目详情（包含OCR历史记录）
@@ -27,15 +29,8 @@ export interface OcrRequest {
 }
 
 
-// OCR响应
-export interface OcrResponse {
-  id: string
-  projectId: string
-  userId: string
-  imageUrl: string
-  description: string
-  createdAt: string
-}
+// OCR响应（与OcrRecord相同）
+export type OcrResponse = OcrRecord
 
 // API响应类型
 export interface ApiResponse<T> {

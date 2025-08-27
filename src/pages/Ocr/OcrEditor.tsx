@@ -6,7 +6,7 @@ import {
   History
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { OcrMode as OcrModeType, OcrProjectDetail } from '@/types/ocr'
+import { OcrMode as OcrModeType } from '@/types/ocr'
 import { UploadMode } from './components/UploadMode'
 import { HistoryMode } from './components/HistoryMode'
 
@@ -14,7 +14,6 @@ export function OcrEditor() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   
-  const [project, setProject] = useState<OcrProjectDetail | null>(null)
   
   // OCR状态
   const [ocrMode, setOcrMode] = useState<OcrModeType>('upload')
@@ -59,10 +58,6 @@ export function OcrEditor() {
 
         {/* 功能模式选择 */}
         <div className="flex-1 p-4 overflow-hidden">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold">以图识文</h2>
-            <p className="text-sm text-muted-foreground mt-1">{project?.name}</p>
-          </div>
 
           <div className="space-y-2">
             {ocrModes.map((mode) => {
@@ -82,15 +77,6 @@ export function OcrEditor() {
             })}
           </div>
 
-          {/* 项目统计信息 */}
-          {project && (
-            <div className="mt-6 p-3 bg-muted rounded-lg">
-              <div className="text-sm text-muted-foreground mb-1">项目统计</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {project.ocrHistory.length} 条识别记录
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -102,9 +88,9 @@ export function OcrEditor() {
           />
         )}
         
-        {ocrMode === 'history' && (
+        {ocrMode === 'history' && projectId && (
           <HistoryMode
-            project={project}
+            projectId={projectId}
           />
         )}
       </div>

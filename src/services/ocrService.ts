@@ -98,23 +98,9 @@ export const ocrRecognitionApi = {
     return response.data
   },
 
-  // 批量OCR识别
-  async batchRecognize(requests: OcrRequest[]): Promise<OcrResponse[]> {
-    const response = await apiClient.post(
-      '/ocr/batch-recognize',
-      { requests },
-      {
-        timeout: 300000, // 批量处理需要更长时间
-      }
-    )
-
-    return response.data || []
-  },
-
-
   // 获取OCR历史记录
   async getOcrHistory(projectId: string): Promise<OcrRecord[]> {
-    const response = await apiClient.get(`/ocr-projects/${projectId}/history`)
+    const response = await apiClient.get(`/image-analysis/results/${projectId}`)
     return response.data || []
   }
 }

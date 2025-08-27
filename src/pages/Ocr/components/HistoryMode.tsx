@@ -1,16 +1,41 @@
-import { Clock, Image, AlertCircle, Download, Eye, Copy, FileText } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Clock, Image, AlertCircle, Download, Eye, Copy, FileText, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { OcrProjectDetail } from '@/types/ocr'
+import { OcrRecord } from '@/types/ocr'
+import { ocrRecognitionApi } from '@/services/ocrService'
 import { toast } from 'sonner'
 
 interface HistoryModeProps {
-  project: OcrProjectDetail | null
+  projectId: string
 }
 
-export function HistoryMode({ project }: HistoryModeProps) {
+export function HistoryMode({ projectId }: HistoryModeProps) {
+  const [ocrHistory, setOcrHistory] = useState<OcrRecord[]>([])
+  const [loading, setLoading] = useState(false)
+
+  // 获取OCR历史记录
+  useEffect(() => {
+    const fetchOcrHistory = async () => {
+      if (!projectId) return
+
+      setLoading(true)
+      try {
+        const history = await ocrRecognitionApi.getOcrHistory(projectId)
+        setOcrHistory(history)
+      } catch (error) {
+        console.error('获取OCR历史记录失败:', error)
+        toast.error('获取历史记录失败，请重试')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOcrHistory()
+  }, [projectId])
+
   const handleDownloadImage = (imageUrl: string, filename: string) => {
     const link = document.createElement('a')
     link.href = imageUrl
@@ -44,7 +69,8 @@ export function HistoryMode({ project }: HistoryModeProps) {
     })
   }
 
-  if (!project) {
+
+  if (loading) {
     return (
       <div className="h-full flex flex-col">
         <div className="p-6 border-b">
@@ -56,16 +82,14 @@ export function HistoryMode({ project }: HistoryModeProps) {
         
         <div className="flex-1 p-6 flex items-center justify-center">
           <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">项目加载中</h3>
-            <p className="text-muted-foreground">请等待项目数据加载完成</p>
+            <Loader2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-spin" />
+            <h3 className="text-lg font-medium text-foreground mb-2">正在加载历史记录</h3>
+            <p className="text-muted-foreground">请稍候...</p>
           </div>
         </div>
       </div>
     )
   }
-
-  const ocrHistory = project.ocrHistory || []
 
   if (ocrHistory.length === 0) {
     return (
@@ -167,7 +191,7 @@ export function HistoryMode({ project }: HistoryModeProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleCopyText(record.extractedText)}
+                          onClick={() => handleCopyText(record.description)}
                           className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                         >
                           <Copy className="h-3 w-3" />
@@ -175,7 +199,7 @@ export function HistoryMode({ project }: HistoryModeProps) {
                       </div>
                       <div className="bg-muted rounded p-3">
                         <Textarea
-                          value={record.extractedText}
+                          value={record.description}
                           readOnly
                           className="min-h-[100px] text-xs border-none bg-transparent p-0 resize-none focus-visible:ring-0"
                         />
@@ -185,7 +209,7 @@ export function HistoryMode({ project }: HistoryModeProps) {
                     {/* 文字统计 */}
                     <div className="mt-3 pt-3 border-t">
                       <div className="text-xs text-muted-foreground">
-                        共识别 {record.extractedText.length} 个字符
+                        共识别 {record.description.length} 个字符
                       </div>
                     </div>
                   </CardContent>

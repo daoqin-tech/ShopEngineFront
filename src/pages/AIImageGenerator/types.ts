@@ -108,7 +108,10 @@ export const ASPECT_RATIOS: AspectRatio[] = [
   { name: 'portrait', label: '9:16', width: 832, height: 1440, description: '竖向 - 适合海报、封面' },
   { name: 'widescreen', label: '21:9', width: 1344, height: 576, description: '超宽屏 - 适合全景图' },
   { name: 'standard', label: '4:3', width: 1152, height: 864, description: '标准 - 适合产品图' },
-  { name: 'cinema', label: '3:2', width: 1152, height: 768, description: '电影比例 - 适合风景图' }
+  { name: 'cinema', label: '3:2', width: 1152, height: 768, description: '电影比例 - 适合风景图' },
+  { name: 'tall', label: '7:10', width: 896, height: 1280, description: '高比例 - 适合竖版海报' },
+  { name: 'classic', label: '3:4', width: 960, height: 1280, description: '经典比例 - 适合传统照片' },
+  { name: 'wide', label: '2:1', width: 1280, height: 640, description: '宽屏 - 适合横版插图' }
 ];
 
 // 图片生成参数（UI层面）
