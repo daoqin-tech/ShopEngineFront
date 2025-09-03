@@ -21,22 +21,29 @@ This is a modern React 19 + TypeScript + Vite project using shadcn/ui components
 - **React Router DOM 7.7.1** for client-side routing
 
 ### Application Structure
-This is an AI image generation platform with the following main features:
+This is an AI-powered e-commerce tool platform with multiple features:
 - **AI Image Projects** - Managing AI image generation projects
 - **AI Image Generator** - Two-step workflow for prompt generation and image creation
-- **Image Editor** - Tools for optimizing generated images
+- **Image Editor** - Tools for optimizing and editing generated images
+- **OCR Recognition** - Text recognition from images with editing capabilities
+- **Authentication System** - WeChat-based login and user management
 - **Sidebar Navigation** - Collapsible navigation with user/team switching
 
 ### Project Structure
-- `src/components/ui/` - shadcn/ui components (Avatar, Breadcrumb, Button, Dropdown, Input, Separator, Sheet, Sidebar, Skeleton, Tooltip)
-- `src/components/` - Application-specific components (app-sidebar, nav-main, nav-projects, nav-user, team-switcher)
+- `src/components/ui/` - shadcn/ui components (Avatar, Badge, Breadcrumb, Button, Card, Dialog, Dropdown, Input, Label, Separator, Sheet, Sidebar, Skeleton, Slider, Tabs, Textarea, Tooltip)
+- `src/components/` - Application-specific components (app-sidebar, nav-main, nav-projects, nav-user, team-switcher, ProtectedRoute, WorkspaceLayout)
 - `src/pages/` - Main application pages
   - `AIImageGenerator/` - Multi-step AI image generation workflow
-  - `AIImageProjects.tsx` - Project management interface  
-  - `ImageEditor.tsx` - Image optimization tools
+  - `AIImageProjects.tsx` - Project management interface
+  - `ImageEdit/` - Image editing tools and components
+  - `Ocr/` - OCR recognition with upload and history modes
+  - `Login.tsx` - Authentication page
+  - `WechatCallback.tsx` - WeChat OAuth callback handler
+- `src/contexts/` - React contexts (AuthContext.tsx for user authentication)
 - `src/hooks/` - Custom React hooks (use-mobile.ts for responsive detection)
-- `src/lib/` - Utility functions (utils.ts for className merging)
-- `src/services/` - API service layers (aiImageProjects.ts, aiImageSessions.ts, fileUpload.ts)
+- `src/lib/` - Utility functions and API clients (utils.ts, api.ts, tencentCloud.ts)
+- `src/services/` - API service layers for all features
+- `src/types/` - TypeScript type definitions (imageEdit.ts, ocr.ts)
 - `@/` alias maps to `./src/` for clean imports
 
 ### UI Framework Setup
@@ -76,9 +83,18 @@ The application uses React Router with the following main routes:
 - `/materials/product-images` - AI Image Projects listing
 - `/materials/project/:projectId/edit` - AI Image Generator workflow
 - `/materials/image-editor` - Image Editor tools
+- `/materials/ocr` - OCR Recognition projects
+- `/materials/ocr/:projectId/edit` - OCR Editor workflow
+- `/materials/image-edit` - Image Edit projects
+- `/login` - Authentication page
+- `/wechat/callback` - WeChat OAuth callback
 
 ### Key Components
 - **AIImageGenerator** - Multi-step workflow with prompt generation and image creation
+- **ImageEditor** - Tools for image optimization and editing
+- **OcrEditor** - OCR text recognition with upload and history modes
+- **AuthContext** - React context for user authentication and state management
+- **ProtectedRoute** - Route wrapper for authentication-required pages
 - **AppSidebar** - Main navigation with collapsible design
 - **StepIndicator** - Progress tracking for multi-step workflows
 - Custom breadcrumb navigation integrated with routing
@@ -98,14 +114,34 @@ The core feature is a two-step AI image generation process:
    - Export capabilities (individual images, ZIP archives, PDF documents)
 
 ### State Management Patterns
-- Extended session model (`ExtendedAIImageSession`) with Map-based collections for prompts and images
-- Centralized type definitions in `src/pages/AIImageGenerator/types.ts`
-- Service layer separation for API interactions
-- Real-time status polling for async operations
+- **Authentication State** - React Context pattern with `AuthContext` for user management
+- **Extended Session Model** - `ExtendedAIImageSession` with Map-based collections for prompts and images
+- **Centralized Types** - Type definitions organized by feature in `src/types/` and component-specific types
+- **Service Layer** - Separated API interactions for each major feature
+- **Real-time Polling** - Task polling service (`taskPollingService.ts`) for async operations
+- **Local Storage** - Token-based authentication persistence
 
 ### Key Libraries
 - **jspdf** - PDF generation for image exports
 - **jszip** - Archive creation for batch downloads
 - **sonner** - Toast notifications
 - **react-markdown** - Markdown rendering for AI responses
-- 你不用测试,我会测试,也不用帮我运行项目
+- **axios** - HTTP client for API requests
+
+### Authentication System
+- **WeChat OAuth** integration for user authentication
+- **Token-based** authentication with localStorage persistence
+- **Protected routes** using `ProtectedRoute` component wrapper
+- **AuthContext** provides user state and authentication methods across the app
+
+### API Integration
+- **Centralized API client** in `src/lib/api.ts` with axios interceptors
+- **Tencent Cloud** integration for cloud services
+- **Service layer pattern** - separate service files for each feature area
+- **Task polling** system for async operations (image generation, OCR processing)
+
+### Development Notes
+- 你不用测试,我会测试,也不用帮我运行项目 (User handles testing and running the project)
+- Use existing component patterns and follow the established architecture
+- Maintain type safety with comprehensive TypeScript definitions
+- Follow the service layer pattern for new API integrations

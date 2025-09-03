@@ -1,0 +1,1648 @@
+{
+  "success": true,
+  "message": "成功解析，找到 43 个智能对象",
+  "data": {
+    "file_name": "手账纸模板3.psd",
+    "canvas": {
+      "width": 1024,
+      "height": 8192,
+      "background": "#ffffff"
+    },
+    "layers": [
+      {
+        "id": "768da5a2-19ed-4b06-9675-44a36d6ac5ba",
+        "name": "画板 1",
+        "type": "artboard",
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 8192,
+        "zIndex": 0,
+        "replaceable": false,
+        "visible": true
+      },
+      {
+        "id": "88d88535-aa96-4af4-a674-03b9da4f0d53",
+        "name": "图层 1",
+        "type": "image",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "zIndex": 1,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/3782f249_20250902_211513_abf38ae2.png",
+        "visible": true
+      },
+      {
+        "id": 42,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_1",
+        "type": "smart_object",
+        "x": 1,
+        "y": 1019,
+        "width": 1027,
+        "height": 1027,
+        "zIndex": 2,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/4910f8e8_20250902_211514_82903163.png",
+        "style": {
+          "opacity": 74
+        },
+        "visible": true
+      },
+      {
+        "id": 43,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_2",
+        "type": "smart_object",
+        "x": 226,
+        "y": 1241,
+        "width": 576,
+        "height": 576,
+        "zIndex": 3,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/b6efa5a9_20250902_211547_8257aeee.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "825f18b2-6d9b-4a7a-ae38-16ad50a0fa10",
+        "name": "15cm/5.9in",
+        "type": "text",
+        "x": 387,
+        "y": 1143,
+        "width": 250,
+        "height": 38,
+        "zIndex": 4,
+        "replaceable": false,
+        "content": "15cm/5.9in",
+        "style": {
+          "fontSize": 33.3,
+          "fontFamily": "AlimamaShuHeiTi-Bold",
+          "color": "#000000",
+          "textAlign": "center",
+          "lineHeight": 29,
+          "letterSpacing": 10,
+          "textOrientation": "horizontal",
+          "writingMode": "horizontal-tb"
+        },
+        "visible": true
+      },
+      {
+        "id": "81cfc63b-b050-4dfc-91d1-80372037a7a2",
+        "name": "15cm/5.9in",
+        "type": "text",
+        "x": 144,
+        "y": 1398,
+        "width": 38,
+        "height": 249,
+        "zIndex": 5,
+        "replaceable": false,
+        "content": "15cm/5.9in",
+        "style": {
+          "fontSize": 33.3,
+          "fontFamily": "AlimamaShuHeiTi-Bold",
+          "color": "#000000",
+          "textAlign": "center",
+          "lineHeight": 29,
+          "letterSpacing": 10,
+          "textOrientation": "vertical",
+          "writingMode": "vertical-rl"
+        },
+        "visible": true
+      },
+      {
+        "id": "5f1f1e59-cda5-4d8e-9363-7e55fb1fe26b",
+        "name": "图层 4",
+        "type": "image",
+        "x": 176,
+        "y": 1241,
+        "width": 44,
+        "height": 576,
+        "zIndex": 6,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/351f21f8_20250902_211547_5d6a30e7.png",
+        "visible": true
+      },
+      {
+        "id": "5af58e73-1c34-49ec-aeb0-f2de8afee347",
+        "name": "图层 4",
+        "type": "image",
+        "x": 224,
+        "y": 1186,
+        "width": 576,
+        "height": 44,
+        "zIndex": 7,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/ec038743_20250902_211547_c668c4f3.png",
+        "visible": true
+      },
+      {
+        "id": "f2a3d3a2-b676-470f-ac36-3d6d619cf151",
+        "name": "36 Sheets,NO REPEATING PATTERN",
+        "type": "text",
+        "x": 98,
+        "y": 1874,
+        "width": 834,
+        "height": 45,
+        "zIndex": 8,
+        "replaceable": false,
+        "content": "36 Sheets,NO REPEATING PATTERN",
+        "style": {
+          "fontSize": 33.3,
+          "fontFamily": "AlimamaShuHeiTi-Bold",
+          "color": "#29211d",
+          "textAlign": "center",
+          "lineHeight": 29,
+          "letterSpacing": 10,
+          "textOrientation": "horizontal",
+          "writingMode": "horizontal-tb"
+        },
+        "visible": true
+      },
+      {
+        "id": "756d77a0-b5e9-497c-a503-646138a01725",
+        "name": "图层 22",
+        "type": "image",
+        "x": -3,
+        "y": -1,
+        "width": 1025,
+        "height": 1025,
+        "zIndex": 9,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/0794272c_20250902_211547_b7b97a16.png",
+        "visible": true
+      },
+      {
+        "id": 45,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_1",
+        "type": "smart_object",
+        "x": 601,
+        "y": 485,
+        "width": 515,
+        "height": 515,
+        "zIndex": 10,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/4a225f86_20250902_211548_7009b598.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 46,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9d41c01a-adc7-4072-859d-f71e6172c6c7_1",
+        "type": "smart_object",
+        "x": -194,
+        "y": 95,
+        "width": 550,
+        "height": 551,
+        "zIndex": 11,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/76a0fd45_20250902_211548_dc17b08b.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 47,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_14e6c391-dfc6-4cbb-8887-40c145739a46_3",
+        "type": "smart_object",
+        "x": 618,
+        "y": 108,
+        "width": 496,
+        "height": 496,
+        "zIndex": 12,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/9c189e26_20250902_211548_1af0b718.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 66,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 48,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_340cb9c4-0a50-4e71-804c-c69ac35bcb8e_1",
+        "type": "smart_object",
+        "x": -95,
+        "y": 485,
+        "width": 534,
+        "height": 534,
+        "zIndex": 13,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/1050c3de_20250902_211548_a5f95f6d.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 44,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_0",
+        "type": "smart_object",
+        "x": 288,
+        "y": 515,
+        "width": 493,
+        "height": 494,
+        "zIndex": 14,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/fc24fa61_20250902_211549_e66e7cbb.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 49,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_1",
+        "type": "smart_object",
+        "x": 373,
+        "y": 108,
+        "width": 472,
+        "height": 472,
+        "zIndex": 15,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/d5afb029_20250902_211549_82ffa4a0.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 104,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 50,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_2",
+        "type": "smart_object",
+        "x": 48,
+        "y": 103,
+        "width": 492,
+        "height": 493,
+        "zIndex": 16,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/35c7263d_20250902_211549_c81e7b89.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "63ca2f60-46cd-4884-b346-1ed3679c9827",
+        "name": "Decorative stationery paper",
+        "type": "text",
+        "x": 147,
+        "y": 737,
+        "width": 676,
+        "height": 64,
+        "zIndex": 17,
+        "replaceable": false,
+        "content": "Decorative stationery paper",
+        "style": {
+          "fontSize": 43.9,
+          "fontFamily": "CharlieKaydenDemoRegular",
+          "color": "#522c1e",
+          "textAlign": "center",
+          "lineHeight": 21.45143,
+          "letterSpacing": 10,
+          "textOrientation": "horizontal",
+          "writingMode": "horizontal-tb"
+        },
+        "visible": true
+      },
+      {
+        "id": "8737593f-9e5b-4a17-acd1-bca2c9db4818",
+        "name": "色相/饱和度 1",
+        "type": "image",
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "zIndex": 18,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/3782f249_20250902_211549_2c7edd1f.png",
+        "visible": true
+      },
+      {
+        "id": "dd0f81e8-a9cb-4e7c-ae36-95a7508e74f0",
+        "name": "图层 15",
+        "type": "image",
+        "x": -600,
+        "y": 4930,
+        "width": 1741,
+        "height": 190,
+        "zIndex": 19,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/3e395fa7_20250902_211549_d293596b.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 52,
+            "angle": -107,
+            "distance": 9,
+            "spread": 6,
+            "size": 9,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 37,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_1",
+        "type": "smart_object",
+        "x": -24,
+        "y": 4241,
+        "width": 1049,
+        "height": 1049,
+        "zIndex": 20,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/db52182f_20250902_211549_1b919be8.png",
+        "visible": true
+      },
+      {
+        "id": "e270b278-936f-4efc-9542-673640c683e9",
+        "name": "图层 16",
+        "type": "image",
+        "x": 0,
+        "y": 7164,
+        "width": 1028,
+        "height": 1028,
+        "zIndex": 21,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/598b9a5a_20250902_211550_39c23519.png",
+        "visible": true
+      },
+      {
+        "id": 93,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_2",
+        "type": "smart_object",
+        "x": 356,
+        "y": 7518,
+        "width": 840,
+        "height": 698,
+        "zIndex": 22,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/94262505_20250902_211550_272e5e62.png",
+        "visible": true
+      },
+      {
+        "id": "419a8a70-5219-434f-ba9c-5dd757d44419",
+        "name": "图层 18",
+        "type": "image",
+        "x": 0,
+        "y": 7019,
+        "width": 1024,
+        "height": 1173,
+        "zIndex": 23,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/93d44b05_20250902_211551_50b140cd.png",
+        "style": {
+          "opacity": 67
+        },
+        "visible": true
+      },
+      {
+        "id": 94,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_2",
+        "type": "smart_object",
+        "x": -253,
+        "y": 7606,
+        "width": 755,
+        "height": 725,
+        "zIndex": 24,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/debac9d2_20250902_211551_124d2f30.png",
+        "visible": true
+      },
+      {
+        "id": "1cedd3a2-5e7d-42d7-a3b5-bd98c0be2bba",
+        "name": "图层 19",
+        "type": "image",
+        "x": 0,
+        "y": 7251,
+        "width": 949,
+        "height": 941,
+        "zIndex": 25,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/647bfe53_20250902_211551_3eddf348.png",
+        "style": {
+          "opacity": 61
+        },
+        "visible": true
+      },
+      {
+        "id": 25,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_0",
+        "type": "smart_object",
+        "x": 28,
+        "y": 7416,
+        "width": 753,
+        "height": 758,
+        "zIndex": 26,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/fa6929e9_20250902_211552_f37818bc.png",
+        "visible": true
+      },
+      {
+        "id": 24,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_1",
+        "type": "smart_object",
+        "x": 48,
+        "y": 7309,
+        "width": 774,
+        "height": 776,
+        "zIndex": 27,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/00acd410_20250902_211552_4842061e.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 40,
+            "angle": 35,
+            "distance": 5,
+            "spread": 8,
+            "size": 4,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 23,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_2",
+        "type": "smart_object",
+        "x": 118,
+        "y": 7213,
+        "width": 821,
+        "height": 803,
+        "zIndex": 28,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/ccccdc00_20250902_211552_57ab7c81.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 40,
+            "angle": 35,
+            "distance": 5,
+            "spread": 8,
+            "size": 4,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 139,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_0",
+        "type": "smart_object",
+        "x": 229,
+        "y": 7188,
+        "width": 778,
+        "height": 781,
+        "zIndex": 29,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/d42e8d8d_20250902_211553_cf7ecc9c.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 40,
+            "angle": 35,
+            "distance": 5,
+            "spread": 8,
+            "size": 4,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "e7ee2ada-430c-4cb0-adad-cdf0670eb3c4",
+        "name": "图层 20",
+        "type": "image",
+        "x": 115,
+        "y": 6889,
+        "width": 909,
+        "height": 1298,
+        "zIndex": 30,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/8d7f56c0_20250902_211553_1abc2f79.png",
+        "style": {
+          "opacity": 63
+        },
+        "visible": true
+      },
+      {
+        "id": "49e8b934-9ffc-4601-acf0-abec5f4b7bc6",
+        "name": "图层 21",
+        "type": "image",
+        "x": 0,
+        "y": 6924,
+        "width": 1024,
+        "height": 1268,
+        "zIndex": 31,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/fe0716c2_20250902_211553_51cc1f4c.png",
+        "style": {
+          "opacity": 69
+        },
+        "visible": true
+      },
+      {
+        "id": "6f59abc5-3136-4da6-9273-be4f97979843",
+        "name": "矩形 1",
+        "type": "image",
+        "x": -2,
+        "y": 5581,
+        "width": 1028,
+        "height": 123,
+        "zIndex": 32,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/52451193_20250902_211553_97d1745f.png",
+        "style": {
+          "opacity": 72
+        },
+        "visible": true
+      },
+      {
+        "id": "97dce3a6-ddac-4e70-aa1b-d6955c35d9bd",
+        "name": "36 sheets of planner paper",
+        "type": "text",
+        "x": 171,
+        "y": 5598,
+        "width": 691,
+        "height": 89,
+        "zIndex": 33,
+        "replaceable": false,
+        "content": "36 sheets of planner paper",
+        "style": {
+          "fontSize": 33.3,
+          "fontFamily": "CuninghamSingleton",
+          "color": "#000000",
+          "textAlign": "center",
+          "lineHeight": 29,
+          "letterSpacing": 10,
+          "textOrientation": "horizontal",
+          "writingMode": "horizontal-tb"
+        },
+        "visible": true
+      },
+      {
+        "id": "25f330ec-1fec-466a-90b9-9a512c3b3249",
+        "name": "图层 17",
+        "type": "image",
+        "x": 582,
+        "y": 7766,
+        "width": 446,
+        "height": 368,
+        "zIndex": 34,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/7f8595c8_20250902_211554_69e1a31c.png",
+        "visible": true
+      },
+      {
+        "id": "70c6731e-e422-4fea-8454-4c93e3bae04a",
+        "name": "图层 23",
+        "type": "image",
+        "x": -2,
+        "y": 2048,
+        "width": 1029,
+        "height": 1025,
+        "zIndex": 35,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/6a167a56_20250902_211554_39017e9a.png",
+        "visible": true
+      },
+      {
+        "id": 38,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_2",
+        "type": "smart_object",
+        "x": -49,
+        "y": 2084,
+        "width": 874,
+        "height": 726,
+        "zIndex": 36,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/1455952a_20250902_211555_5efada7f.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 65,
+            "angle": -107,
+            "distance": 0,
+            "spread": 22,
+            "size": 9,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "1524eeb7-69fa-40e2-ba26-332aa80355b8",
+        "name": "图层 24",
+        "type": "image",
+        "x": 0,
+        "y": 1441,
+        "width": 946,
+        "height": 1214,
+        "zIndex": 37,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/8088417a_20250902_211555_a056210d.png",
+        "style": {
+          "opacity": 67
+        },
+        "visible": true
+      },
+      {
+        "id": 74,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_340cb9c4-0a50-4e71-804c-c69ac35bcb8e_1",
+        "type": "smart_object",
+        "x": -129,
+        "y": 2309,
+        "width": 832,
+        "height": 718,
+        "zIndex": 38,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/cf3da39b_20250902_211555_86707e49.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "070eb70f-ebdc-4bdb-8e3f-40e768e9a434",
+        "name": "图层 25",
+        "type": "image",
+        "x": 0,
+        "y": 1572,
+        "width": 1024,
+        "height": 1258,
+        "zIndex": 39,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/fdcac441_20250902_211556_ff0ff715.png",
+        "style": {
+          "opacity": 58
+        },
+        "visible": true
+      },
+      {
+        "id": 75,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_1",
+        "type": "smart_object",
+        "x": 282,
+        "y": 2313,
+        "width": 703,
+        "height": 652,
+        "zIndex": 40,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/cb26f1b0_20250902_211556_154881e3.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 52,
+            "angle": -149,
+            "distance": 7,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "4e456a9e-2765-4b98-a3db-3c27f6931bc4",
+        "name": "图层 26",
+        "type": "image",
+        "x": -1,
+        "y": 3072,
+        "width": 1027,
+        "height": 1027,
+        "zIndex": 41,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/dd41e693_20250902_211556_94617029.png",
+        "visible": true
+      },
+      {
+        "id": 33,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_1",
+        "type": "smart_object",
+        "x": 221,
+        "y": 3423,
+        "width": 459,
+        "height": 413,
+        "zIndex": 42,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/6e2d5f32_20250902_211557_aa709158.png",
+        "visible": true
+      },
+      {
+        "id": 34,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9d41c01a-adc7-4072-859d-f71e6172c6c7_1",
+        "type": "smart_object",
+        "x": 152,
+        "y": 3233,
+        "width": 706,
+        "height": 707,
+        "zIndex": 43,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/5f8e10da_20250902_211557_13b0636e.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 65,
+            "angle": -107,
+            "distance": 0,
+            "spread": 22,
+            "size": 9,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "e3adf914-530b-4f8e-bb9b-0d5a1018c03e",
+        "name": "图层 29",
+        "type": "image",
+        "x": 512,
+        "y": 3484,
+        "width": 143,
+        "height": 108,
+        "zIndex": 44,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/efedad2a_20250902_211557_6c99eb0d.png",
+        "visible": true
+      },
+      {
+        "id": "0757b07f-6e5a-4504-9685-b8181ec9401f",
+        "name": "图层 30",
+        "type": "image",
+        "x": 248,
+        "y": 3730,
+        "width": 152,
+        "height": 75,
+        "zIndex": 45,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/885fd9d1_20250902_211557_da34bc95.png",
+        "visible": true
+      },
+      {
+        "id": "54327878-4957-4533-a068-2fb7447f4c3e",
+        "name": "图层 28",
+        "type": "image",
+        "x": 585,
+        "y": 3642,
+        "width": 173,
+        "height": 174,
+        "zIndex": 46,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/79185002_20250902_211557_2a9959d7.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 71,
+            "angle": 38,
+            "distance": 4,
+            "spread": 6,
+            "size": 4,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "d1243162-b2fb-49eb-8204-2ca03aa12994",
+        "name": "图层 27",
+        "type": "image",
+        "x": 327,
+        "y": 3571,
+        "width": 150,
+        "height": 145,
+        "zIndex": 47,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/429c99db_20250902_211557_289df8d9.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 63,
+            "angle": 38,
+            "distance": 4,
+            "spread": 6,
+            "size": 4,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "96df9621-5967-466c-99bb-e337eee2e009",
+        "name": "图层 31",
+        "type": "image",
+        "x": -2,
+        "y": 4091,
+        "width": 1029,
+        "height": 1029,
+        "zIndex": 48,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/529feff4_20250902_211557_6c0b5105.png",
+        "visible": true
+      },
+      {
+        "id": 32,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_0",
+        "type": "smart_object",
+        "x": 248,
+        "y": 4143,
+        "width": 836,
+        "height": 829,
+        "zIndex": 49,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/58d33fd2_20250902_211558_fde8ba3d.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 65,
+            "angle": -107,
+            "distance": 0,
+            "spread": 22,
+            "size": 9,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 16,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_2",
+        "type": "smart_object",
+        "x": -402,
+        "y": 4057,
+        "width": 873,
+        "height": 744,
+        "zIndex": 50,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/fddbaf09_20250902_211558_69c94b50.png",
+        "visible": true
+      },
+      {
+        "id": "478e0d59-ac55-4190-ba64-e31874820ca2",
+        "name": "图层 37",
+        "type": "image",
+        "x": 0,
+        "y": 3794,
+        "width": 742,
+        "height": 1051,
+        "zIndex": 51,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/527e0f6a_20250902_211559_83cf134d.png",
+        "visible": true
+      },
+      {
+        "id": "09c7b4b4-2f59-4cb7-bb28-c293d9b191fe",
+        "name": "图层 36",
+        "type": "image",
+        "x": 107,
+        "y": 4096,
+        "width": 409,
+        "height": 267,
+        "zIndex": 52,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/ce305a11_20250902_211559_722a578d.png",
+        "visible": true
+      },
+      {
+        "id": 29,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_0",
+        "type": "smart_object",
+        "x": 250,
+        "y": 4348,
+        "width": 766,
+        "height": 767,
+        "zIndex": 53,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/c2e138e2_20250902_211559_ef5b62e6.png",
+        "visible": true
+      },
+      {
+        "id": "d3d985ca-0aef-464e-9a98-276b9909e3b3",
+        "name": "图层 35",
+        "type": "image",
+        "x": 855,
+        "y": 4640,
+        "width": 169,
+        "height": 318,
+        "zIndex": 54,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/3bca2e7f_20250902_211559_4bb9bb9e.png",
+        "visible": true
+      },
+      {
+        "id": 30,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_1",
+        "type": "smart_object",
+        "x": 187,
+        "y": 4060,
+        "width": 982,
+        "height": 983,
+        "zIndex": 55,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/53944438_20250902_211559_9c84946d.png",
+        "visible": true
+      },
+      {
+        "id": 31,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_2",
+        "type": "smart_object",
+        "x": 79,
+        "y": 4156,
+        "width": 1019,
+        "height": 1020,
+        "zIndex": 56,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/4be56adb_20250902_211600_732b63ce.png",
+        "visible": true
+      },
+      {
+        "id": "a47de184-49b9-4e14-b852-4fb7d8337c5a",
+        "name": "图层 33",
+        "type": "image",
+        "x": 753,
+        "y": 4654,
+        "width": 271,
+        "height": 210,
+        "zIndex": 57,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/b49ec55b_20250902_211600_83c5ff25.png",
+        "visible": true
+      },
+      {
+        "id": "e47ef03c-b58c-4b69-a837-489a34d365d9",
+        "name": "图层 32",
+        "type": "image",
+        "x": 807,
+        "y": 4676,
+        "width": 206,
+        "height": 111,
+        "zIndex": 58,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/21ca56cc_20250902_211600_eb86cb48.png",
+        "visible": true
+      },
+      {
+        "id": "088fc9f4-b678-4fa0-be25-ef29d82ac6dc",
+        "name": "图层 34",
+        "type": "image",
+        "x": 969,
+        "y": 4737,
+        "width": 43,
+        "height": 119,
+        "zIndex": 59,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/a76018b0_20250902_211600_81317499.png",
+        "visible": true
+      },
+      {
+        "id": "944ca4d0-9db5-409f-b92b-606d5c520f4a",
+        "name": "图层 38",
+        "type": "image",
+        "x": -3,
+        "y": 5119,
+        "width": 1025,
+        "height": 1025,
+        "zIndex": 60,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/0ef3c4ba_20250902_211601_1b127429.png",
+        "visible": true
+      },
+      {
+        "id": 125,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_0",
+        "type": "smart_object",
+        "x": -109,
+        "y": 5625,
+        "width": 659,
+        "height": 659,
+        "zIndex": 61,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/02402116_20250902_211601_cfa9f0e2.png",
+        "visible": true
+      },
+      {
+        "id": "5766ffec-ea7f-403a-a111-19fbc93c4d8a",
+        "name": "图层 35",
+        "type": "image",
+        "x": 186,
+        "y": 6090,
+        "width": 206,
+        "height": 170,
+        "zIndex": 62,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/33b537c2_20250902_211601_7b06e954.png",
+        "visible": true
+      },
+      {
+        "id": 132,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_340cb9c4-0a50-4e71-804c-c69ac35bcb8e_1",
+        "type": "smart_object",
+        "x": -370,
+        "y": 5234,
+        "width": 643,
+        "height": 643,
+        "zIndex": 63,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/a365926b_20250902_211601_4739a6a2.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 127,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_1",
+        "type": "smart_object",
+        "x": 63,
+        "y": 5571,
+        "width": 609,
+        "height": 610,
+        "zIndex": 64,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/cbd869f6_20250902_211602_c4c1bfe5.png",
+        "visible": true
+      },
+      {
+        "id": 128,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_2",
+        "type": "smart_object",
+        "x": 280,
+        "y": 5571,
+        "width": 655,
+        "height": 656,
+        "zIndex": 65,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/44f473a7_20250902_211602_12e5e33e.png",
+        "visible": true
+      },
+      {
+        "id": 130,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_1",
+        "type": "smart_object",
+        "x": -20,
+        "y": 5159,
+        "width": 583,
+        "height": 583,
+        "zIndex": 66,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/d247a080_20250902_211602_2d08adef.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 131,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_14e6c391-dfc6-4cbb-8887-40c145739a46_3",
+        "type": "smart_object",
+        "x": 217,
+        "y": 5089,
+        "width": 554,
+        "height": 554,
+        "zIndex": 67,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/3aa6c546_20250902_211602_e6b68c36.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 66,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 133,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_0",
+        "type": "smart_object",
+        "x": 87,
+        "y": 5128,
+        "width": 568,
+        "height": 569,
+        "zIndex": 68,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/7e73a63d_20250902_211602_0733747e.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 134,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_1",
+        "type": "smart_object",
+        "x": 428,
+        "y": 5411,
+        "width": 569,
+        "height": 570,
+        "zIndex": 69,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/245cf89e_20250902_211603_30ce1321.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 104,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 135,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_2",
+        "type": "smart_object",
+        "x": 324,
+        "y": 5119,
+        "width": 538,
+        "height": 539,
+        "zIndex": 70,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/79110252_20250902_211603_f78ef257.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "be5a406b-f889-4c23-9802-0c6198ca1d00",
+        "name": "图层 38",
+        "type": "image",
+        "x": -3,
+        "y": 5119,
+        "width": 1025,
+        "height": 1025,
+        "zIndex": 71,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/4ba56460_20250902_211603_e4e48c10.png",
+        "visible": true
+      },
+      {
+        "id": "91a47bd1-f3be-450b-ac9e-adec5fea9d73",
+        "name": "图层 40",
+        "type": "image",
+        "x": 557,
+        "y": 5467,
+        "width": 78,
+        "height": 596,
+        "zIndex": 72,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/b942548e_20250902_211603_6ff986ca.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 71,
+            "angle": 48,
+            "distance": 4,
+            "spread": 18,
+            "size": 7,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 22,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_0",
+        "type": "smart_object",
+        "x": 570,
+        "y": 5473,
+        "width": 706,
+        "height": 698,
+        "zIndex": 73,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/9aee685f_20250902_211603_51d40a1e.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 40,
+            "angle": 35,
+            "distance": 5,
+            "spread": 8,
+            "size": 4,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "58bc5c94-b8c0-4b84-a4aa-6f10fe28d87d",
+        "name": "图层 39",
+        "type": "image",
+        "x": 562,
+        "y": 5467,
+        "width": 305,
+        "height": 622,
+        "zIndex": 74,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/d0c5d08e_20250902_211604_e83a1852.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 71,
+            "angle": 129,
+            "distance": 4,
+            "spread": 18,
+            "size": 7,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": "997ad8a8-6328-4286-88a2-ba7c410e86c7",
+        "name": "图层 41",
+        "type": "image",
+        "x": -3,
+        "y": 6139,
+        "width": 1032,
+        "height": 1032,
+        "zIndex": 75,
+        "replaceable": false,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/4b625c29_20250902_211604_86d3ef2d.png",
+        "visible": true
+      },
+      {
+        "id": 146,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_2",
+        "type": "smart_object",
+        "x": 215,
+        "y": 6589,
+        "width": 558,
+        "height": 560,
+        "zIndex": 76,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/77cf24d3_20250902_211605_26a89857.png",
+        "visible": true
+      },
+      {
+        "id": 145,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_1",
+        "type": "smart_object",
+        "x": 409,
+        "y": 6416,
+        "width": 598,
+        "height": 599,
+        "zIndex": 77,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/c7115d4f_20250902_211605_8ba46edb.png",
+        "visible": true
+      },
+      {
+        "id": 143,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_b01a5ffb-989f-4ef5-a08c-69030221320d_0",
+        "type": "smart_object",
+        "x": 505,
+        "y": 6539,
+        "width": 609,
+        "height": 609,
+        "zIndex": 78,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/513b22dd_20250902_211605_29e37665.png",
+        "visible": true
+      },
+      {
+        "id": 149,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_1",
+        "type": "smart_object",
+        "x": 197,
+        "y": 6501,
+        "width": 569,
+        "height": 570,
+        "zIndex": 79,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/245cf89e_20250902_211606_f6ef9cc3.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 104,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 150,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_1914b46a-b1b4-4d4f-bfff-50a45614ecfd_2",
+        "type": "smart_object",
+        "x": -98,
+        "y": 6518,
+        "width": 579,
+        "height": 580,
+        "zIndex": 80,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/ab273089_20250902_211606_0292e1fd.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 148,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_0",
+        "type": "smart_object",
+        "x": 390,
+        "y": 6184,
+        "width": 541,
+        "height": 542,
+        "zIndex": 81,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/52bb62e5_20250902_211606_60487ab4.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 80,
+            "angle": 103,
+            "distance": 4,
+            "spread": 14,
+            "size": 3,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      },
+      {
+        "id": 147,
+        "name": "hcc_001_74332_20250602A039Detailed_vintage_map_illustration_w_9a5af4e3-2f9d-4add-98fe-e0e3b7c0a535_1",
+        "type": "smart_object",
+        "x": 59,
+        "y": 6219,
+        "width": 555,
+        "height": 556,
+        "zIndex": 82,
+        "replaceable": true,
+        "content": "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/psd_images/691a0eda_20250902_211606_0770337d.png",
+        "style": {
+          "shadow": {
+            "enabled": true,
+            "blend_mode": "multiply",
+            "color": "#000000",
+            "opacity": 60,
+            "angle": 122,
+            "distance": 10,
+            "spread": 9,
+            "size": 10,
+            "use_global_light": false,
+            "knock_out": true,
+            "inner_shadow": false
+          }
+        },
+        "visible": true
+      }
+    ],
+    "total_layers": 83,
+    "smart_objects": 43
+  }
+}

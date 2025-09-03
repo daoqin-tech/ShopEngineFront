@@ -1,6 +1,7 @@
 import * as React from "react"
 import {
   SquareTerminal,
+  Layers,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -14,7 +15,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {}
+type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
 export function AppSidebar({ ...props }: AppSidebarProps) {
   const { user } = useAuth()
@@ -39,6 +40,22 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           {
             title: "AI编辑图片",
             url: "/workspace/image-edit-projects",
+          },
+        ],
+      },
+      {
+        title: "模板套图",
+        url: "/workspace/template-management",
+        icon: Layers,
+        isActive: false,
+        items: [
+          {
+            title: "模板管理",
+            url: "/workspace/template-management",
+          },
+          {
+            title: "套图项目",
+            url: "/workspace/cover-projects",
           },
         ],
       },

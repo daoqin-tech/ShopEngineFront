@@ -212,7 +212,7 @@ export function ImageEditor() {
         <div className="p-4 border-b flex-shrink-0">
           <Button 
             variant="ghost" 
-            size="sm" 
+            size="sm"
             onClick={handleBackToProject}
             className="flex items-center gap-2 w-full justify-start"
           >
