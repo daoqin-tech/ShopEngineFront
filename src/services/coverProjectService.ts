@@ -4,25 +4,60 @@ import {
   CoverGenerationRequest, 
   CoverGenerationResponse,
   GeneratedCover,
-  BatchGenerationStatus,
-  ReplacementImage
+  BatchGenerationStatus
 } from '@/types/template'
+
+// 模板选择项（用于cover projects）
+// 切片数据类型（简化版，只包含预览需要的信息）
+export interface SlicingData {
+  regions: {
+    id: string
+    x: number
+    y: number
+    width: number
+    height: number
+    index: number
+  }[]
+}
+
+export interface TemplateSelectionItem {
+  id: string
+  name: string
+  thumbnailUrl: string
+  psdUrl: string
+  status: string
+  width: number
+  height: number
+  slicing?: SlicingData
+  createdAt: string
+  updatedAt: string
+}
+
+// 简单图片信息接口
+export interface SimpleImageInfo {
+  id: string
+  imageUrl: string
+  createdAt: string
+  status: string
+  width: number
+  height: number
+}
+
+// 本地替换图片接口
+interface ReplacementImage {
+  id: string
+  originalName: string
+  url: string
+  width: number
+  height: number
+  fileSize: number
+}
 
 // 套图项目API
 export const coverProjectService = {
   // 获取套图项目列表
-  getProjects: async (params?: {
-    page?: number
-    limit?: number
-    status?: string
-    search?: string
-  }): Promise<{
-    projects: CoverProject[]
-    total: number
-    page: number
-    limit: number
-  }> => {
-    const response = await apiClient.get('/cover-projects', { params })
+  getProjects: async (): Promise<CoverProject[]> => {
+    const response = await apiClient.get('/cover-projects')
     return response.data
   },
 
@@ -33,11 +68,8 @@ export const coverProjectService = {
   },
 
   // 创建套图项目
-  createProject: async (data: {
-    name: string
-    templateId?: string
-  }): Promise<CoverProject> => {
-    const response = await apiClient.post('/cover-projects', data)
+  createProject: async (): Promise<CoverProject> => {
+    const response = await apiClient.post('/cover-projects')
     return response.data
   },
 
@@ -55,6 +87,42 @@ export const coverProjectService = {
   // 设置项目使用的模板
   setProjectTemplate: async (projectId: string, templateId: string): Promise<CoverProject> => {
     const response = await apiClient.put(`/cover-projects/${projectId}/template`, { templateId })
+    return response.data
+  },
+
+  // 获取所有模板（用于模板选择）
+  getTemplates: async (params?: { name?: string }): Promise<TemplateSelectionItem[]> => {
+    const response = await apiClient.get('/cover-projects/templates', { params })
+    return response.data
+  },
+
+  // 获取AI项目列表（用于项目选择）
+  getAIProjects: async (params?: { page?: number; limit?: number; name?: string }) => {
+    const response = await apiClient.get('/cover-projects/projects', { params })
+    return response.data
+  },
+
+  // 批量获取项目图片
+  batchGetImages: async (projectIds: string[]): Promise<Record<string, SimpleImageInfo[]>> => {
+    const response = await apiClient.post('/cover-projects/images', {
+      projectIds
+    })
+    return response.data
+  },
+
+  // 开始生成套图
+  startCoverGeneration: async (params: {
+    coverProjectId: string
+    templateId: string
+    aiProjectIds: string[]
+  }): Promise<{
+    taskId: string
+    status: string
+  }> => {
+    const response = await apiClient.post(`/cover-projects/${params.coverProjectId}/generate`, {
+      templateId: params.templateId,
+      aiProjectIds: params.aiProjectIds
+    })
     return response.data
   }
 }

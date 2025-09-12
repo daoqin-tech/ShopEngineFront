@@ -4,16 +4,21 @@ import { useTemplate } from '@/hooks/useTemplate'
 import { useKeyboardShortcuts, SHORTCUTS } from '@/hooks/useKeyboardShortcuts'
 import { PageLoading } from '@/components/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ErrorBoundary'
-import { PSDImportDialog } from '@/components/PSDImportDialog'
+import { PSDImportDialog } from '@/pages/PSDImportDialog'
+import { AddSliceDialog } from './template/AddSliceDialog'
 import { toast } from 'sonner'
 import { 
   ArrowLeft, Save, Undo2, Redo2, ZoomIn, ZoomOut,
-  Move, Hand, FileUp
+  Move, Hand, FileUp, Grid3X3, X, Info
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { LayerComponent } from './template/LayerComponent'
 import { LayersPanel } from './template/LayersPanel'
+import { SliceRegionsOverlay } from './template/SliceRegionsOverlay'
+import { SlicePanel } from './template/SlicePanel'
+import { createAutoSliceRegions } from '@/utils/sliceUtils'
+import { SliceRegion } from '@/types/template'
 
 export function TemplateEditor() {
   const { templateId } = useParams<{ templateId: string }>()
@@ -28,6 +33,7 @@ export function TemplateEditor() {
     canRedo,
     updateLayer,
     deleteLayer,
+    updateTemplate,
     undo,
     redo,
     saveTemplate,
@@ -40,10 +46,12 @@ export function TemplateEditor() {
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [activeToolType, setActiveToolType] = useState<'select' | 'pan'>('select')
+  const [activeToolType, setActiveToolType] = useState<'select' | 'pan' | 'slice'>('select')
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0, offsetX: 0, offsetY: 0 })
   const [showPSDImportDialog, setShowPSDImportDialog] = useState(false)
+  const [showAddSliceDialog, setShowAddSliceDialog] = useState(false)
+  const [showPreviewTip, setShowPreviewTip] = useState(true)
   
   
   
@@ -56,6 +64,13 @@ export function TemplateEditor() {
       loadTemplate()
     }
   }, [templateId, loadTemplate])
+
+  // 模板加载完成后重置画布偏移量
+  useEffect(() => {
+    if (template && !loading) {
+      setCanvasOffset({ x: 0, y: 0 })
+    }
+  }, [template, loading])
 
 
 
@@ -312,8 +327,81 @@ export function TemplateEditor() {
     setIsPanning(false)
   }
 
-  // 获取选中的图层
-  const selectedLayer = template?.data?.layers?.find(l => l.id === selectedLayerId)
+
+
+  const handleDeleteSlice = (sliceId: string) => {
+    if (!template?.slicing?.regions) return
+    
+    const updatedRegions = template.slicing.regions.filter(region => region.id !== sliceId)
+    
+    if (updatedRegions.length === 0) {
+      // 如果删除后没有分区了，清除整个分区配置并切回选择模式
+      const newTemplate = { ...template }
+      delete newTemplate.slicing
+      updateTemplate(newTemplate)
+      setActiveToolType('select')
+      toast.success('已删除分区，已切回选择模式')
+    } else {
+      // 重新计算分区索引
+      const reindexedRegions = updatedRegions
+        .sort((a, b) => {
+          if (Math.abs(a.y - b.y) < 5) { // 同一行
+            return a.x - b.x
+          }
+          return a.y - b.y
+        })
+        .map((region, index) => ({
+          ...region,
+          index: index + 1
+        }))
+      
+      updateTemplate({
+        ...template,
+        slicing: { regions: reindexedRegions }
+      })
+      toast.success('已删除分区')
+    }
+  }
+
+  const handleAddSlice = () => {
+    if (!template) return
+    setShowAddSliceDialog(true)
+  }
+
+  const handleAddSliceConfirm = (regionData: { x: number; y: number; width: number; height: number }) => {
+    if (!template) return
+
+    // 生成UUID
+    const generateUUID = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0
+        const v = c === 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+      })
+    }
+
+    const existingRegions = template.slicing?.regions || []
+    const newIndex = existingRegions.length + 1
+
+    const newRegion: SliceRegion = {
+      id: generateUUID(),
+      x: regionData.x,
+      y: regionData.y,
+      width: regionData.width,
+      height: regionData.height,
+      index: newIndex
+    }
+
+    const updatedRegions = [...existingRegions, newRegion]
+
+    updateTemplate({
+      ...template,
+      slicing: { regions: updatedRegions }
+    })
+
+    toast.success('分区已添加')
+  }
+
   
 
   // 加载状态
@@ -360,9 +448,18 @@ export function TemplateEditor() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" onClick={() => setShowPSDImportDialog(true)}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowPSDImportDialog(true)}
+            disabled={template?.status === 'processing' || template?.status === 'success'}
+          >
             <FileUp className="w-4 h-4 mr-1" />
-            导入PSD
+            {template?.status === 'processing' && '处理中...'}
+            {template?.status === 'success' && '已导入'}
+            {template?.status === 'failed' && '重新导入PSD'}
+            {template?.status === 'pending' && '导入PSD'}
+            {!template?.status && '导入PSD'}
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
@@ -384,7 +481,8 @@ export function TemplateEditor() {
         <div className="w-16 bg-white border-r flex-shrink-0 flex flex-col items-center py-4 space-y-2">
           {[
             { type: 'select', icon: Move, tooltip: '选择' },
-            { type: 'pan', icon: Hand, tooltip: '手势拖拽' }
+            { type: 'pan', icon: Hand, tooltip: '手势拖拽' },
+            { type: 'slice', icon: Grid3X3, tooltip: '分区切片' }
           ].map(({ type, icon: Icon, tooltip }) => (
             <Button
               key={type}
@@ -431,6 +529,29 @@ export function TemplateEditor() {
         {/* 中央画布区域 */}
         <div className="flex-1 flex flex-col min-w-0">
 
+          {/* 可关闭的模板提示信息 */}
+          {showPreviewTip && (
+            <div className="bg-muted/50 border-b px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <div className="text-sm text-foreground">
+                    <span className="font-medium">预览模式：</span>
+                    当前为模板预览，可进行分区切片和标记可替换图层以修改配置
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowPreviewTip(false)}
+                  className="h-6 w-6 p-0 hover:bg-background/80"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* 画布容器 */}
           <div 
             ref={containerRef}
@@ -444,86 +565,87 @@ export function TemplateEditor() {
                 : 'default' 
             }}
           >
-            {/* 滚动内容区域 - 确保有足够空间滚动 */}
-            <div 
-              style={{
-                minWidth: '100%',
-                minHeight: '100%',
-                width: Math.max((template.data?.width || 800) * zoom + 400, window.innerWidth),
-                height: Math.max((template.data?.height || 600) * zoom + 400, window.innerHeight),
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <div
-                ref={canvasRef}
-                className="relative bg-white shadow-lg"
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500">加载模板中...</div>
+              </div>
+            ) : template ? (
+              /* 滚动内容区域 - 确保有足够空间滚动 */
+              <div 
                 style={{
-                  width: (template.data?.width || 800) * zoom,
-                  height: (template.data?.height || 600) * zoom,
-                  transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
-                  overflow: 'hidden', // 裁剪超出画布边界的元素
-                  transition: isPanning ? 'none' : 'transform 0.3s ease-out', // 拖拽时禁用过渡
-                  cursor: activeToolType === 'pan' 
-                    ? (isPanning ? 'grabbing' : 'grab') 
-                    : 'default'
+                  minWidth: '100%',
+                  minHeight: '100%',
+                  width: Math.max((template.data?.width || 800) * zoom + 400, window.innerWidth - 64 - 384), // 减去左侧工具栏(64px)和右侧面板(384px)
+                  height: Math.max((template.data?.height || 600) * zoom + 400, window.innerHeight - 56), // 减去顶部工具栏高度
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
-                {/* 渲染图层 */}
-                {template.data?.layers?.map(layer => (
-                  <LayerComponent
-                    key={layer.id}
-                    layer={layer}
+                <div
+                  ref={canvasRef}
+                  className="relative bg-white shadow-lg"
+                  style={{
+                    width: (template.data?.width || 800) * zoom,
+                    height: (template.data?.height || 600) * zoom,
+                    transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
+                    overflow: 'hidden', // 裁剪超出画布边界的元素
+                    transition: isPanning ? 'none' : 'transform 0.3s ease-out', // 拖拽时禁用过渡
+                    cursor: activeToolType === 'pan' 
+                      ? (isPanning ? 'grabbing' : 'grab') 
+                      : 'default'
+                  }}
+                >
+                  {/* 渲染图层 */}
+                  {template.data?.layers?.map(layer => (
+                    <LayerComponent
+                      key={layer.id}
+                      layer={layer}
+                      zoom={zoom}
+                      isSelected={selectedLayerId === layer.id}
+                      activeToolType={activeToolType}
+                      onMouseDown={(e) => handleLayerMouseDown(e, layer.id)}
+                    />
+                  ))}
+                  
+                  {/* 分区可视化覆盖层 */}
+                  <SliceRegionsOverlay
+                    regions={template.slicing?.regions || []}
                     zoom={zoom}
-                    isSelected={selectedLayerId === layer.id}
-                    activeToolType={activeToolType}
-                    onMouseDown={(e) => handleLayerMouseDown(e, layer.id)}
+                    canvasWidth={template.data?.width || 800}
+                    canvasHeight={template.data?.height || 600}
+                    isActive={activeToolType === 'slice'}
                   />
-                ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500">未找到模板数据</div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 右侧面板 - 图层面板 */}
+        {/* 右侧面板 - 图层面板/分区面板 */}
         <div className="w-96 bg-white border-l flex-shrink-0 flex flex-col">
           <div className="h-full flex flex-col">
             <div className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
-              <LayersPanel
-                layers={template.data?.layers || []}
-                selectedLayerId={selectedLayerId}
-                onSelectLayer={selectLayer}
-                onUpdateLayer={updateLayer}
-              />
+              {activeToolType === 'slice' ? (
+                <SlicePanel
+                  regions={template.slicing?.regions || []}
+                  onDeleteSlice={handleDeleteSlice}
+                  onAddSlice={handleAddSlice}
+                />
+              ) : (
+                <LayersPanel
+                  layers={template.data?.layers || []}
+                  selectedLayerId={selectedLayerId}
+                  onSelectLayer={selectLayer}
+                  onUpdateLayer={updateLayer}
+                />
+              )}
             </div>
-            
-            {/* 选中图层的基础信息预览 */}
-            {selectedLayer && (
-              <div className="border-t bg-gray-50 p-3 flex-shrink-0">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-800 mb-1 truncate">
-                    {selectedLayer.name}
-                  </div>
-                  <div className="text-gray-600 space-y-1">
-                    <div className="flex justify-between">
-                      <span>位置:</span>
-                      <span>{Math.round(selectedLayer.x)}, {Math.round(selectedLayer.y)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>尺寸:</span>
-                      <span>{Math.round(selectedLayer.width)} × {Math.round(selectedLayer.height)}</span>
-                    </div>
-                    {selectedLayer.type === 'image' && (
-                      <div className="text-center text-xs text-green-600 mt-2">
-                        {selectedLayer.replaceable ? '✓ 已标记为可替换' : '未标记为可替换'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -532,8 +654,20 @@ export function TemplateEditor() {
       <PSDImportDialog
         open={showPSDImportDialog}
         onOpenChange={setShowPSDImportDialog}
-        projectId={templateId}
+        templateId={templateId}
       />
+
+      {/* 添加分区对话框 */}
+      {template && (
+        <AddSliceDialog
+          open={showAddSliceDialog}
+          onOpenChange={setShowAddSliceDialog}
+          canvasWidth={template.data?.width || 800}
+          canvasHeight={template.data?.height || 600}
+          existingRegions={template.slicing?.regions || []}
+          onAddSlice={handleAddSliceConfirm}
+        />
+      )}
     </div>
   )
 }

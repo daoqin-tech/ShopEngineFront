@@ -1,8 +1,7 @@
 import { apiClient } from '@/lib/api'
 import { 
   Template, 
-  PSDUploadResponse,
-  TemplateParseStatus 
+  PSDUploadResponse
 } from '@/types/template'
 
 // 模板管理API
@@ -43,16 +42,9 @@ export const templateService = {
     return response.data
   },
 
-  // 查询PSD解析状态
-  getParseStatus: async (templateId: string): Promise<TemplateParseStatus> => {
-    const response = await apiClient.get(`/templates/${templateId}/parse-status`)
-    return response.data
-  },
-
-  // 更新模板信息
-  updateTemplate: async (templateId: string, updates: Partial<Template>): Promise<Template> => {
-    const response = await apiClient.put(`/templates/${templateId}`, updates)
-    return response.data
+  // 更新模板名称
+  updateTemplateName: async (templateId: string, name: string): Promise<void> => {
+    await apiClient.put(`/templates/${templateId}`, { name })
   },
 
   // 删除模板
@@ -72,43 +64,13 @@ export const templateService = {
     return response.data
   },
 
-  // 解析PSD文件（通过文件URL）
-  parsePSDFile: async (fileUrl: string, fileName: string, projectId?: string): Promise<Template> => {
+  // 解析PSD文件（通过文件URL）- 后端异步处理，前端同步请求
+  parsePSDFile: async (fileUrl: string, fileName: string, templateId?: string): Promise<any> => {
     const response = await apiClient.post('/templates/parse-psd', {
       fileUrl,
       fileName,
-      projectId
+      templateId
     })
     return response.data
-  }
-}
-
-// 图层操作API
-export const layerService = {
-  // 更新图层
-  updateLayer: async (templateId: string, layerId: string, updates: any): Promise<void> => {
-    await apiClient.put(`/templates/${templateId}/layers/${layerId}`, updates)
-  },
-
-  // 删除图层
-  deleteLayer: async (templateId: string, layerId: string): Promise<void> => {
-    await apiClient.delete(`/templates/${templateId}/layers/${layerId}`)
-  },
-
-  // 添加图层
-  addLayer: async (templateId: string, layer: any): Promise<any> => {
-    const response = await apiClient.post(`/templates/${templateId}/layers`, layer)
-    return response.data
-  },
-
-  // 复制图层
-  duplicateLayer: async (templateId: string, layerId: string): Promise<any> => {
-    const response = await apiClient.post(`/templates/${templateId}/layers/${layerId}/duplicate`)
-    return response.data
-  },
-
-  // 重新排序图层
-  reorderLayers: async (templateId: string, layerIds: string[]): Promise<void> => {
-    await apiClient.put(`/templates/${templateId}/layers/reorder`, { layerIds })
   }
 }

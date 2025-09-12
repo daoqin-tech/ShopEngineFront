@@ -10,17 +10,18 @@ import { toast } from 'sonner'
 interface PSDImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  projectId?: string
+  templateId?: string
 }
 
 type ImportStatus = 'idle' | 'uploading' | 'parsing' | 'success' | 'error'
 
-export function PSDImportDialog({ open, onOpenChange, projectId }: PSDImportDialogProps) {
+export function PSDImportDialog({ open, onOpenChange, templateId }: PSDImportDialogProps) {
   const [status, setStatus] = useState<ImportStatus>('idle')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
+  const [countdown, setCountdown] = useState(5)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const resetDialog = () => {
@@ -29,6 +30,7 @@ export function PSDImportDialog({ open, onOpenChange, projectId }: PSDImportDial
     setUploadProgress(0)
     setErrorMessage('')
     setIsDragOver(false)
+    setCountdown(5)
   }
 
   const handleClose = () => {
@@ -102,15 +104,23 @@ export function PSDImportDialog({ open, onOpenChange, projectId }: PSDImportDial
 
       // 提交解析请求
       setStatus('parsing')
-      await templateService.parsePSDFile(fileUrl, file.name, projectId)
+      await templateService.parsePSDFile(fileUrl, file.name, templateId)
 
       // 解析提交成功
       setStatus('success')
-      toast.success('PSD文件已提交解析，处理完成后将自动更新')
+      setCountdown(20)
       
-      setTimeout(() => {
-        handleClose()
-      }, 2000)
+      // 开始倒计时
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval)
+            handleClose()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
 
     } catch (error) {
       setStatus('error')
@@ -216,8 +226,11 @@ export function PSDImportDialog({ open, onOpenChange, projectId }: PSDImportDial
               <div className="text-xl font-medium text-green-600 mb-2">
                 提交成功！
               </div>
-              <div className="text-muted-foreground">
-                PSD文件已开始解析，完成后将自动更新
+              <div className="text-muted-foreground mb-4">
+                解析过程较耗时，约需几分钟，请耐心等待。您可关闭对话框或退出当前界面，解析完成后刷新页面查看模板。
+              </div>
+              <div className="text-sm text-muted-foreground">
+                对话框将在 <span className="font-medium text-blue-600">{countdown}</span> 秒后自动关闭
               </div>
             </div>
           )}
@@ -251,6 +264,14 @@ export function PSDImportDialog({ open, onOpenChange, projectId }: PSDImportDial
             <div className="flex justify-center">
               <Button variant="outline" onClick={handleClose}>
                 关闭对话框
+              </Button>
+            </div>
+          )}
+          
+          {status === 'success' && (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={handleClose}>
+                立即关闭
               </Button>
             </div>
           )}

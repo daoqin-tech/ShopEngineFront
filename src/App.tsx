@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { WorkspaceLayout } from "@/components/WorkspaceLayout"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/contexts/AuthContext"
@@ -15,16 +15,10 @@ import { OcrEditor } from "@/pages/Ocr"
 import { OcrProjects } from "@/pages/OcrProjects"
 import { TemplateManagement } from "@/pages/TemplateManagement"
 import { CoverProjects } from "@/pages/CoverProjects"
-import { TemplateSelection } from "@/pages/TemplateSelection"
 import { TemplateEditor } from "@/pages/TemplateEditor"
 import { CoverEditor } from "@/pages/CoverEditor"
 import { Toaster } from "sonner"
 
-// 模板选择页面包装器，用于从路由参数获取projectId
-function TemplateSelectionWrapper() {
-  const { projectId } = useParams<{ projectId: string }>()
-  return <TemplateSelection projectId={projectId || ""} />
-}
 
 // 模板编辑器包装器
 function TemplateEditorWrapper() {
@@ -114,11 +108,6 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/workspace/cover-project/:projectId/template-selection" element={
-            <ProtectedRoute>
-              <TemplateSelectionWrapper />
-            </ProtectedRoute>
-          } />
           
           <Route path="/workspace/template/:templateId" element={
             <ProtectedRoute>
@@ -126,7 +115,7 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/workspace/cover-project/:projectId/edit" element={
+          <Route path="/workspace/cover-project/:projectId" element={
             <ProtectedRoute>
               <CoverEditor />
             </ProtectedRoute>

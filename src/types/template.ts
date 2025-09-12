@@ -61,15 +61,32 @@ export interface Layer {
   }
 }
 
+// 模板状态枚举
+export type TemplateStatus = "pending" | "processing" | "success" | "failed"
+
+// 分区信息
+export interface SliceRegion {
+  id: string
+  x: number      // 分区左上角x坐标
+  y: number      // 分区左上角y坐标  
+  width: number  // 分区宽度
+  height: number // 分区高度
+  index: number  // 分区序号（用于排序）
+}
+
 // 模板信息
 export interface Template {
   id: string
   name: string
   thumbnailUrl: string  // 预览图
+  status: TemplateStatus  // 模板状态
   data: {
     width: number
     height: number
     layers: Layer[]
+  }
+  slicing?: {
+    regions: SliceRegion[]
   }
   createdAt: string
   updatedAt: string
@@ -89,45 +106,16 @@ export interface PSDUploadResponse {
   status: string
 }
 
-// 模板解析状态查询响应
-export interface TemplateParseStatus {
-  templateId: string
-  status: string
-  progress?: number     // 解析进度 0-100
-  result?: Template     // 解析完成后的模板数据
-  error?: string
-}
-
-// 套图项目状态
-export enum CoverProjectStatus {
-  DRAFT = 'draft',          // 草稿
-  IN_PROGRESS = 'in_progress', // 进行中
-  COMPLETED = 'completed',     // 已完成
-  FAILED = 'failed'           // 失败
-}
 
 // 套图项目
 export interface CoverProject {
   id: string
   name: string
   templateId: string
-  template: Template
-  status: CoverProjectStatus
-  totalImages: number        // 总图片数量
-  completedImages: number    // 已生成图片数量
   createdAt: string
   updatedAt: string
 }
 
-// 替换图片信息
-export interface ReplacementImage {
-  id: string
-  originalName: string
-  url: string
-  width: number
-  height: number
-  fileSize: number
-}
 
 // 套图生成请求
 export interface CoverGenerationRequest {
@@ -138,7 +126,6 @@ export interface CoverGenerationRequest {
     imageId?: string        // 替换的图片ID
     text?: string          // 替换的文本内容
   }[]
-  outputFormat: 'jpg' | 'png'
   outputWidth?: number
   outputHeight?: number
 }

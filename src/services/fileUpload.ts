@@ -112,8 +112,38 @@ export class FileUploadAPI {
 
   // 批量上传文件
   static async uploadFiles(files: File[]): Promise<string[]> {
-    const uploadPromises = files.map(file => this.uploadFile(file));
+    const uploadPromises = files.map(file => this.uploadFile(file, `coverImages/${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name}`));
     return Promise.all(uploadPromises);
+  }
+
+  // 批量上传文件带进度
+  static async uploadFilesWithProgress(
+    files: File[], 
+    onProgress: (fileIndex: number, progress: number, totalProgress: number) => void
+  ): Promise<string[]> {
+    const results: string[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const objectKey = `coverImages/${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name}`;
+      
+      try {
+        const fileUrl = await this.uploadFileWithProgress(
+          file, 
+          (progress) => {
+            const totalProgress = ((i / files.length) * 100) + (progress / files.length);
+            onProgress(i, progress, totalProgress);
+          },
+          objectKey
+        );
+        results.push(fileUrl);
+      } catch (error) {
+        console.error(`文件 ${file.name} 上传失败:`, error);
+        throw error;
+      }
+    }
+    
+    return results;
   }
 
   // 验证文件类型和大小

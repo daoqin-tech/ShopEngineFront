@@ -6,7 +6,7 @@ interface LayerComponentProps {
   layer: Layer
   zoom: number
   isSelected: boolean
-  activeToolType: 'select' | 'pan'
+  activeToolType: 'select' | 'pan' | 'slice'
   onMouseDown: (e: React.MouseEvent) => void
 }
 
@@ -20,6 +20,8 @@ export function LayerComponent({ layer, zoom, isSelected, activeToolType, onMous
         return 'grab'
       case 'select':
         return 'move'
+      case 'slice':
+        return 'default'
       default:
         return 'default'
     }

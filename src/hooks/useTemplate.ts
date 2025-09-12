@@ -61,26 +61,11 @@ export function useTemplate(templateId: string | null) {
       setLoading(true)
       setError(null)
       
-      // 使用本地JSON数据模拟模板加载
-      const response = await fetch('/mock-template.json')
-      const jsonData = await response.json()
-      
-      // 转换JSON数据为Template格式
-      const mockTemplate: Template = {
-        id: templateId,
-        name: jsonData.data.file_name || '手账纸模板3',
-        thumbnailUrl: '',
-        data: {
-          width: jsonData.data.canvas.width,
-          height: jsonData.data.canvas.height,
-          layers: jsonData.data.layers
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      
-      setTemplate(mockTemplate)
-      setHistory([mockTemplate])
+      // 调用后端API获取模板数据
+      const templateData = await templateService.getTemplate(templateId)
+      console.log(templateData)
+      setTemplate(templateData)
+      setHistory([templateData])
       setHistoryIndex(0)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '加载模板失败')
@@ -204,6 +189,12 @@ export function useTemplate(templateId: string | null) {
     saveToHistory(newTemplate)
   }, [template, saveToHistory])
 
+  // 更新整个模板
+  const updateTemplate = useCallback((newTemplate: Template) => {
+    setTemplate(newTemplate)
+    saveToHistory(newTemplate)
+  }, [saveToHistory])
+
   return {
     template,
     loading,
@@ -212,6 +203,7 @@ export function useTemplate(templateId: string | null) {
     canRedo: historyIndex < history.length - 1,
     updateLayer,
     deleteLayer,
+    updateTemplate,
     undo,
     redo,
     saveTemplate,
