@@ -127,6 +127,12 @@ export const coverProjectService = {
       aiProjectIds: params.aiProjectIds
     })
     return response.data
+  },
+
+  // 获取项目的所有任务
+  getProjectTasks: async (projectId: string): Promise<TaskInfo[]> => {
+    const response = await apiClient.get(`/cover-projects/projects/${projectId}/tasks`)
+    return response.data
   }
 }
 

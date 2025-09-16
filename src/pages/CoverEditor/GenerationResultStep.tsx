@@ -24,6 +24,8 @@ interface GenerationResultStepProps {
   selectedProjects: Set<string>
   onProjectsSelect: (projects: Set<string>) => void
   selectedTemplate: TemplateSelectionItem | null
+  coverProjectId?: string
+  onTasksUpdate?: (tasks: TaskInfo[]) => void
 }
 
 export function GenerationResultStep({
@@ -31,7 +33,9 @@ export function GenerationResultStep({
   taskStatuses,
   selectedProjects,
   onProjectsSelect,
-  selectedTemplate
+  selectedTemplate,
+  coverProjectId,
+  onTasksUpdate
 }: GenerationResultStepProps) {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false)
   const [currentTaskImages, setCurrentTaskImages] = useState<string[]>([])
@@ -80,6 +84,19 @@ export function GenerationResultStep({
     }
   }, [searchQuery])
 
+  // 加载项目任务数据（右侧结果区域）
+  const loadProjectTasks = useCallback(async () => {
+    if (!coverProjectId || !onTasksUpdate) return
+
+    try {
+      const existingTasks = await coverProjectService.getProjectTasks(coverProjectId)
+      onTasksUpdate(existingTasks)
+    } catch (err) {
+      console.error('加载项目任务失败:', err)
+      toast.error('加载项目任务失败')
+    }
+  }, [coverProjectId, onTasksUpdate])
+
   // 当选中的项目改变时，重新加载图片
   useEffect(() => {
     loadProjectImages()
@@ -89,6 +106,11 @@ export function GenerationResultStep({
   useEffect(() => {
     loadAIProjects()
   }, [loadAIProjects])
+
+  // 加载项目任务数据
+  useEffect(() => {
+    loadProjectTasks()
+  }, [loadProjectTasks])
 
 
   // 处理项目选择

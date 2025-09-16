@@ -190,6 +190,8 @@ export function CoverEditor() {
           selectedProjects={selectedProjects}
           onProjectsSelect={setSelectedProjects}
           selectedTemplate={selectedTemplate}
+          coverProjectId={projectId}
+          onTasksUpdate={setTaskStatuses}
         />
       </div>
       
