@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import JSZip from 'jszip'
-import { type GeneratedCover } from '@/types/template'
 import { coverProjectService, type SimpleImageInfo, type TemplateSelectionItem, type TaskInfo } from '@/services/coverProjectService'
 
 // AI项目接口
@@ -20,7 +19,6 @@ interface AIProject {
 }
 
 interface GenerationResultStepProps {
-  generatedCovers: GeneratedCover[]
   isGenerating: boolean
   taskStatuses: TaskInfo[]
   selectedProjects: Set<string>
@@ -29,7 +27,6 @@ interface GenerationResultStepProps {
 }
 
 export function GenerationResultStep({
-  generatedCovers,
   isGenerating,
   taskStatuses,
   selectedProjects,
@@ -37,7 +34,6 @@ export function GenerationResultStep({
   selectedTemplate
 }: GenerationResultStepProps) {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false)
-  const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [currentTaskImages, setCurrentTaskImages] = useState<string[]>([])
   const [projectImages, setProjectImages] = useState<Record<string, SimpleImageInfo[]>>({})
   const [loadingImages, setLoadingImages] = useState(false)
@@ -375,7 +371,6 @@ export function GenerationResultStep({
                           <div
                             className="cursor-pointer"
                             onClick={() => {
-                              setPreviewImageIndex(0) // 从第一张开始预览
                               setShowPreviewDialog(true)
                               // 设置当前任务的图片作为预览对象
                               setCurrentTaskImages(task.resultImages!)

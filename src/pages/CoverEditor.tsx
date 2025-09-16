@@ -10,7 +10,7 @@ import {
   type TemplateSelectionItem,
   type TaskInfo
 } from '@/services/coverProjectService'
-import { type CoverProject, type GeneratedCover, type BatchGenerationStatus } from '@/types/template'
+import { type CoverProject } from '@/types/template'
 import { toast } from 'sonner'
 
 export function CoverEditor() {
@@ -19,13 +19,11 @@ export function CoverEditor() {
   
   // 项目数据状态
   const [project, setProject] = useState<CoverProject | null>(null)
-  const [generatedCovers, setGeneratedCovers] = useState<GeneratedCover[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
   // 生成状态
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generationStatus, setGenerationStatus] = useState<BatchGenerationStatus | null>(null)
   const [taskStatuses, setTaskStatuses] = useState<TaskInfo[]>([])
   
   // 项目选择状态
@@ -78,58 +76,14 @@ export function CoverEditor() {
 
       console.log('套图生成已启动:', result)
 
-      // 初始化生成状态
-      setGenerationStatus({
-        projectId,
-        totalTasks: result.tasks.length,
-        completedTasks: 0,
-        failedTasks: 0,
-        results: []
-      })
-
       // 开始轮询任务状态 (每5秒轮询一次)
       coverPollingService.startTaskPolling(
         result.tasks,
         (taskStatuses) => {
           setTaskStatuses(taskStatuses)
-
-          // 更新整体状态
-          const completedTasks = taskStatuses.filter(t => t.status === 'completed').length
-          const failedTasks = taskStatuses.filter(t => t.status === 'failed').length
-
-          setGenerationStatus({
-            projectId,
-            totalTasks: result.tasks.length,
-            completedTasks,
-            failedTasks,
-            results: [] // 将在完成时构建
-          })
         },
         (taskStatuses) => {
           setTaskStatuses(taskStatuses)
-
-          // 构建生成结果
-          const completedTasks = taskStatuses.filter(t => t.status === 'completed')
-          const generatedCovers: GeneratedCover[] = []
-
-          completedTasks.forEach(task => {
-            task.resultImages?.forEach((imageUrl, index) => {
-              generatedCovers.push({
-                id: `${task.taskId}-${index}`,
-                projectId: task.aiProjectId,
-                templateId: selectedTemplate.id,
-                imageUrl,
-                thumbnailUrl: imageUrl, // 使用同一张图作为缩略图
-                width: 800,
-                height: 600,
-                status: 'completed',
-                createdAt: task.createdAt,
-                replacements: []
-              })
-            })
-          })
-
-          setGeneratedCovers(generatedCovers)
           setIsGenerating(false)
           toast.success('套图生成完成！')
         },
@@ -231,7 +185,6 @@ export function CoverEditor() {
       {/* 主要内容区域 */}
       <div className="flex-1 p-6">
         <GenerationResultStep
-          generatedCovers={generatedCovers}
           isGenerating={isGenerating}
           taskStatuses={taskStatuses}
           selectedProjects={selectedProjects}

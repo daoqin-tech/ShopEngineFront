@@ -8,10 +8,9 @@ interface LayerComponentProps {
   isSelected: boolean
   activeToolType: 'select' | 'pan' | 'slice'
   onClick: (e: React.MouseEvent) => void
-  shouldHighlight?: boolean  // 是否应该高亮显示在最上层
 }
 
-export function LayerComponent({ layer, zoom, isSelected, activeToolType, onClick, shouldHighlight }: LayerComponentProps) {
+export function LayerComponent({ layer, zoom, isSelected, activeToolType, onClick }: LayerComponentProps) {
   if (!layer.visible) return null
 
   // 根据工具类型决定光标样式
