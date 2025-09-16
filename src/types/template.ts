@@ -88,6 +88,7 @@ export interface Template {
   slicing?: {
     regions: SliceRegion[]
   }
+  layerIds?: string[]  // 用户选择的需要替换的图层ID列表
   createdAt: string
   updatedAt: string
 }

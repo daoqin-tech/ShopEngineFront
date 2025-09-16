@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Package, Eye, Image, Check, Search, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Package, Image, Check, Search, ChevronRight, ChevronLeft, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import JSZip from 'jszip'
 import { type GeneratedCover } from '@/types/template'
-import { coverProjectService, type SimpleImageInfo, type TemplateSelectionItem } from '@/services/coverProjectService'
+import { coverProjectService, type SimpleImageInfo, type TemplateSelectionItem, type TaskInfo } from '@/services/coverProjectService'
 
 // AI项目接口
 interface AIProject {
@@ -22,10 +22,7 @@ interface AIProject {
 interface GenerationResultStepProps {
   generatedCovers: GeneratedCover[]
   isGenerating: boolean
-  generationStatus: {
-    completedTasks: number
-    totalTasks: number
-  } | null
+  taskStatuses: TaskInfo[]
   selectedProjects: Set<string>
   onProjectsSelect: (projects: Set<string>) => void
   selectedTemplate: TemplateSelectionItem | null
@@ -34,13 +31,14 @@ interface GenerationResultStepProps {
 export function GenerationResultStep({
   generatedCovers,
   isGenerating,
-  generationStatus,
+  taskStatuses,
   selectedProjects,
   onProjectsSelect,
   selectedTemplate
 }: GenerationResultStepProps) {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false)
   const [previewImageIndex, setPreviewImageIndex] = useState(0)
+  const [currentTaskImages, setCurrentTaskImages] = useState<string[]>([])
   const [projectImages, setProjectImages] = useState<Record<string, SimpleImageInfo[]>>({})
   const [loadingImages, setLoadingImages] = useState(false)
   
@@ -113,25 +111,61 @@ export function GenerationResultStep({
     setShowMaterialPanel(true)
   }
 
+  // 导出所有图片为ZIP
+  const handleExportAllImages = async () => {
+    if (currentTaskImages.length === 0) {
+      toast.error('没有图片可导出')
+      return
+    }
+
+    try {
+      toast.info('正在准备下载...')
+
+      const zip = new JSZip()
+
+      // 下载所有图片并添加到ZIP
+      const promises = currentTaskImages.map(async (imageUrl, index) => {
+        try {
+          const response = await fetch(imageUrl)
+          if (!response.ok) throw new Error(`Failed to fetch image ${index + 1}`)
+
+          const blob = await response.blob()
+          const extension = imageUrl.split('.').pop()?.toLowerCase() || 'jpg'
+          const filename = `image_${(index + 1).toString().padStart(3, '0')}.${extension}`
+
+          zip.file(filename, blob)
+        } catch (error) {
+          console.error(`Failed to download image ${index + 1}:`, error)
+          toast.error(`下载图片 ${index + 1} 失败`)
+        }
+      })
+
+      await Promise.all(promises)
+
+      // 生成ZIP文件
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+
+      // 创建下载链接
+      const url = URL.createObjectURL(zipBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `task_images_${Date.now()}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success('图片导出成功！')
+    } catch (error) {
+      console.error('Export failed:', error)
+      toast.error('导出失败，请重试')
+    }
+  }
+
 
   return (
     <>
       <div className="h-full flex flex-col">
-        {/* 生成进度条 */}
-        {isGenerating && generationStatus && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-medium">正在生成套图...</span>
-              <span className="text-sm text-gray-600">
-                {generationStatus.completedTasks}/{generationStatus.totalTasks}
-              </span>
-            </div>
-            <Progress 
-              value={(generationStatus.completedTasks / generationStatus.totalTasks) * 100} 
-              className="h-2" 
-            />
-          </div>
-        )}
 
         {/* 主要内容区域：左右分栏 */}
         <div className="flex-1 flex gap-6 overflow-hidden">
@@ -303,42 +337,100 @@ export function GenerationResultStep({
           <div className="flex-1 bg-white rounded-lg border p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <Image className="w-5 h-5 text-gray-600" />
-              <h3 className="text-lg font-medium">生成结果</h3>
-              {generatedCovers.length > 0 && (
-                <Badge variant="secondary">{generatedCovers.length} 张套图</Badge>
+              <h3 className="text-lg font-medium">生成任务</h3>
+              {taskStatuses.length > 0 && (
+                <Badge variant="secondary">{taskStatuses.length} 个任务</Badge>
               )}
             </div>
-            
+
             <div className="flex-1 overflow-y-auto">
-              {generatedCovers.length > 0 ? (
-                <div className="grid grid-cols-3 gap-4">
-                  {generatedCovers.map((cover, index) => (
-                    <div key={cover.id} className="relative group">
-                      <div className="aspect-square bg-gray-100 rounded overflow-hidden">
-                        <img
-                          src={cover.thumbnailUrl}
-                          alt={`生成结果 ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button
-                            size="sm"
-                            variant="secondary"
+              {taskStatuses.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {taskStatuses.map((task) => {
+                    // 获取状态样式
+                    const getStatusBadge = (status: TaskInfo['status']) => {
+                      switch (status) {
+                        case 'pending':
+                          return <Badge variant="outline" className="text-gray-600">等待中</Badge>
+                        case 'queued':
+                          return <Badge variant="outline" className="text-orange-600">队列中</Badge>
+                        case 'processing':
+                          return <Badge variant="outline" className="text-blue-600">处理中</Badge>
+                        case 'completed':
+                          return <Badge variant="outline" className="text-green-600">已完成</Badge>
+                        case 'failed':
+                          return <Badge variant="destructive">失败</Badge>
+                        default:
+                          return <Badge variant="outline">未知</Badge>
+                      }
+                    }
+
+                    const isCompleted = task.status === 'completed'
+                    const hasImages = task.resultImages && task.resultImages.length > 0
+
+                    return (
+                      <div key={task.taskId} className="border rounded-lg overflow-hidden">
+                        {/* 主要内容区域 */}
+                        {isCompleted && hasImages ? (
+                          <div
+                            className="cursor-pointer"
                             onClick={() => {
-                              setPreviewImageIndex(index)
+                              setPreviewImageIndex(0) // 从第一张开始预览
                               setShowPreviewDialog(true)
+                              // 设置当前任务的图片作为预览对象
+                              setCurrentTaskImages(task.resultImages!)
                             }}
-                            className="p-1 h-auto"
                           >
-                            <Eye className="w-3 h-3" />
-                          </Button>
+                            {/* 显示第一张图片 */}
+                            <div className="aspect-square bg-gray-100">
+                              <img
+                                src={task.resultImages![0]}
+                                alt="任务结果"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </div>
+                        ) : task.status === 'processing' ? (
+                          <div className="aspect-square flex items-center justify-center bg-gray-50">
+                            <div className="text-center">
+                              <div className="w-8 h-8 mx-auto mb-2 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                              <p className="text-xs text-gray-500">处理中...</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="aspect-square flex items-center justify-center bg-gray-50">
+                            <div className="text-center">
+                              <Image className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                              <p className="text-xs text-gray-500">
+                                {task.status === 'pending' ? '等待开始' :
+                                 task.status === 'queued' ? '等待处理' :
+                                 task.status === 'failed' ? '生成失败' : '暂无结果'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 底部信息栏 */}
+                        <div className="p-3 bg-white">
+                          <div className="flex items-center justify-between">
+                            {getStatusBadge(task.status)}
+                            {isCompleted && hasImages && (
+                              <span className="text-xs text-gray-500">
+                                {task.resultImages!.length} 张
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 错误信息 */}
+                          {task.status === 'failed' && task.errorMessage && (
+                            <div className="text-red-600 text-xs mt-2 p-2 bg-red-50 rounded">
+                              {task.errorMessage}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 text-center">
-                        结果 {index + 1}
-                      </p>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : selectedProjects.size === 0 ? (
                 <div className="flex items-center justify-center h-full">
@@ -360,15 +452,15 @@ export function GenerationResultStep({
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="w-16 h-16 mx-auto mb-3 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                    <p className="text-gray-500 mb-1">生成中...</p>
-                    <p className="text-sm text-gray-400">请耐心等待套图生成完成</p>
+                    <p className="text-gray-500 mb-1">准备生成任务...</p>
+                    <p className="text-sm text-gray-400">请耐心等待任务启动</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <Image className="w-16 h-16 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500 mb-1">暂无生成结果</p>
+                    <p className="text-gray-500 mb-1">暂无生成任务</p>
                     <p className="text-sm text-gray-400">点击开始生成按钮创建套图</p>
                   </div>
                 </div>
@@ -378,43 +470,33 @@ export function GenerationResultStep({
         </div>
       </div>
 
-      {/* 预览对话框 */}
+      {/* 预览对话框 - 图片网格显示 */}
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
-              预览套图 {previewImageIndex + 1} / {generatedCovers.length}
+              任务图片 ({currentTaskImages.length} 张)
             </DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center p-4">
-            {generatedCovers[previewImageIndex] && (
-              <img
-                src={generatedCovers[previewImageIndex].imageUrl}
-                alt={`预览 ${previewImageIndex + 1}`}
-                className="max-w-full max-h-[70vh] object-contain"
-              />
-            )}
+          <div className="max-h-[70vh] overflow-y-auto p-4">
+            <div className="grid grid-cols-3 gap-4">
+              {currentTaskImages.map((imageUrl, index) => (
+                <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden">
+                  <img
+                    src={imageUrl}
+                    alt={`图片 ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-between p-4 border-t">
+          <div className="flex items-center justify-center p-4 border-t">
             <Button
-              variant="outline"
-              onClick={() => setPreviewImageIndex(prev => Math.max(0, prev - 1))}
-              disabled={previewImageIndex === 0}
+              onClick={handleExportAllImages}
             >
-              上一张
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowPreviewDialog(false)}
-            >
-              关闭
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setPreviewImageIndex(prev => Math.min(generatedCovers.length - 1, prev + 1))}
-              disabled={previewImageIndex === generatedCovers.length - 1}
-            >
-              下一张
+              <Download className="w-4 h-4 mr-2" />
+              全部导出 ZIP
             </Button>
           </div>
         </DialogContent>

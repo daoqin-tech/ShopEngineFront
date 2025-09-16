@@ -1,14 +1,16 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useTemplate } from '@/hooks/useTemplate'
+import { v4 as uuidv4 } from 'uuid'
 import { useKeyboardShortcuts, SHORTCUTS } from '@/hooks/useKeyboardShortcuts'
+import { templateService } from '@/services/templateService'
+import { Template } from '@/types/template'
 import { PageLoading } from '@/components/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ErrorBoundary'
 import { PSDImportDialog } from '@/pages/PSDImportDialog'
 import { AddSliceDialog } from './template/AddSliceDialog'
 import { toast } from 'sonner'
-import { 
-  ArrowLeft, Save, Undo2, Redo2, ZoomIn, ZoomOut,
+import {
+  ArrowLeft, ZoomIn, ZoomOut,
   Move, Hand, FileUp, Grid3X3, X, Info
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,35 +19,75 @@ import { LayerComponent } from './template/LayerComponent'
 import { LayersPanel } from './template/LayersPanel'
 import { SliceRegionsOverlay } from './template/SliceRegionsOverlay'
 import { SlicePanel } from './template/SlicePanel'
-import { createAutoSliceRegions } from '@/utils/sliceUtils'
-import { SliceRegion } from '@/types/template'
 
 export function TemplateEditor() {
   const { templateId } = useParams<{ templateId: string }>()
   const navigate = useNavigate()
   
-  // 使用模板Hook
-  const {
-    template,
-    loading,
-    error,
-    canUndo,
-    canRedo,
-    updateLayer,
-    deleteLayer,
-    updateTemplate,
-    undo,
-    redo,
-    saveTemplate,
-    loadTemplate
-  } = useTemplate(templateId || null)
+  // 本地状态管理
+  const [template, setTemplate] = useState<Template | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 加载模板
+  const loadTemplate = useCallback(async () => {
+    if (!templateId) return
+
+    try {
+      setLoading(true)
+      setError(null)
+      const templateData = await templateService.getTemplate(templateId)
+      setTemplate(templateData)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '加载模板失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [templateId])
+
+  // 更新分区
+  const updateSlicing = async (regions: import('@/types/template').SliceRegion[]) => {
+    if (!templateId) return
+
+    try {
+      await templateService.updateSlicing(templateId, regions)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '更新分区失败')
+      throw err instanceof Error ? err : new Error(String(err))
+    }
+  }
+
+  // 切换图层是否需要替换
+  const handleToggleLayerForReplacement = async (layerId: string) => {
+    if (!template || !templateId) return
+
+    try {
+      const currentLayerIds = template.layerIds || []
+      const updatedLayerIds = currentLayerIds.includes(layerId)
+        ? currentLayerIds.filter(id => id !== layerId)  // 移除
+        : [...currentLayerIds, layerId]  // 添加
+
+      // 调用后端API保存
+      await templateService.updateReplacementLayers(templateId, updatedLayerIds)
+
+      // 接口调用成功后更新本地状态
+      setTemplate({
+        ...template,
+        layerIds: updatedLayerIds
+      })
+
+      toast.success(currentLayerIds.includes(layerId) ? '已移除替换标记' : '已标记为需要替换')
+    } catch (error) {
+      toast.error('更新替换图层失败，请重试')
+      console.error('更新替换图层失败:', error)
+    }
+  }
   
   // 画布状态
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
+  const [highlightedLayerId, setHighlightedLayerId] = useState<string | null>(null)  // 需要高亮显示的图层ID
   const [zoom, setZoom] = useState(1.0)
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [activeToolType, setActiveToolType] = useState<'select' | 'pan' | 'slice'>('select')
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0, offsetX: 0, offsetY: 0 })
@@ -183,28 +225,14 @@ export function TemplateEditor() {
     setZoom(1.0)
   }
 
-  // 快捷键配置
+  // 快捷键配置（移除编辑相关功能，保持预览模式）
   useKeyboardShortcuts({
-    [SHORTCUTS.SAVE]: async () => {
-      try {
-        await saveTemplate()
-        toast.success('模板已保存')
-      } catch (error) {
-        toast.error('保存失败，请稍后重试')
-      }
-    },
-    [SHORTCUTS.UNDO]: undo,
-    [SHORTCUTS.REDO]: redo,
-    [SHORTCUTS.DELETE]: () => {
-      if (selectedLayerId) {
-        handleDeleteLayer(selectedLayerId)
-      }
-    },
     [SHORTCUTS.ZOOM_IN]: zoomIn,
     [SHORTCUTS.ZOOM_OUT]: zoomOut,
     [SHORTCUTS.ZOOM_RESET]: resetZoom,
     [SHORTCUTS.ESCAPE]: () => {
       setSelectedLayerId(null)
+      setHighlightedLayerId(null)
     }
   })
 
@@ -248,39 +276,22 @@ export function TemplateEditor() {
     })
   }
 
-  // 处理删除图层
-  const handleDeleteLayer = async (layerId: string) => {
-    try {
-      await deleteLayer(layerId)
-      if (selectedLayerId === layerId) {
-        setSelectedLayerId(null)
-      }
-      toast.success('图层已删除')
-    } catch (error) {
-      toast.error('删除失败，请稍后重试')
-    }
+  // 从图层面板选择图层（带高亮效果）
+  const selectLayerFromPanel = (layerId: string) => {
+    // 先执行原有的选择逻辑（包括滚动定位）
+    selectLayer(layerId)
+
+    // 设置高亮效果，让该图层显示在最上层
+    setHighlightedLayerId(layerId)
   }
 
-
-
-  // 图层拖拽
-  const handleLayerMouseDown = (e: React.MouseEvent, layerId: string) => {
-    // 在手势模式下，不处理图层拖拽，让事件冒泡到画布容器
-    if (activeToolType === 'pan') {
-      return
-    }
-    
+  // 处理删除图层
+  // 图层选择（预览模式，不支持编辑）
+  const handleLayerClick = (e: React.MouseEvent, layerId: string) => {
     e.stopPropagation()
     selectLayer(layerId)
-    
-    const layer = template?.data?.layers?.find(l => l.id === layerId)
-    if (!layer) return
-
-    setIsDragging(true)
-    setDragStart({
-      x: e.clientX - layer.x * zoom,
-      y: e.clientY - layer.y * zoom
-    })
+    // 清除高亮效果
+    setHighlightedLayerId(null)
   }
 
   // 画布容器鼠标按下事件
@@ -294,6 +305,10 @@ export function TemplateEditor() {
         offsetY: canvasOffset.y
       })
       e.preventDefault()
+    } else {
+      // 点击画布空白区域时，清除选中状态和高亮效果
+      setSelectedLayerId(null)
+      setHighlightedLayerId(null)
     }
   }
 
@@ -310,56 +325,59 @@ export function TemplateEditor() {
       return
     }
 
-    // 处理图层拖拽
-    if (!isDragging || !selectedLayerId || !template) return
-
-    const layer = template?.data?.layers?.find(l => l.id === selectedLayerId)
-    if (!layer) return
-
-    const newX = (e.clientX - dragStart.x) / zoom
-    const newY = (e.clientY - dragStart.y) / zoom
-
-    updateLayer(selectedLayerId, { x: newX, y: newY })
+    // 预览模式不支持图层拖拽
   }
 
   const handleMouseUp = () => {
-    setIsDragging(false)
     setIsPanning(false)
   }
 
 
 
-  const handleDeleteSlice = (sliceId: string) => {
+  const handleDeleteSlice = async (sliceId: string) => {
     if (!template?.slicing?.regions) return
-    
-    const updatedRegions = template.slicing.regions.filter(region => region.id !== sliceId)
-    
-    if (updatedRegions.length === 0) {
-      // 如果删除后没有分区了，清除整个分区配置并切回选择模式
-      const newTemplate = { ...template }
-      delete newTemplate.slicing
-      updateTemplate(newTemplate)
-      setActiveToolType('select')
-      toast.success('已删除分区，已切回选择模式')
-    } else {
-      // 重新计算分区索引
-      const reindexedRegions = updatedRegions
-        .sort((a, b) => {
-          if (Math.abs(a.y - b.y) < 5) { // 同一行
-            return a.x - b.x
-          }
-          return a.y - b.y
+
+    try {
+      const updatedRegions = template.slicing.regions.filter(region => region.id !== sliceId)
+
+      if (updatedRegions.length === 0) {
+        // 如果删除后没有分区了，调用后端清除分区配置
+        await updateSlicing([])
+
+        // 接口调用成功后更新本地状态
+        setTemplate({
+          ...template,
+          slicing: { regions: [] }
         })
-        .map((region, index) => ({
-          ...region,
-          index: index + 1
-        }))
-      
-      updateTemplate({
-        ...template,
-        slicing: { regions: reindexedRegions }
-      })
-      toast.success('已删除分区')
+        setActiveToolType('select')
+        toast.success('已删除分区，已切回选择模式')
+      } else {
+        // 重新计算分区索引，保持ID
+        const reindexedRegions = updatedRegions
+          .sort((a, b) => {
+            if (Math.abs(a.y - b.y) < 5) { // 同一行
+              return a.x - b.x
+            }
+            return a.y - b.y
+          })
+          .map((region, index) => ({
+            ...region,
+            index: index + 1
+          }))
+
+        // 调用后端API保存
+        await updateSlicing(reindexedRegions)
+
+        // 接口调用成功后更新本地状态
+        setTemplate({
+          ...template,
+          slicing: { regions: reindexedRegions }
+        })
+        toast.success('已删除分区')
+      }
+    } catch (error) {
+      toast.error('删除分区失败，请重试')
+      console.error('删除分区失败:', error)
     }
   }
 
@@ -368,38 +386,38 @@ export function TemplateEditor() {
     setShowAddSliceDialog(true)
   }
 
-  const handleAddSliceConfirm = (regionData: { x: number; y: number; width: number; height: number }) => {
+  const handleAddSliceConfirm = async (regionData: { x: number; y: number; width: number; height: number }) => {
     if (!template) return
 
-    // 生成UUID
-    const generateUUID = () => {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0
-        const v = c === 'x' ? r : (r & 0x3 | 0x8)
-        return v.toString(16)
+    try {
+      const existingRegions = template.slicing?.regions || []
+
+      // 创建新分区，使用uuid库生成ID
+      const newRegion = {
+        id: uuidv4(),
+        x: regionData.x,
+        y: regionData.y,
+        width: regionData.width,
+        height: regionData.height,
+        index: existingRegions.length + 1
+      }
+
+      // 包含现有分区和新分区的完整列表
+      const allRegions = [...existingRegions, newRegion]
+
+      // 调用后端API保存
+      await updateSlicing(allRegions)
+
+      // 接口调用成功后更新本地状态
+      setTemplate({
+        ...template,
+        slicing: { regions: allRegions }
       })
+
+    } catch (error) {
+      toast.error('添加分区失败，请重试')
+      console.error('添加分区失败:', error)
     }
-
-    const existingRegions = template.slicing?.regions || []
-    const newIndex = existingRegions.length + 1
-
-    const newRegion: SliceRegion = {
-      id: generateUUID(),
-      x: regionData.x,
-      y: regionData.y,
-      width: regionData.width,
-      height: regionData.height,
-      index: newIndex
-    }
-
-    const updatedRegions = [...existingRegions, newRegion]
-
-    updateTemplate({
-      ...template,
-      slicing: { regions: updatedRegions }
-    })
-
-    toast.success('分区已添加')
   }
 
   
@@ -461,18 +479,6 @@ export function TemplateEditor() {
             {template?.status === 'pending' && '导入PSD'}
             {!template?.status && '导入PSD'}
           </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
-            <Undo2 className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo}>
-            <Redo2 className="w-4 h-4" />
-          </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <Button size="sm">
-            <Save className="w-4 h-4 mr-2" />
-            保存
-          </Button>
         </div>
       </div>
 
@@ -489,7 +495,7 @@ export function TemplateEditor() {
               variant={activeToolType === type ? 'default' : 'ghost'}
               size="sm"
               className="w-10 h-10"
-              onClick={() => setActiveToolType(type as any)}
+              onClick={() => setActiveToolType(type as 'select' | 'pan' | 'slice')}
               title={tooltip}
             >
               <Icon className="w-4 h-4" />
@@ -534,10 +540,10 @@ export function TemplateEditor() {
             <div className="bg-muted/50 border-b px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Info className="w-4 h-4 text-amber-500" />
                   <div className="text-sm text-foreground">
-                    <span className="font-medium">预览模式：</span>
-                    当前为模板预览，可进行分区切片和标记可替换图层以修改配置
+                    <span className="font-medium text-amber-600">使用提示：</span>
+                    <span className="text-orange-600 font-medium">模板编辑功能包含导入模板、分区切片、标记可替换图层等复杂操作，请务必在当前界面完成这些操作</span>
                   </div>
                 </div>
                 <Button
@@ -605,9 +611,35 @@ export function TemplateEditor() {
                       zoom={zoom}
                       isSelected={selectedLayerId === layer.id}
                       activeToolType={activeToolType}
-                      onMouseDown={(e) => handleLayerMouseDown(e, layer.id)}
+                      onClick={(e) => handleLayerClick(e, layer.id)}
                     />
                   ))}
+
+                  {/* 高亮图层：在最上层渲染被高亮的图层副本 */}
+                  {highlightedLayerId && template.data?.layers && (
+                    (() => {
+                      const highlightLayer = template.data.layers.find(layer => layer.id === highlightedLayerId);
+                      return highlightLayer ? (
+                        <div
+                          key={`highlight-${highlightLayer.id}`}
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            zIndex: 9999,
+                            filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 20px rgba(59, 130, 246, 0.4))',
+                            animation: 'pulse 1.5s ease-in-out infinite'
+                          }}
+                        >
+                          <LayerComponent
+                            layer={highlightLayer}
+                            zoom={zoom}
+                            isSelected={true}
+                            activeToolType={activeToolType}
+                            onClick={() => {}}
+                          />
+                        </div>
+                      ) : null;
+                    })()
+                  )}
                   
                   {/* 分区可视化覆盖层 */}
                   <SliceRegionsOverlay
@@ -641,8 +673,9 @@ export function TemplateEditor() {
                 <LayersPanel
                   layers={template.data?.layers || []}
                   selectedLayerId={selectedLayerId}
-                  onSelectLayer={selectLayer}
-                  onUpdateLayer={updateLayer}
+                  selectedLayerIds={template.layerIds || []}
+                  onSelectLayer={selectLayerFromPanel}
+                  onToggleLayerForReplacement={handleToggleLayerForReplacement}
                 />
               )}
             </div>

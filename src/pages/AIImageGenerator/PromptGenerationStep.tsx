@@ -82,7 +82,7 @@ export function PromptGenerationStep({
   // 复制悬浮面板状态
   const [activeCopyPromptId, setActiveCopyPromptId] = useState<string>('');
   const [activeCopyMessageId, setActiveCopyMessageId] = useState<string>('');
-  const [copyCount, setCopyCount] = useState(4);
+  const [copyCount, setCopyCount] = useState<number | string>(4);
   const [isCopying, setIsCopying] = useState(false);
   
   // 当帮助对话框第一次打开时，自动展开第一个部分
@@ -175,7 +175,8 @@ export function PromptGenerationStep({
     
     setIsCopying(true);
     try {
-      await onCopyPrompt(activeCopyPromptId, copyCount, activeCopyMessageId);
+      const count = typeof copyCount === 'string' ? (copyCount === '' ? 4 : parseInt(copyCount)) : copyCount;
+      await onCopyPrompt(activeCopyPromptId, count, activeCopyMessageId);
       setActiveCopyPromptId(''); // 关闭面板
       setActiveCopyMessageId('');
     } catch (error) {
@@ -541,14 +542,24 @@ export function PromptGenerationStep({
                                         <div className="flex items-center gap-2">
                                           <span className="text-sm text-gray-700">自定义:</span>
                                           <Input
-                                            type="number"
-                                            min="1"
-                                            max="40"
-                                            value={copyCount}
-                                            onChange={(e) => setCopyCount(Math.min(40, Math.max(1, parseInt(e.target.value) || 1)))}
-                                            className="w-16 h-8 text-sm text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                            style={{ MozAppearance: 'textfield' }}
-                                            placeholder="4"
+                                            type="text"
+                                            value={copyCount.toString()}
+                                            onChange={(e) => {
+                                              const value = e.target.value;
+                                              // 允许空字符串，临时显示为空
+                                              if (value === '') {
+                                                setCopyCount('');
+                                                return;
+                                              }
+                                              // 只允许数字
+                                              if (/^\d+$/.test(value)) {
+                                                const numValue = parseInt(value);
+                                                if (numValue <= 40) {
+                                                  setCopyCount(numValue);
+                                                }
+                                              }
+                                            }}
+                                            className="w-16 h-8 text-sm text-center"
                                             disabled={isCopying}
                                           />
                                         </div>

@@ -7,10 +7,11 @@ interface LayerComponentProps {
   zoom: number
   isSelected: boolean
   activeToolType: 'select' | 'pan' | 'slice'
-  onMouseDown: (e: React.MouseEvent) => void
+  onClick: (e: React.MouseEvent) => void
+  shouldHighlight?: boolean  // 是否应该高亮显示在最上层
 }
 
-export function LayerComponent({ layer, zoom, isSelected, activeToolType, onMouseDown }: LayerComponentProps) {
+export function LayerComponent({ layer, zoom, isSelected, activeToolType, onClick, shouldHighlight }: LayerComponentProps) {
   if (!layer.visible) return null
 
   // 根据工具类型决定光标样式
@@ -66,7 +67,7 @@ export function LayerComponent({ layer, zoom, isSelected, activeToolType, onMous
             ...borderStyle,
             overflow: 'hidden' // 确保子元素不会超出画板边界
           }}
-          onMouseDown={onMouseDown}
+          onClick={onClick}
         />
       )
       break
@@ -76,7 +77,7 @@ export function LayerComponent({ layer, zoom, isSelected, activeToolType, onMous
       content = (
         <div
           style={{ ...style, ...borderStyle }}
-          onMouseDown={onMouseDown}
+          onClick={onClick}
           className="w-full h-full"
         >
           <img
@@ -105,7 +106,7 @@ export function LayerComponent({ layer, zoom, isSelected, activeToolType, onMous
       content = (
         <div
           style={{ ...style, ...borderStyle }}
-          onMouseDown={onMouseDown}
+          onClick={onClick}
           className="w-full h-full"
         >
           <div
@@ -132,7 +133,7 @@ export function LayerComponent({ layer, zoom, isSelected, activeToolType, onMous
         <div
           className="w-full h-full bg-gray-200 border-2 border-dashed border-gray-400"
           style={{ ...style, ...borderStyle }}
-          onMouseDown={onMouseDown}
+          onClick={onClick}
         />
       )
   }

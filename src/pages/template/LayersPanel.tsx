@@ -5,15 +5,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 interface LayersPanelProps {
   layers: Layer[]
   selectedLayerId: string | null
+  selectedLayerIds: string[]  // 选中的需要替换的图层ID列表
   onSelectLayer: (layerId: string) => void
-  onUpdateLayer: (layerId: string, updates: Partial<Layer>) => void
+  onToggleLayerForReplacement: (layerId: string) => void  // 切换图层是否需要替换
 }
 
-export function LayersPanel({ 
-  layers, 
-  selectedLayerId, 
-  onSelectLayer, 
-  onUpdateLayer
+export function LayersPanel({
+  layers,
+  selectedLayerId,
+  selectedLayerIds,
+  onSelectLayer,
+  onToggleLayerForReplacement
 }: LayersPanelProps) {
   const selectedLayerRef = useRef<HTMLDivElement>(null)
 
@@ -71,20 +73,18 @@ export function LayersPanel({
               </div>
               
               <div className="flex items-center space-x-1">
-                {/* 可替换复选框 - 只显示智能对象图层 */}
-                {layer.type === LayerType.SMART_OBJECT && (
-                  <div 
+                {/* 可替换图层的选择checkbox - 只显示智能对象图层 */}
+                {layer.type === LayerType.SMART_OBJECT && layer.replaceable && (
+                  <div
                     className="flex items-center space-x-2 cursor-pointer"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
-                      checked={layer.replaceable || false}
-                      onCheckedChange={(checked: boolean) => {
-                        onUpdateLayer(layer.id, { replaceable: checked })
-                      }}
-                      className="w-5 h-5"
+                      checked={selectedLayerIds.includes(layer.id)}
+                      onCheckedChange={() => onToggleLayerForReplacement(layer.id)}
+                      className="w-4 h-4"
                     />
-                    <span className="text-sm text-foreground">可替换</span>
+                    <span className="text-sm text-foreground">需要替换</span>
                   </div>
                 )}
               </div>

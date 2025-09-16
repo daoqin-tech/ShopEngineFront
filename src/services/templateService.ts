@@ -1,7 +1,8 @@
 import { apiClient } from '@/lib/api'
-import { 
-  Template, 
-  PSDUploadResponse
+import {
+  Template,
+  PSDUploadResponse,
+  SliceRegion
 } from '@/types/template'
 
 // 模板管理API
@@ -45,6 +46,23 @@ export const templateService = {
   // 更新模板名称
   updateTemplateName: async (templateId: string, name: string): Promise<void> => {
     await apiClient.put(`/templates/${templateId}`, { name })
+  },
+
+  // 更新模板内容
+  updateTemplate: async (templateId: string, templateData: Partial<Template>): Promise<Template> => {
+    const response = await apiClient.put(`/templates/${templateId}`, templateData)
+    return response.data
+  },
+
+  // 更新模板分区
+  updateSlicing: async (templateId: string, regions: SliceRegion[]): Promise<{ regions: SliceRegion[] }> => {
+    const response = await apiClient.put(`/templates/${templateId}/slicing`, { regions })
+    return response.data
+  },
+
+  // 更新需要替换的图层ID列表
+  updateReplacementLayers: async (templateId: string, layerIds: string[]): Promise<void> => {
+    await apiClient.put(`/templates/${templateId}/replacement-layers`, { layerIds })
   },
 
   // 删除模板

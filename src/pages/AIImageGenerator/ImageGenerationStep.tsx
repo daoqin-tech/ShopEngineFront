@@ -826,7 +826,7 @@ export function ImageGenerationStep({
                 <p className="text-sm text-gray-500">正在检查已生成的图片</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-6 gap-4">
                 {filteredImages.map((image) => {
                   const isCompleted = image.status === PromptStatus.COMPLETED;
                   const isSelected = selectedImageIds.has(image.id);
@@ -839,59 +839,45 @@ export function ImageGenerationStep({
                           ? 'border-gray-200 hover:border-gray-300' 
                           : 'border-gray-200'
                     }`}>
-                      {/* 提示词区域 */}
-                      <div className="p-4 border-b border-gray-100 relative">
+                      {/* 图片区域 */}
+                      <div className="p-3 relative">
                         {/* 选择框 - 只有COMPLETED状态的图片才显示 */}
                         {isCompleted && (
                           <button
                             onClick={() => toggleImageSelection(image.id)}
-                            className="absolute top-3 right-3 p-1 rounded hover:bg-gray-100 transition-colors"
+                            className="absolute top-2 right-2 p-1.5 rounded-md bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm border border-white/20 transition-colors z-10"
                           >
                             {isSelected ? (
-                              <CheckSquare className="w-5 h-5 text-blue-600" />
+                              <CheckSquare className="w-4 h-4 text-blue-600" />
                             ) : (
-                              <Square className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                              <Square className="w-4 h-4 text-gray-400 hover:text-gray-600" />
                             )}
                           </button>
                         )}
-                        
-                        <div className="flex-1 min-w-0 pr-10">
-                          <div 
-                            className="text-sm text-gray-700 leading-relaxed"
-                            title={image.promptText}
-                          >
-                            <div className="line-clamp-2">
-                              {image.promptText || '提示词文本'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* 图片区域 */}
-                      <div className="p-4">
+
                         {image.status === PromptStatus.COMPLETED ? (
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             <div className="relative group">
                               {/* 图片容器 */}
-                              <div className="relative w-full h-48 rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
-                                <img 
-                                  src={image.imageUrl} 
+                              <div className="relative w-full rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
+                                <img
+                                  src={image.imageUrl}
                                   alt="历史生成图片"
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-auto object-contain"
                                 />
-                                {/* 毛玻璃全覆盖层 - 渐显效果 */}
+                                {/* 磨砂全覆盖层 - 渐显效果 */}
                                 <div className="absolute inset-0 bg-white/20 backdrop-blur-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 rounded-lg">
                                   <div className="flex gap-2">
-                                    <Button 
-                                      size="sm" 
+                                    <Button
+                                      size="sm"
                                       className="bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg border border-white/20"
                                       onClick={() => setPreviewImage(image)}
                                     >
                                       <Eye className="w-4 h-4 mr-2" />
                                       预览
                                     </Button>
-                                    <Button 
-                                      size="sm" 
+                                    <Button
+                                      size="sm"
                                       className="bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg border border-white/20"
                                       onClick={() => handleDownloadImage(image.imageUrl, `image-${image.id}.jpg`)}
                                     >
@@ -900,6 +886,15 @@ export function ImageGenerationStep({
                                     </Button>
                                   </div>
                                 </div>
+                              </div>
+                            </div>
+                            {/* 提示词区域 - 紧凑显示 */}
+                            <div className="bg-gray-50 rounded-md p-2">
+                              <div
+                                className="text-xs text-gray-600 leading-relaxed line-clamp-1"
+                                title={image.promptText}
+                              >
+                                {image.promptText || '提示词文本'}
                               </div>
                             </div>
                             <div className="flex items-center justify-between text-xs text-gray-500">
@@ -912,7 +907,8 @@ export function ImageGenerationStep({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center h-48 bg-gray-50 border border-gray-200 rounded-lg">
+                          <div>
+                            <div className="flex flex-col items-center justify-center min-h-[200px] bg-gray-50 border border-gray-200 rounded-lg mb-2">
                             <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
                               {image.status === PromptStatus.PROCESSING ? (
                                 <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -925,11 +921,21 @@ export function ImageGenerationStep({
                             <p className={`text-sm mb-2 ${getStatusColor(image.status)}`}>
                               {getStatusText(image.status)}
                             </p>
-                            <p className="text-xs text-gray-400 text-center">
-                              {image.status === PromptStatus.PROCESSING ? '正在生成中...' : 
-                               image.status === PromptStatus.FAILED ? '生成失败' : 
-                               '等待处理'}
-                            </p>
+                              <p className="text-xs text-gray-400 text-center">
+                                {image.status === PromptStatus.PROCESSING ? '正在生成中...' :
+                                 image.status === PromptStatus.FAILED ? '生成失败' :
+                                 '等待处理'}
+                              </p>
+                            </div>
+                            {/* 提示词区域 - 紧凑显示 */}
+                            <div className="bg-gray-50 rounded-md p-2">
+                              <div
+                                className="text-xs text-gray-600 leading-relaxed line-clamp-1"
+                                title={image.promptText}
+                              >
+                                {image.promptText || '提示词文本'}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

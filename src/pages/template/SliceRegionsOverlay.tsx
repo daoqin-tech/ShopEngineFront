@@ -38,20 +38,28 @@ export function SliceRegionsOverlay({
         >
           {/* 分区编号 */}
           <div
-            className="absolute top-1 left-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded font-bold"
+            className="absolute bg-red-500 text-white px-3 py-1.5 rounded font-bold"
             style={{
-              fontSize: Math.max(10, 12 / zoom) + 'px'
+              top: 0,
+              left: 0,
+              fontSize: 20 / zoom + 'px',
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left'
             }}
           >
             {region.index}
           </div>
-          
+
           {/* 分区尺寸信息 */}
           {zoom > 0.3 && (
             <div
-              className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded"
+              className="absolute bg-black/70 text-white px-1 py-0.5 rounded"
               style={{
-                fontSize: Math.max(8, 10 / zoom) + 'px'
+                bottom: 0,
+                right: 0,
+                fontSize: 10 / zoom + 'px',
+                transform: `scale(${zoom})`,
+                transformOrigin: 'bottom right'
               }}
             >
               {region.width}×{region.height}

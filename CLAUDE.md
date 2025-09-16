@@ -91,6 +91,7 @@ The application uses React Router with the following main routes:
 
 ### Key Components
 - **AIImageGenerator** - Multi-step workflow with prompt generation and image creation
+- **TemplateEditor** - PSD template preview and configuration system
 - **ImageEditor** - Tools for image optimization and editing
 - **OcrEditor** - OCR text recognition with upload and history modes
 - **AuthContext** - React context for user authentication and state management
@@ -113,6 +114,35 @@ The core feature is a two-step AI image generation process:
    - Support for multiple aspect ratios (1:1, 16:9, 9:16, 21:9, 4:3, 3:2)
    - Export capabilities (individual images, ZIP archives, PDF documents)
 
+### Template Editor System
+The Template Editor (`src/pages/TemplateEditor.tsx`) provides a comprehensive PSD template preview and configuration interface:
+
+1. **Template Preview Mode**
+   - Read-only preview of PSD templates with layer visualization
+   - Canvas zoom (25%-500%) with pan controls and smooth positioning
+   - Layer highlighting system for overlapping layer identification
+   - Real-time canvas positioning and smooth scrolling to selected layers
+
+2. **Slice Region Management** (`src/pages/template/`)
+   - Interactive slice region creation with `AddSliceDialog`
+   - Visual slice overlays with numbered regions and size indicators
+   - Drag-to-create slice regions with automatic indexing
+   - Backend synchronization via `templateService.updateSlicing()`
+   - Uses `uuid` library for consistent ID generation
+
+3. **Layer Management System**
+   - Smart layer selection with automatic viewport centering
+   - Layer panel (`LayersPanel`) with replacement layer marking
+   - Replaceable layer checkbox system for smart objects
+   - Layer highlighting with visual effects (glow + pulse animation)
+   - Keyboard shortcuts (ESC to deselect, zoom controls)
+
+4. **Key Template Editor Components**
+   - `LayerComponent` - Individual layer rendering with zoom scaling
+   - `SliceRegionsOverlay` - Visual slice region display with responsive scaling
+   - `LayersPanel` - Layer list with replacement selection interface
+   - `SlicePanel` - Slice region management and deletion controls
+
 ### State Management Patterns
 - **Authentication State** - React Context pattern with `AuthContext` for user management
 - **Extended Session Model** - `ExtendedAIImageSession` with Map-based collections for prompts and images
@@ -127,6 +157,7 @@ The core feature is a two-step AI image generation process:
 - **sonner** - Toast notifications
 - **react-markdown** - Markdown rendering for AI responses
 - **axios** - HTTP client for API requests
+- **uuid** - UUID generation for slice regions and template management
 
 ### Authentication System
 - **WeChat OAuth** integration for user authentication
@@ -139,9 +170,21 @@ The core feature is a two-step AI image generation process:
 - **Tencent Cloud** integration for cloud services
 - **Service layer pattern** - separate service files for each feature area
 - **Task polling** system for async operations (image generation, OCR processing)
+- **Template Management APIs** - `templateService` with specialized endpoints:
+  - `updateSlicing()` - Slice region management with complete region arrays
+  - `updateReplacementLayers()` - Replaceable layer ID management
+  - `getTemplate()` - Template data loading with layers and metadata
 
 ### Development Notes
 - 你不用测试,我会测试,也不用帮我运行项目 (User handles testing and running the project)
 - Use existing component patterns and follow the established architecture
 - Maintain type safety with comprehensive TypeScript definitions
 - Follow the service layer pattern for new API integrations
+
+### Template Editor Architecture Notes
+- **Pure Preview Mode** - Templates are read-only; only slice regions and layer replacement selections are editable
+- **Local State Management** - Uses `useState` instead of complex hooks for template data
+- **API-First Updates** - All changes call backend APIs before updating UI state (no optimistic updates)
+- **Layer Management** - `Template.layerIds[]` stores user-selected replacement layer IDs
+- **Slice Management** - `Template.slicing.regions[]` contains complete SliceRegion objects with UUIDs
+- **Visual Feedback** - Layer highlighting system for multi-layer overlap scenarios

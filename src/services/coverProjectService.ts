@@ -116,8 +116,11 @@ export const coverProjectService = {
     templateId: string
     aiProjectIds: string[]
   }): Promise<{
-    taskId: string
-    status: string
+    tasks: {
+      taskId: string
+      aiProjectId: string
+      status: string
+    }[]
   }> => {
     const response = await apiClient.post(`/cover-projects/${params.coverProjectId}/generate`, {
       templateId: params.templateId,
@@ -171,7 +174,20 @@ export const coverGenerationService = {
     return response.data
   },
 
-  // 查询生成状态
+  // 查询单个任务状态
+  getTaskStatus: async (taskId: string): Promise<{
+    taskId: string
+    status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed'
+    resultImages?: string[]
+    errorMessage?: string
+    createdAt: string
+    completedAt?: string
+  }> => {
+    const response = await apiClient.get(`/cover-projects/tasks/${taskId}`)
+    return response.data
+  },
+
+  // 查询生成状态（保留兼容性）
   getGenerationStatus: async (projectId: string): Promise<BatchGenerationStatus> => {
     const response = await apiClient.get(`/cover-generation/status/${projectId}`)
     return response.data
@@ -229,13 +245,71 @@ export const coverGenerationService = {
   }
 }
 
-// 任务轮询服务（复用现有的 taskPollingService）
+// 任务信息类型
+export interface TaskInfo {
+  taskId: string
+  aiProjectId: string
+  status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed'
+  resultImages?: string[]
+  errorMessage?: string
+  createdAt: string
+  completedAt?: string
+}
+
+// 任务轮询服务
 export class CoverGenerationPollingService {
   private pollingIntervals: Map<string, NodeJS.Timeout> = new Map()
 
-  // 开始轮询生成状态
+  // 开始轮询生成状态 - 新版本，基于TaskID
+  startTaskPolling(
+    tasks: { taskId: string; aiProjectId: string }[],
+    onUpdate: (taskStatuses: TaskInfo[]) => void,
+    onComplete: (taskStatuses: TaskInfo[]) => void,
+    onError: (error: Error) => void,
+    interval: number = 2000
+  ) {
+    const pollingKey = tasks.map(t => t.taskId).join(',')
+
+    // 清除现有的轮询
+    this.stopPolling(pollingKey)
+
+    const poll = async () => {
+      try {
+        // 并行获取所有任务状态
+        const taskPromises = tasks.map(task =>
+          coverGenerationService.getTaskStatus(task.taskId)
+            .then(status => ({ ...status, aiProjectId: task.aiProjectId }))
+        )
+
+        const taskStatuses = await Promise.all(taskPromises)
+        onUpdate(taskStatuses)
+
+        // 检查是否所有任务都完成
+        const allCompleted = taskStatuses.every(task =>
+          task.status === 'completed' || task.status === 'failed'
+        )
+
+        if (allCompleted) {
+          this.stopPolling(pollingKey)
+          onComplete(taskStatuses)
+        }
+      } catch (error) {
+        this.stopPolling(pollingKey)
+        onError(error as Error)
+      }
+    }
+
+    // 立即执行一次
+    poll()
+
+    // 设置定时轮询
+    const intervalId = setInterval(poll, interval)
+    this.pollingIntervals.set(pollingKey, intervalId)
+  }
+
+  // 开始轮询生成状态 - 旧版本，保持兼容性
   startPolling(
-    projectId: string, 
+    projectId: string,
     onUpdate: (status: BatchGenerationStatus) => void,
     onComplete: (status: BatchGenerationStatus) => void,
     onError: (error: Error) => void,
@@ -269,11 +343,11 @@ export class CoverGenerationPollingService {
   }
 
   // 停止轮询
-  stopPolling(projectId: string) {
-    const intervalId = this.pollingIntervals.get(projectId)
+  stopPolling(key: string) {
+    const intervalId = this.pollingIntervals.get(key)
     if (intervalId) {
       clearInterval(intervalId)
-      this.pollingIntervals.delete(projectId)
+      this.pollingIntervals.delete(key)
     }
   }
 

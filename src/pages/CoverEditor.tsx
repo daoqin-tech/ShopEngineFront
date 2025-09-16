@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Play, FileImage } from 'lucide-react'
+import { ArrowLeft, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { GenerationResultStep } from './CoverEditor/GenerationResultStep'
 import { TemplateSelectionDialog } from './CoverEditor/TemplateSelectionDialog'
-import { 
-  coverProjectService, 
+import {
+  coverProjectService,
   coverPollingService,
-  type TemplateSelectionItem 
+  type TemplateSelectionItem,
+  type TaskInfo
 } from '@/services/coverProjectService'
 import { type CoverProject, type GeneratedCover, type BatchGenerationStatus } from '@/types/template'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ export function CoverEditor() {
   // 生成状态
   const [isGenerating, setIsGenerating] = useState(false)
   const [generationStatus, setGenerationStatus] = useState<BatchGenerationStatus | null>(null)
+  const [taskStatuses, setTaskStatuses] = useState<TaskInfo[]>([])
   
   // 项目选择状态
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set())
@@ -67,34 +68,68 @@ export function CoverEditor() {
     try {
       setIsGenerating(true)
       setError(null)
-      
+
       // 调用生成API
       const result = await coverProjectService.startCoverGeneration({
         coverProjectId: projectId,
         templateId: selectedTemplate.id,
         aiProjectIds: Array.from(selectedProjects)
       })
-      
+
       console.log('套图生成已启动:', result)
-      
+
       // 初始化生成状态
       setGenerationStatus({
         projectId,
-        totalTasks: selectedProjects.size,
+        totalTasks: result.tasks.length,
         completedTasks: 0,
         failedTasks: 0,
         results: []
       })
-      
-      // 开始轮询生成状态
-      coverPollingService.startPolling(
-        projectId,
-        (status) => {
-          setGenerationStatus(status)
+
+      // 开始轮询任务状态 (每5秒轮询一次)
+      coverPollingService.startTaskPolling(
+        result.tasks,
+        (taskStatuses) => {
+          setTaskStatuses(taskStatuses)
+
+          // 更新整体状态
+          const completedTasks = taskStatuses.filter(t => t.status === 'completed').length
+          const failedTasks = taskStatuses.filter(t => t.status === 'failed').length
+
+          setGenerationStatus({
+            projectId,
+            totalTasks: result.tasks.length,
+            completedTasks,
+            failedTasks,
+            results: [] // 将在完成时构建
+          })
         },
-        (status) => {
-          setGenerationStatus(status)
-          setGeneratedCovers(status.results)
+        (taskStatuses) => {
+          setTaskStatuses(taskStatuses)
+
+          // 构建生成结果
+          const completedTasks = taskStatuses.filter(t => t.status === 'completed')
+          const generatedCovers: GeneratedCover[] = []
+
+          completedTasks.forEach(task => {
+            task.resultImages?.forEach((imageUrl, index) => {
+              generatedCovers.push({
+                id: `${task.taskId}-${index}`,
+                projectId: task.aiProjectId,
+                templateId: selectedTemplate.id,
+                imageUrl,
+                thumbnailUrl: imageUrl, // 使用同一张图作为缩略图
+                width: 800,
+                height: 600,
+                status: 'completed',
+                createdAt: task.createdAt,
+                replacements: []
+              })
+            })
+          })
+
+          setGeneratedCovers(generatedCovers)
           setIsGenerating(false)
           toast.success('套图生成完成！')
         },
@@ -102,9 +137,10 @@ export function CoverEditor() {
           setError(error.message)
           setIsGenerating(false)
           toast.error('生成过程中发生错误')
-        }
+        },
+        5000 // 5秒轮询间隔
       )
-      
+
     } catch (error) {
       console.error('生成套图失败:', error)
       toast.error('生成套图失败，请重试')
@@ -197,7 +233,7 @@ export function CoverEditor() {
         <GenerationResultStep
           generatedCovers={generatedCovers}
           isGenerating={isGenerating}
-          generationStatus={generationStatus}
+          taskStatuses={taskStatuses}
           selectedProjects={selectedProjects}
           onProjectsSelect={setSelectedProjects}
           selectedTemplate={selectedTemplate}
