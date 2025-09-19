@@ -108,13 +108,22 @@ export interface PSDUploadResponse {
 }
 
 
+// 套图项目统计信息
+export interface CoverProjectStats {
+  TotalTasks: number
+  PendingTasks: number
+  ProcessingTasks: number
+  CompletedTasks: number
+  FailedTasks: number
+}
+
 // 套图项目
 export interface CoverProject {
   id: string
   name: string
-  templateId: string
   createdAt: string
   updatedAt: string
+  stats: CoverProjectStats
 }
 
 

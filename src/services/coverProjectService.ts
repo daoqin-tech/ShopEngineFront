@@ -56,9 +56,50 @@ interface ReplacementImage {
 // 套图项目API
 export const coverProjectService = {
   // 获取套图项目列表
-  getProjects: async (): Promise<CoverProject[]> => {
-    const response = await apiClient.get('/cover-projects')
-    return response.data
+  getProjects: async (params?: { page?: number; limit?: number }): Promise<{
+    data: CoverProject[]
+    total: number
+    page: number
+    limit: number
+  }> => {
+    const response = await apiClient.get('/cover-projects', {
+      params: {
+        page: params?.page || 1,
+        limit: params?.limit || 50
+      }
+    })
+
+    // 处理后端返回的数据结构 {code, message, data}
+    const backendData = response.data
+
+    // 如果后端返回标准格式，直接返回
+    if (backendData && backendData.data && Array.isArray(backendData.data)) {
+      // 暂时模拟分页信息，等后端添加分页字段
+      return {
+        data: backendData.data,
+        total: backendData.data.length, // 临时使用当前页数据长度
+        page: params?.page || 1,
+        limit: params?.limit || 50
+      }
+    }
+
+    // 如果是数组直接返回(兼容旧格式)
+    if (Array.isArray(backendData)) {
+      return {
+        data: backendData,
+        total: backendData.length,
+        page: params?.page || 1,
+        limit: params?.limit || 50
+      }
+    }
+
+    // 默认返回空数据
+    return {
+      data: [],
+      total: 0,
+      page: params?.page || 1,
+      limit: params?.limit || 50
+    }
   },
 
   // 获取单个项目详情

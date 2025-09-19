@@ -3,7 +3,6 @@ import { Package, Image, Check, Search, ChevronRight, ChevronLeft, Download } fr
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import JSZip from 'jszip'
 import { coverProjectService, type SimpleImageInfo, type TemplateSelectionItem, type TaskInfo } from '@/services/coverProjectService'
@@ -90,6 +89,7 @@ export function GenerationResultStep({
 
     try {
       const existingTasks = await coverProjectService.getProjectTasks(coverProjectId)
+      // 后端已经保证了时间倒序排列
       onTasksUpdate(existingTasks)
     } catch (err) {
       console.error('加载项目任务失败:', err)
@@ -488,36 +488,50 @@ export function GenerationResultStep({
       </div>
 
       {/* 预览对话框 - 图片网格显示 */}
-      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>
-              任务图片 ({currentTaskImages.length} 张)
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto p-4">
-            <div className="grid grid-cols-3 gap-4">
-              {currentTaskImages.map((imageUrl, index) => (
-                <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden">
-                  <img
-                    src={imageUrl}
-                    alt={`图片 ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+      {/* 自定义预览对话框 */}
+      {showPreviewDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30">
+          <div className="w-[60vw] max-h-[80vh] bg-white rounded-lg shadow-xl flex flex-col">
+            {/* 头部 */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">
+                任务图片 ({currentTaskImages.length} 张)
+              </h2>
+              <button
+                onClick={() => setShowPreviewDialog(false)}
+                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 内容区域 */}
+            <div className="overflow-y-auto p-4 scrollbar-hide">
+              <div className="grid grid-cols-4 gap-3">
+                {currentTaskImages.map((imageUrl, index) => (
+                  <div key={index} className="aspect-square bg-gray-100 rounded overflow-hidden">
+                    <img
+                      src={imageUrl}
+                      alt={`图片 ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 底部 */}
+            <div className="flex items-center justify-center p-4 border-t">
+              <Button
+                onClick={handleExportAllImages}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                全部导出 ZIP
+              </Button>
             </div>
           </div>
-          <div className="flex items-center justify-center p-4 border-t">
-            <Button
-              onClick={handleExportAllImages}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              全部导出 ZIP
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </>
   )
 }

@@ -76,14 +76,39 @@ export function CoverEditor() {
 
       console.log('套图生成已启动:', result)
 
+      // 立即将新任务添加到任务列表中（以pending状态）
+      const newTasks: TaskInfo[] = result.tasks.map(task => ({
+        taskId: task.taskId,
+        aiProjectId: task.aiProjectId,
+        status: 'pending' as const,
+        createdAt: new Date().toISOString()
+      }))
+
+      setTaskStatuses(prevTasks => {
+        // 将新任务添加到前面，现有任务保持在后面
+        return [...newTasks, ...prevTasks]
+      })
+
       // 开始轮询任务状态 (每5秒轮询一次)
       coverPollingService.startTaskPolling(
         result.tasks,
-        (taskStatuses) => {
-          setTaskStatuses(taskStatuses)
+        (newTaskStatuses) => {
+          // 更新对应任务状态，保持原有顺序
+          setTaskStatuses(prevTasks => {
+            return prevTasks.map(existingTask => {
+              const updatedTask = newTaskStatuses.find(newTask => newTask.taskId === existingTask.taskId)
+              return updatedTask ? updatedTask : existingTask
+            })
+          })
         },
-        (taskStatuses) => {
-          setTaskStatuses(taskStatuses)
+        (completedTaskStatuses) => {
+          // 最终完成时更新任务状态，保持顺序
+          setTaskStatuses(prevTasks => {
+            return prevTasks.map(existingTask => {
+              const completedTask = completedTaskStatuses.find(task => task.taskId === existingTask.taskId)
+              return completedTask ? completedTask : existingTask
+            })
+          })
           setIsGenerating(false)
           toast.success('套图生成完成！')
         },
