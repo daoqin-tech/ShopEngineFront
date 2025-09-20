@@ -8,8 +8,27 @@ import {
 // 模板管理API
 export const templateService = {
   // 获取模板列表
-  getTemplates: async (): Promise<Template[]> => {
-    const response = await apiClient.get('/templates')
+  getTemplates: async (params?: {
+    name?: string;
+    startTime?: number;  // 秒级时间戳
+    endTime?: number;    // 秒级时间戳
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: Template[];
+    total: number;
+    page: number;
+    limit: number;
+  }> => {
+    const response = await apiClient.get('/templates', {
+      params: {
+        ...(params?.name && { name: params.name }),
+        ...(params?.startTime && { startTime: params.startTime }),
+        ...(params?.endTime && { endTime: params.endTime }),
+        page: params?.page || 1,
+        limit: params?.limit || 50,
+      }
+    })
     return response.data
   },
 

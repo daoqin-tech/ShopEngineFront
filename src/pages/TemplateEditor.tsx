@@ -118,104 +118,108 @@ export function TemplateEditor() {
 
   // Zoom 函数定义 - 保持视觉中心点不变
   const zoomIn = () => {
-    if (!containerRef.current || !template?.data) return
-    
+    if (!containerRef.current || !template) return
+
     const container = containerRef.current
     const currentZoom = zoom
     const newZoom = Math.min(currentZoom * 1.2, 3)
-    
+
     if (newZoom === currentZoom) return
-    
+
     // 获取当前滚动位置和容器中心点
     const scrollLeft = container.scrollLeft
     const scrollTop = container.scrollTop
     const containerWidth = container.clientWidth
     const containerHeight = container.clientHeight
-    
+
     // 获取滚动内容区域和画布的信息
-    const scrollContentWidth = Math.max((template.data.width || 800) * currentZoom + 400, window.innerWidth)
-    const scrollContentHeight = Math.max((template.data.height || 600) * currentZoom + 400, window.innerHeight)
-    const canvasWidth = (template.data.width || 800) * currentZoom
-    const canvasHeight = (template.data.height || 600) * currentZoom
-    
+    const templateWidth = template.width || template.data?.width || 800
+    const templateHeight = template.height || template.data?.height || 600
+    const scrollContentWidth = Math.max(templateWidth * currentZoom + 400, window.innerWidth)
+    const scrollContentHeight = Math.max(templateHeight * currentZoom + 400, window.innerHeight)
+    const canvasWidth = templateWidth * currentZoom
+    const canvasHeight = templateHeight * currentZoom
+
     // 画布在滚动内容区域中的起始位置（由于居中）
     const canvasStartX = (scrollContentWidth - canvasWidth) / 2
     const canvasStartY = (scrollContentHeight - canvasHeight) / 2
-    
+
     // 计算当前视觉中心点（相对于画布坐标系）
     const centerX = (scrollLeft + containerWidth / 2 - canvasStartX) / currentZoom
     const centerY = (scrollTop + containerHeight / 2 - canvasStartY) / currentZoom
-    
+
     setZoom(newZoom)
-    
+
     // 缩放后调整滚动位置，保持相同的视觉中心点
     requestAnimationFrame(() => {
       // 计算新的滚动内容区域信息
-      const newScrollContentWidth = Math.max((template.data.width || 800) * newZoom + 400, window.innerWidth)
-      const newScrollContentHeight = Math.max((template.data.height || 600) * newZoom + 400, window.innerHeight)
-      const newCanvasWidth = (template.data.width || 800) * newZoom
-      const newCanvasHeight = (template.data.height || 600) * newZoom
-      
+      const newScrollContentWidth = Math.max(templateWidth * newZoom + 400, window.innerWidth)
+      const newScrollContentHeight = Math.max(templateHeight * newZoom + 400, window.innerHeight)
+      const newCanvasWidth = templateWidth * newZoom
+      const newCanvasHeight = templateHeight * newZoom
+
       // 新的画布起始位置
       const newCanvasStartX = (newScrollContentWidth - newCanvasWidth) / 2
       const newCanvasStartY = (newScrollContentHeight - newCanvasHeight) / 2
-      
+
       // 计算新的滚动位置，保持相同的画布中心点在视觉中心
       const newScrollLeft = centerX * newZoom + newCanvasStartX - containerWidth / 2
       const newScrollTop = centerY * newZoom + newCanvasStartY - containerHeight / 2
-      
+
       container.scrollLeft = Math.max(0, newScrollLeft)
       container.scrollTop = Math.max(0, newScrollTop)
     })
   }
 
   const zoomOut = () => {
-    if (!containerRef.current || !template?.data) return
-    
+    if (!containerRef.current || !template) return
+
     const container = containerRef.current
     const currentZoom = zoom
     const newZoom = Math.max(currentZoom / 1.2, 0.1)
-    
+
     if (newZoom === currentZoom) return
-    
+
     // 获取当前滚动位置和容器中心点
     const scrollLeft = container.scrollLeft
     const scrollTop = container.scrollTop
     const containerWidth = container.clientWidth
     const containerHeight = container.clientHeight
-    
+
     // 获取滚动内容区域和画布的信息
-    const scrollContentWidth = Math.max((template.data.width || 800) * currentZoom + 400, window.innerWidth)
-    const scrollContentHeight = Math.max((template.data.height || 600) * currentZoom + 400, window.innerHeight)
-    const canvasWidth = (template.data.width || 800) * currentZoom
-    const canvasHeight = (template.data.height || 600) * currentZoom
-    
+    const templateWidth = template.width || template.data?.width || 800
+    const templateHeight = template.height || template.data?.height || 600
+    const scrollContentWidth = Math.max(templateWidth * currentZoom + 400, window.innerWidth)
+    const scrollContentHeight = Math.max(templateHeight * currentZoom + 400, window.innerHeight)
+    const canvasWidth = templateWidth * currentZoom
+    const canvasHeight = templateHeight * currentZoom
+
     // 画布在滚动内容区域中的起始位置（由于居中）
     const canvasStartX = (scrollContentWidth - canvasWidth) / 2
     const canvasStartY = (scrollContentHeight - canvasHeight) / 2
-    
+
     // 计算当前视觉中心点（相对于画布坐标系）
     const centerX = (scrollLeft + containerWidth / 2 - canvasStartX) / currentZoom
     const centerY = (scrollTop + containerHeight / 2 - canvasStartY) / currentZoom
-    
+
     setZoom(newZoom)
-    
+
     // 缩放后调整滚动位置，保持相同的视觉中心点
     requestAnimationFrame(() => {
       // 计算新的滚动内容区域信息
-      const newScrollContentWidth = Math.max((template.data.width || 800) * newZoom + 400, window.innerWidth)
-      const newScrollContentHeight = Math.max((template.data.height || 600) * newZoom + 400, window.innerHeight)
-      const newCanvasWidth = (template.data.width || 800) * newZoom
-      const newCanvasHeight = (template.data.height || 600) * newZoom
-      
+      const newScrollContentWidth = Math.max(templateWidth * newZoom + 400, window.innerWidth)
+      const newScrollContentHeight = Math.max(templateHeight * newZoom + 400, window.innerHeight)
+      const newCanvasWidth = templateWidth * newZoom
+      const newCanvasHeight = templateHeight * newZoom
+
       // 新的画布起始位置
       const newCanvasStartX = (newScrollContentWidth - newCanvasWidth) / 2
       const newCanvasStartY = (newScrollContentHeight - newCanvasHeight) / 2
-      
+
       // 计算新的滚动位置，保持相同的画布中心点在视觉中心
       const newScrollLeft = centerX * newZoom + newCanvasStartX - containerWidth / 2
       const newScrollTop = centerY * newZoom + newCanvasStartY - containerHeight / 2
-      
+
       container.scrollLeft = Math.max(0, newScrollLeft)
       container.scrollTop = Math.max(0, newScrollTop)
     })
@@ -239,18 +243,20 @@ export function TemplateEditor() {
   // 选中图层并滚动到元素位置
   const selectLayer = (layerId: string) => {
     setSelectedLayerId(layerId)
-    
+
     // 自动滚动到选中图层位置
     const layer = template?.data?.layers?.find(l => l.id === layerId)
-    if (!layer || !containerRef.current || !template?.data) return
-    
+    if (!layer || !containerRef.current || !template) return
+
     const container = containerRef.current
-    
+
     // 计算滚动内容区域的尺寸
-    const scrollContentWidth = Math.max((template.data.width || 800) * zoom + 400, window.innerWidth)
-    const scrollContentHeight = Math.max((template.data.height || 600) * zoom + 400, window.innerHeight)
-    const canvasWidth = (template.data.width || 800) * zoom
-    const canvasHeight = (template.data.height || 600) * zoom
+    const templateWidth = template.width || template.data?.width || 800
+    const templateHeight = template.height || template.data?.height || 600
+    const scrollContentWidth = Math.max(templateWidth * zoom + 400, window.innerWidth)
+    const scrollContentHeight = Math.max(templateHeight * zoom + 400, window.innerHeight)
+    const canvasWidth = templateWidth * zoom
+    const canvasHeight = templateHeight * zoom
     
     // 画布在滚动内容区域中的起始位置（由于居中）
     const canvasStartX = (scrollContentWidth - canvasWidth) / 2
@@ -461,7 +467,7 @@ export function TemplateEditor() {
           <Separator orientation="vertical" className="h-6" />
           <div>
             <h1 className="font-semibold">{template.name}</h1>
-            <p className="text-sm text-gray-600">{template.data?.width} × {template.data?.height}</p>
+            <p className="text-sm text-gray-600">{template.width || template.data?.width || 800} × {template.height || template.data?.height || 600}</p>
           </div>
         </div>
 
@@ -581,8 +587,8 @@ export function TemplateEditor() {
                 style={{
                   minWidth: '100%',
                   minHeight: '100%',
-                  width: Math.max((template.data?.width || 800) * zoom + 400, window.innerWidth - 64 - 384), // 减去左侧工具栏(64px)和右侧面板(384px)
-                  height: Math.max((template.data?.height || 600) * zoom + 400, window.innerHeight - 56), // 减去顶部工具栏高度
+                  width: Math.max((template.width || template.data?.width || 800) * zoom + 400, window.innerWidth - 64 - 384), // 减去左侧工具栏(64px)和右侧面板(384px)
+                  height: Math.max((template.height || template.data?.height || 600) * zoom + 400, window.innerHeight - 56), // 减去顶部工具栏高度
                   position: 'relative',
                   display: 'flex',
                   alignItems: 'center',
@@ -593,8 +599,8 @@ export function TemplateEditor() {
                   ref={canvasRef}
                   className="relative bg-white shadow-lg"
                   style={{
-                    width: (template.data?.width || 800) * zoom,
-                    height: (template.data?.height || 600) * zoom,
+                    width: (template.width || template.data?.width || 800) * zoom,
+                    height: (template.height || template.data?.height || 600) * zoom,
                     transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px)`,
                     overflow: 'hidden', // 裁剪超出画布边界的元素
                     transition: isPanning ? 'none' : 'transform 0.3s ease-out', // 拖拽时禁用过渡
@@ -645,8 +651,8 @@ export function TemplateEditor() {
                   <SliceRegionsOverlay
                     regions={template.slicing?.regions || []}
                     zoom={zoom}
-                    canvasWidth={template.data?.width || 800}
-                    canvasHeight={template.data?.height || 600}
+                    canvasWidth={template.width || template.data?.width || 800}
+                    canvasHeight={template.height || template.data?.height || 600}
                     isActive={activeToolType === 'slice'}
                   />
                 </div>
@@ -695,8 +701,8 @@ export function TemplateEditor() {
         <AddSliceDialog
           open={showAddSliceDialog}
           onOpenChange={setShowAddSliceDialog}
-          canvasWidth={template.data?.width || 800}
-          canvasHeight={template.data?.height || 600}
+          canvasWidth={template.width || template.data?.width || 800}
+          canvasHeight={template.height || template.data?.height || 600}
           existingRegions={template.slicing?.regions || []}
           onAddSlice={handleAddSliceConfirm}
         />

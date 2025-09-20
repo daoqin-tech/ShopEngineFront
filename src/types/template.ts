@@ -79,8 +79,13 @@ export interface Template {
   id: string
   name: string
   thumbnailUrl: string  // 预览图
+  psdUrl?: string      // PSD文件URL
   status: TemplateStatus  // 模板状态
-  data: {
+  width: number        // 模板宽度
+  height: number       // 模板高度
+  regionsCount: number // 生成图片个数
+  layerIdsCount: number // 支持替换的图片数量
+  data?: {
     width: number
     height: number
     layers: Layer[]

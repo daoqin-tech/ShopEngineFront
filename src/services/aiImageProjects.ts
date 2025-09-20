@@ -6,7 +6,12 @@ export interface AIImageProject {
   name: string;
   createdAt: string;
   updatedAt: string;
-  imageCount: number;
+  totalTasks: number;
+  pendingTasks: number;
+  queuedTasks: number;
+  processingTasks: number;
+  completedTasks: number;
+  failedTasks: number;
   thumbnail?: string;
 }
 
@@ -29,9 +34,21 @@ export interface AIImageProjectsListResponse {
 
 export class AIImageProjectsAPI {
   // 获取AI图片项目列表
-  static async getAIImageProjects(page: number = 1, limit: number = 20): Promise<AIImageProjectsListResponse> {
+  static async getAIImageProjects(params?: {
+    page?: number;
+    limit?: number;
+    name?: string;       // 项目名称搜索
+    startTime?: number;  // 秒级时间戳
+    endTime?: number;    // 秒级时间戳
+  }): Promise<AIImageProjectsListResponse> {
     const response = await apiClient.get('/projects', {
-      params: { page, limit }
+      params: {
+        page: params?.page || 1,
+        limit: params?.limit || 50,
+        ...(params?.name && { name: params.name }),
+        ...(params?.startTime && { startTime: params.startTime }),
+        ...(params?.endTime && { endTime: params.endTime })
+      }
     });
     return response.data;
   }
