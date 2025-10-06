@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Search } from 'lucide-react';
+import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy } from 'lucide-react';
 import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage, ASPECT_RATIOS } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
+import { toast } from 'sonner';
 
 
-// 验证尺寸是否符合API要求
+// 验证尺寸是否符合新模型API要求
 const validateDimension = (value: number): number => {
   // 限制在256-1440范围内
   const clamped = Math.max(256, Math.min(1440, value));
@@ -15,12 +17,37 @@ const validateDimension = (value: number): number => {
   return Math.round(clamped / 32) * 32;
 };
 
-// PDF页面尺寸配置（单位：mm）
+// 智能验证并调整尺寸组合以符合所有约束
+const validateDimensions = (width: number, height: number): { width: number; height: number } => {
+  // 首先验证单个尺寸范围并调整为32的倍数
+  let validWidth = validateDimension(width);
+  let validHeight = validateDimension(height);
+
+  return { width: validWidth, height: validHeight };
+};
+
+// 检查尺寸是否满足所有约束（不调整，仅检查）
+const checkDimensionsValid = (width: number, height: number): { valid: boolean; reason?: string } => {
+  // 检查基本范围（单个维度）
+  if (width < 256 || width > 1440) {
+    return { valid: false, reason: '宽度必须在256-1440范围内' };
+  }
+  if (height < 256 || height > 1440) {
+    return { valid: false, reason: '高度必须在256-1440范围内' };
+  }
+
+  // 检查32的倍数
+  if (width % 32 !== 0 || height % 32 !== 0) {
+    return { valid: false, reason: '尺寸必须是32的倍数' };
+  }
+
+  return { valid: true };
+};
+
+// PDF页面尺寸配置（单位：cm）
 const PAGE_SIZES = {
-  a4: { width: 210, height: 297, label: 'A4 (21.0 × 29.7 cm)' },
-  a3: { width: 297, height: 420, label: 'A3 (29.7 × 42.0 cm)' },
-  letter: { width: 216, height: 279, label: 'Letter (21.6 × 27.9 cm)' },
-  custom: { width: 210, height: 297, label: '自定义尺寸' }
+  small: { width: 158, height: 158, label: '小尺寸 (15.8 × 15.8 cm)' },
+  large: { width: 306, height: 306, label: '大尺寸 (30.6 × 30.6 cm)' }
 };
 
 // 获取图片实际尺寸
@@ -51,14 +78,16 @@ export function ImageGenerationStep({
   onGenerateImages,
   refreshTrigger,
   projectName,
-  isGeneratingImages
+  isGeneratingImages,
+  onStartPolling
 }: ImageGenerationStepProps) {
+  const navigate = useNavigate();
   const selectedPrompts = Array.from(session.prompts?.values() || []).filter(p => selectedPromptIds.has(p.id));
   
   // 生成参数状态
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0]); // 默认选择1:1
   const [customWidth, setCustomWidth] = useState<number>(1024);
-  const [customHeight, setCustomHeight] = useState<number>(768); // FLUX默认高度
+  const [customHeight, setCustomHeight] = useState<number>(1024); // 新模型默认尺寸
   const [useCustomSize, setUseCustomSize] = useState(false);
   
   // 输入验证反馈状态
@@ -71,17 +100,19 @@ export function ImageGenerationStep({
   // 图片预览状态
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
   
-  // 搜索相关状态
-  const [searchTerm, setSearchTerm] = useState('');
   
   // 批量导出相关状态
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+
+  // 批量复制相关状态
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [copyCount, setCopyCount] = useState(1);
+  const [isCopying, setIsCopying] = useState(false);
   
   // PDF导出相关状态
   const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [pdfPageSize, setPdfPageSize] = useState<'a4' | 'a3' | 'letter' | 'custom'>('a4');
-  const [customPageSize, setCustomPageSize] = useState({ width: 210, height: 297 });
+  const [pdfPageSize, setPdfPageSize] = useState<'small' | 'large'>('small');
   const [pdfImages, setPdfImages] = useState<GeneratedImage[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
@@ -96,10 +127,31 @@ export function ImageGenerationStep({
   useEffect(() => {
     if (session.projectId) {
       setIsLoadingHistoricalData(true);
-      
+
       AIImageSessionsAPI.loadImages(session.projectId)
         .then((images) => {
           setHistoricalImages(images || []);
+
+          // 检查是否有非完成状态的图片，如果有则开始轮询
+          if (images) {
+            const processingImages = images.filter(img =>
+              img.status === PromptStatus.PENDING ||
+              img.status === PromptStatus.QUEUED ||
+              img.status === PromptStatus.PROCESSING
+            );
+
+            if (processingImages.length > 0) {
+              // 获取这些图片对应的promptId
+              const promptIdsToMonitor = processingImages.map(img => img.promptId);
+              // 去重
+              const uniquePromptIds = Array.from(new Set(promptIdsToMonitor));
+
+              // 调用父组件的轮询方法
+              if (onStartPolling) {
+                onStartPolling(uniquePromptIds);
+              }
+            }
+          }
         })
         .catch((error) => {
           console.error('Error loading images:', error);
@@ -145,11 +197,8 @@ export function ImageGenerationStep({
   // 获取可导出的图片（只有COMPLETED状态的图片）
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
   
-  // 根据搜索词筛选所有图片（包括所有状态）
-  const filteredImages = (historicalImages || []).filter(img => {
-    if (!searchTerm.trim()) return true;
-    return img.promptText?.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  // 所有历史图片
+  const filteredImages = historicalImages || [];
 
   // 切换图片选择状态
   const toggleImageSelection = (imageId: string) => {
@@ -206,6 +255,11 @@ export function ImageGenerationStep({
 
       // 下载并添加图片到压缩包
       const downloadPromises = selectedImages.map(async (image, index) => {
+        if (!image.imageUrl) {
+          console.warn(`图片 ${image.id} 缺少 imageUrl`);
+          return;
+        }
+
         try {
           const response = await fetch(image.imageUrl, {
             mode: 'cors',
@@ -255,6 +309,41 @@ export function ImageGenerationStep({
       alert('导出失败，请重试');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // 批量复制图片
+  const handleBatchCopy = async () => {
+    if (selectedImageIds.size === 0) {
+      toast.error('请选择要复制的图片');
+      return;
+    }
+
+    setIsCopying(true);
+
+    try {
+      // 获取选中图片对应的promptId
+      const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
+      const promptIds = selectedImages.map(img => img.promptId);
+
+      // 调用批量生成图片API
+      await AIImageSessionsAPI.batchGenerateImages(promptIds, copyCount);
+
+      toast.success(`成功提交批量生成任务：${selectedImageIds.size} 个提示词，每个生成 ${copyCount} 张图片`);
+
+      // 清除选择和重置状态
+      setSelectedImageIds(new Set());
+      setCopyCount(1);
+      setShowCopyDialog(false);
+
+      // 跳转到项目列表页面
+      navigate('/workspace/product-images');
+
+    } catch (error) {
+      console.error('批量生成图片失败:', error);
+      toast.error('生成失败，请重试');
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -347,14 +436,14 @@ export function ImageGenerationStep({
       const jsPDF = (await import('jspdf')).default;
       
       // 获取页面尺寸
-      const pageSize = pdfPageSize === 'custom' ? customPageSize : PAGE_SIZES[pdfPageSize];
+      const pageSize = PAGE_SIZES[pdfPageSize];
       const pdf = new jsPDF({
-        orientation: pageSize.height > pageSize.width ? 'portrait' : 'landscape',
+        orientation: 'portrait', // 正方形页面，默认用portrait
         unit: 'mm',
         format: [pageSize.width, pageSize.height]
       });
-      
-      // 页面尺寸（单位：mm）
+
+      // 页面尺寸（单位：mm，从cm转换）
       const pageWidth = pageSize.width;
       const pageHeight = pageSize.height;
       const availableWidth = pageWidth;
@@ -362,7 +451,12 @@ export function ImageGenerationStep({
 
       for (let i = 0; i < pdfImages.length; i++) {
         const image = pdfImages[i];
-        
+
+        if (!image.imageUrl) {
+          console.warn(`PDF图片 ${image.id} 缺少 imageUrl，跳过`);
+          continue;
+        }
+
         try {
           // 获取图片数据
           const response = await fetch(image.imageUrl, {
@@ -431,20 +525,6 @@ export function ImageGenerationStep({
     }
   };
 
-  // 下载图片
-  const handleDownloadImage = (imageUrl: string, filename?: string) => {
-    try {
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = filename || `generated-image-${Date.now()}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('下载图片失败:', error);
-      alert('下载失败，请重试');
-    }
-  };
 
   // 处理比例选择变化
   const handleAspectRatioChange = (aspectRatio: AspectRatio) => {
@@ -468,19 +548,31 @@ export function ImageGenerationStep({
 
   // 输入框失焦时验证
   const handleWidthBlur = () => {
-    const validatedValue = validateDimension(customWidth);
-    if (validatedValue !== customWidth) {
-      setCustomWidth(validatedValue);
+    const result = validateDimensions(customWidth, customHeight);
+    if (result.width !== customWidth) {
+      setCustomWidth(result.width);
       setWidthAdjusted(true);
       // 3秒后清除提示
       setTimeout(() => setWidthAdjusted(false), 3000);
     }
+    if (result.height !== customHeight) {
+      setCustomHeight(result.height);
+      setHeightAdjusted(true);
+      // 3秒后清除提示
+      setTimeout(() => setHeightAdjusted(false), 3000);
+    }
   };
 
   const handleHeightBlur = () => {
-    const validatedValue = validateDimension(customHeight);
-    if (validatedValue !== customHeight) {
-      setCustomHeight(validatedValue);
+    const result = validateDimensions(customWidth, customHeight);
+    if (result.width !== customWidth) {
+      setCustomWidth(result.width);
+      setWidthAdjusted(true);
+      // 3秒后清除提示
+      setTimeout(() => setWidthAdjusted(false), 3000);
+    }
+    if (result.height !== customHeight) {
+      setCustomHeight(result.height);
       setHeightAdjusted(true);
       // 3秒后清除提示
       setTimeout(() => setHeightAdjusted(false), 3000);
@@ -489,41 +581,6 @@ export function ImageGenerationStep({
 
 
 
-  // 获取状态对应的中文显示
-  const getStatusText = (status: PromptStatus) => {
-    switch (status) {
-      case PromptStatus.PENDING:
-        return '等待中';
-      case PromptStatus.QUEUED:
-        return '排队中';
-      case PromptStatus.PROCESSING:
-        return '生成中';
-      case PromptStatus.COMPLETED:
-        return '已完成';
-      case PromptStatus.FAILED:
-        return '失败';
-      default:
-        return '未知';
-    }
-  };
-
-  // 获取状态对应的颜色样式
-  const getStatusColor = (status: PromptStatus) => {
-    switch (status) {
-      case PromptStatus.PENDING:
-        return 'text-gray-500';
-      case PromptStatus.QUEUED:
-        return 'text-blue-500';
-      case PromptStatus.PROCESSING:
-        return 'text-yellow-500';
-      case PromptStatus.COMPLETED:
-        return 'text-green-500';
-      case PromptStatus.FAILED:
-        return 'text-red-500';
-      default:
-        return 'text-gray-500';
-    }
-  };
 
   return (
     <div className="flex h-[calc(100vh-80px)]">
@@ -580,8 +637,8 @@ export function ImageGenerationStep({
                         max="1440"
                         step="32"
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
-                          widthAdjusted 
-                            ? 'border-amber-400 bg-amber-50 focus:ring-amber-400' 
+                          widthAdjusted
+                            ? 'border-amber-400 bg-amber-50 focus:ring-amber-400'
                             : 'border-gray-200 focus:ring-gray-900'
                         }`}
                         placeholder="256-1440"
@@ -605,8 +662,8 @@ export function ImageGenerationStep({
                         max="1440"
                         step="32"
                         className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
-                          heightAdjusted 
-                            ? 'border-amber-400 bg-amber-50 focus:ring-amber-400' 
+                          heightAdjusted
+                            ? 'border-amber-400 bg-amber-50 focus:ring-amber-400'
                             : 'border-gray-200 focus:ring-gray-900'
                         }`}
                         placeholder="256-1440"
@@ -619,8 +676,9 @@ export function ImageGenerationStep({
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 text-xs text-gray-500">
-                  尺寸要求：256-1440像素，必须是32的倍数
+                <div className="mt-6 text-xs text-gray-500 space-y-1">
+                  <div>• 尺寸范围：256-1440像素</div>
+                  <div>• 必须是32的倍数</div>
                 </div>
               </>
             )}
@@ -629,6 +687,18 @@ export function ImageGenerationStep({
               最终尺寸: <span className="font-mono font-semibold">
                 {useCustomSize ? customWidth : selectedAspectRatio.width} × {useCustomSize ? customHeight : selectedAspectRatio.height}
               </span>
+
+              {useCustomSize && (() => {
+                const validation = checkDimensionsValid(customWidth, customHeight);
+
+                return (
+                  <div className="mt-2 space-y-1 text-xs">
+                    <div className={validation.valid ? "text-green-600" : "text-red-600"}>
+                      {validation.valid ? "✓ 参数验证通过" : `✗ ${validation.reason}`}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           
@@ -747,19 +817,9 @@ export function ImageGenerationStep({
               </div>
               {completedImages.length > 0 && (
                 <div className="flex items-center gap-3 flex-wrap">
-                  {/* 搜索框 */}
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="搜索提示词..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 h-8 text-sm border-gray-300"
-                    />
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={toggleSelectAll}
                     className="text-gray-600 hover:text-gray-900"
                   >
@@ -778,9 +838,28 @@ export function ImageGenerationStep({
                       return allSelected ? '取消全选' : '全选';
                     })()}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                    onClick={() => setShowCopyDialog(true)}
+                    disabled={selectedImageIds.size === 0 || isCopying}
+                  >
+                    {isCopying ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        复制中...
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        批量复制
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                     onClick={handleBatchExport}
                     disabled={selectedImageIds.size === 0 || isExporting}
@@ -797,9 +876,9 @@ export function ImageGenerationStep({
                       </>
                     )}
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                     onClick={() => {
                       const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
@@ -830,115 +909,68 @@ export function ImageGenerationStep({
                 {filteredImages.map((image) => {
                   const isCompleted = image.status === PromptStatus.COMPLETED;
                   const isSelected = selectedImageIds.has(image.id);
-                  
-                  return (
-                    <div key={image.id} className={`group border rounded-xl bg-white hover:shadow-lg transition-all duration-200 ${
-                      isCompleted && isSelected 
-                        ? 'border-blue-300 bg-blue-50' 
-                        : isCompleted 
-                          ? 'border-gray-200 hover:border-gray-300' 
-                          : 'border-gray-200'
-                    }`}>
-                      {/* 图片区域 */}
-                      <div className="p-3 relative">
-                        {/* 选择框 - 只有COMPLETED状态的图片才显示 */}
-                        {isCompleted && (
-                          <button
-                            onClick={() => toggleImageSelection(image.id)}
-                            className="absolute top-2 right-2 p-1.5 rounded-md bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm border border-white/20 transition-colors z-10"
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-blue-600" />
-                            ) : (
-                              <Square className="w-4 h-4 text-gray-400 hover:text-gray-600" />
-                            )}
-                          </button>
-                        )}
 
-                        {image.status === PromptStatus.COMPLETED ? (
-                          <div className="space-y-2">
-                            <div className="relative group">
-                              {/* 图片容器 */}
-                              <div className="relative w-full rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
-                                <img
-                                  src={image.imageUrl}
-                                  alt="历史生成图片"
-                                  className="w-full h-auto object-contain"
-                                />
-                                {/* 磨砂全覆盖层 - 渐显效果 */}
-                                <div className="absolute inset-0 bg-white/20 backdrop-blur-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300 rounded-lg">
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      className="bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg border border-white/20"
-                                      onClick={() => setPreviewImage(image)}
-                                    >
-                                      <Eye className="w-4 h-4 mr-2" />
-                                      预览
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      className="bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg border border-white/20"
-                                      onClick={() => handleDownloadImage(image.imageUrl, `image-${image.id}.jpg`)}
-                                    >
-                                      <Download className="w-4 h-4 mr-2" />
-                                      下载
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            {/* 提示词区域 - 紧凑显示 */}
-                            <div className="bg-gray-50 rounded-md p-2">
-                              <div
-                                className="text-xs text-gray-600 leading-relaxed line-clamp-1"
-                                title={image.promptText}
+                  return (
+                    <div key={image.id}
+                         className={`group border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 relative ${
+                           isCompleted && isSelected
+                             ? 'border-blue-300 bg-blue-50'
+                             : isCompleted
+                               ? 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                               : 'border-gray-200'
+                         }`}
+                         onClick={isCompleted ? () => toggleImageSelection(image.id) : undefined}
+                    >
+                      {/* 选择框 - 只有选中状态才显示 */}
+                      {isCompleted && isSelected && (
+                        <div className="absolute top-2 right-2 p-1.5 rounded-md bg-white/90 backdrop-blur-sm shadow-sm border border-white/20 z-10">
+                          <CheckSquare className="w-4 h-4 text-blue-600" />
+                        </div>
+                      )}
+
+                      {image.status === PromptStatus.COMPLETED && image.imageUrl ? (
+                        <div className="relative group bg-gray-50 leading-none">
+                          <img
+                            src={image.imageUrl}
+                            alt="历史生成图片"
+                            className="w-full h-auto object-contain block"
+                            style={{ verticalAlign: 'top' }}
+                          />
+                          {/* 磨砂全覆盖层 - 渐显效果 */}
+                          <div className="absolute inset-0 bg-white/20 backdrop-blur-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg border border-white/20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewImage(image);
+                                }}
                               >
-                                {image.promptText || '提示词文本'}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-gray-500">
-                              <span className="font-mono">
-                                {image.width}×{image.height}
-                              </span>
-                              <span className={getStatusColor(image.status)}>
-                                {getStatusText(image.status)}
-                              </span>
+                                <Eye className="w-4 h-4 mr-2" />
+                                预览
+                              </Button>
                             </div>
                           </div>
-                        ) : (
-                          <div>
-                            <div className="flex flex-col items-center justify-center min-h-[200px] bg-gray-50 border border-gray-200 rounded-lg mb-2">
-                            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                              {image.status === PromptStatus.PROCESSING ? (
-                                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                              ) : image.status === PromptStatus.FAILED ? (
-                                <div className="w-5 h-5 text-red-500">✕</div>
-                              ) : (
-                                <MessageSquare className="w-6 h-6 text-gray-400" />
-                              )}
-                            </div>
-                            <p className={`text-sm mb-2 ${getStatusColor(image.status)}`}>
-                              {getStatusText(image.status)}
-                            </p>
-                              <p className="text-xs text-gray-400 text-center">
-                                {image.status === PromptStatus.PROCESSING ? '正在生成中...' :
-                                 image.status === PromptStatus.FAILED ? '生成失败' :
-                                 '等待处理'}
-                              </p>
-                            </div>
-                            {/* 提示词区域 - 紧凑显示 */}
-                            <div className="bg-gray-50 rounded-md p-2">
-                              <div
-                                className="text-xs text-gray-600 leading-relaxed line-clamp-1"
-                                title={image.promptText}
-                              >
-                                {image.promptText || '提示词文本'}
-                              </div>
-                            </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center min-h-[200px] bg-gray-50">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                            {image.status === PromptStatus.PROCESSING ? (
+                              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            ) : image.status === PromptStatus.FAILED ? (
+                              <div className="w-5 h-5 text-red-500">✕</div>
+                            ) : (
+                              <MessageSquare className="w-6 h-6 text-gray-400" />
+                            )}
                           </div>
-                        )}
-                      </div>
+                          <p className="text-xs text-gray-400 text-center">
+                            {image.status === PromptStatus.PROCESSING ? '正在生成中...' :
+                             image.status === PromptStatus.FAILED ? '生成失败' :
+                             '等待处理'}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -950,7 +982,7 @@ export function ImageGenerationStep({
         </div>
 
         {/* 图片预览模态框 */}
-        {previewImage && (
+        {previewImage && previewImage.imageUrl && (
           <div 
             className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
             onClick={() => setPreviewImage(null)}
@@ -1022,56 +1054,15 @@ export function ImageGenerationStep({
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           页面尺寸
                         </label>
-                        <select 
-                          value={pdfPageSize} 
-                          onChange={(e) => setPdfPageSize(e.target.value as 'a4' | 'a3' | 'letter' | 'custom')}
+                        <select
+                          value={pdfPageSize}
+                          onChange={(e) => setPdfPageSize(e.target.value as 'small' | 'large')}
                           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         >
-                          <option value="a4">{PAGE_SIZES.a4.label}</option>
-                          <option value="a3">{PAGE_SIZES.a3.label}</option>
-                          <option value="letter">{PAGE_SIZES.letter.label}</option>
-                          <option value="custom">{PAGE_SIZES.custom.label}</option>
+                          <option value="small">{PAGE_SIZES.small.label}</option>
+                          <option value="large">{PAGE_SIZES.large.label}</option>
                         </select>
                       </div>
-                      
-                      {/* 自定义尺寸输入 */}
-                      {pdfPageSize === 'custom' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            自定义尺寸 (cm)
-                          </label>
-                          <div className="flex gap-2 items-center">
-                            <Input
-                              type="number"
-                              placeholder="宽度"
-                              value={customPageSize.width / 10}
-                              onChange={(e) => setCustomPageSize(prev => ({ 
-                                ...prev, 
-                                width: Math.max(1, Number(e.target.value) * 10) 
-                              }))}
-                              className="flex-1"
-                              min="1"
-                              step="0.1"
-                            />
-                            <span className="text-gray-500">×</span>
-                            <Input
-                              type="number"
-                              placeholder="高度"
-                              value={customPageSize.height / 10}
-                              onChange={(e) => setCustomPageSize(prev => ({ 
-                                ...prev, 
-                                height: Math.max(1, Number(e.target.value) * 10) 
-                              }))}
-                              className="flex-1"
-                              min="1"
-                              step="0.1"
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            当前尺寸: {(customPageSize.width / 10).toFixed(1)} × {(customPageSize.height / 10).toFixed(1)} cm
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                   
@@ -1137,11 +1128,13 @@ export function ImageGenerationStep({
 
                           {/* 图片 */}
                           <div className="p-3">
-                            <img 
-                              src={image.imageUrl}
-                              alt={`页面 ${index + 1}`}
-                              className="w-full h-32 rounded border border-gray-100"
-                            />
+                            {image.imageUrl && (
+                              <img
+                                src={image.imageUrl}
+                                alt={`页面 ${index + 1}`}
+                                className="w-full h-32 rounded border border-gray-100"
+                              />
+                            )}
                           </div>
 
                           {/* 删除按钮 */}
@@ -1179,6 +1172,92 @@ export function ImageGenerationStep({
                     <>
                       <FileText className="w-4 h-4 mr-2" />
                       生成PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 批量复制对话框 */}
+        {showCopyDialog && (
+          <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowCopyDialog(false)}
+          >
+            <div
+              className="bg-white rounded-lg max-w-md w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 头部 */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">批量复制图片</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCopyDialog(false)}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* 内容 */}
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-600">
+                    已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      每张图片复制数量
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="40"
+                      value={copyCount}
+                      onChange={(e) => setCopyCount(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
+                      className="w-full"
+                      placeholder="输入复制数量"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      每张图片最多可复制 40 个
+                    </p>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="text-sm text-gray-600">
+                      将生成：<span className="font-semibold text-gray-900">{selectedImageIds.size * copyCount}</span> 张新图片
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 底部按钮 */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCopyDialog(false)}
+                  disabled={isCopying}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleBatchCopy}
+                  disabled={isCopying || selectedImageIds.size === 0}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isCopying ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      复制中...
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      开始复制
                     </>
                   )}
                 </Button>
