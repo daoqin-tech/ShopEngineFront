@@ -76,4 +76,12 @@ export class AIImageProjectsAPI {
     const response = await apiClient.delete(`/projects/${id}`);
     return response.data;
   }
+
+  // 批量重新生成AI图片项目
+  static async regenerateAIImageProjects(projectIds: string[]): Promise<null> {
+    const response = await apiClient.post('/projects/regenerate', {
+      projectIds
+    });
+    return response.data;
+  }
 }

@@ -113,4 +113,12 @@ export class AIImageSessionsAPI {
     });
     return response.data; // 返回生成任务的结果
   }
+
+  // 批量重新生成失败的图片
+  static async retryFailedImages(taskIds: string[]): Promise<null> {
+    const response = await apiClient.post('/images/retry', {
+      taskIds
+    });
+    return response.data;
+  }
 }

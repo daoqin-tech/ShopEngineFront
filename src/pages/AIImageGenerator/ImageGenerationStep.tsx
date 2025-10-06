@@ -105,6 +105,9 @@ export function ImageGenerationStep({
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
 
+  // 批量重试相关状态
+  const [isRetrying, setIsRetrying] = useState(false);
+
   // 批量复制相关状态
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [copyCount, setCopyCount] = useState(1);
@@ -196,7 +199,10 @@ export function ImageGenerationStep({
 
   // 获取可导出的图片（只有COMPLETED状态的图片）
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
-  
+
+  // 获取失败的图片
+  const failedImages = (historicalImages || []).filter(img => img.status === PromptStatus.FAILED);
+
   // 所有历史图片
   const filteredImages = historicalImages || [];
 
@@ -213,25 +219,27 @@ export function ImageGenerationStep({
     });
   };
 
-  // 全选/取消全选（只针对已完成的图片）
+  // 全选/取消全选（只针对已完成和失败的图片）
   const toggleSelectAll = () => {
-    // 只对已完成且符合搜索条件的图片进行全选操作
-    const filteredCompletedImages = filteredImages.filter(img => img.status === PromptStatus.COMPLETED);
-    const filteredCompletedIds = filteredCompletedImages.map(img => img.id);
-    const allFilteredSelected = filteredCompletedIds.every(id => selectedImageIds.has(id));
-    
-    if (allFilteredSelected && filteredCompletedImages.length > 0) {
-      // 当前筛选结果全选，则取消选择筛选的图片
+    // 只对已完成和失败的图片进行全选操作
+    const selectableImages = filteredImages.filter(img =>
+      img.status === PromptStatus.COMPLETED || img.status === PromptStatus.FAILED
+    );
+    const selectableIds = selectableImages.map(img => img.id);
+    const allSelected = selectableIds.every(id => selectedImageIds.has(id));
+
+    if (allSelected && selectableImages.length > 0) {
+      // 当前全选，则取消选择
       setSelectedImageIds(prev => {
         const newSet = new Set(prev);
-        filteredCompletedIds.forEach(id => newSet.delete(id));
+        selectableIds.forEach(id => newSet.delete(id));
         return newSet;
       });
     } else {
-      // 否则选择所有筛选的已完成图片
+      // 否则选择所有可选图片
       setSelectedImageIds(prev => {
         const newSet = new Set(prev);
-        filteredCompletedIds.forEach(id => newSet.add(id));
+        selectableIds.forEach(id => newSet.add(id));
         return newSet;
       });
     }
@@ -344,6 +352,62 @@ export function ImageGenerationStep({
       toast.error('生成失败，请重试');
     } finally {
       setIsCopying(false);
+    }
+  };
+
+  // 批量重试失败的图片
+  const handleBatchRetry = async () => {
+    if (selectedImageIds.size === 0) {
+      toast.error('请选择要重试的图片');
+      return;
+    }
+
+    // 分类选中的图片
+    const selectedFailedImages: string[] = [];
+    const selectedCompletedImages: string[] = [];
+
+    Array.from(selectedImageIds).forEach(id => {
+      const image = historicalImages.find(img => img.id === id);
+      if (image) {
+        if (image.status === PromptStatus.FAILED) {
+          selectedFailedImages.push(id);
+        } else if (image.status === PromptStatus.COMPLETED) {
+          selectedCompletedImages.push(id);
+        }
+      }
+    });
+
+    // 如果选择了成功的图片,给出提示
+    if (selectedCompletedImages.length > 0) {
+      toast.error(`已选择 ${selectedCompletedImages.length} 张成功的图片，成功的图片不需要重新生成`);
+      return;
+    }
+
+    if (selectedFailedImages.length === 0) {
+      toast.error('所选图片中没有失败的图片');
+      return;
+    }
+
+    setIsRetrying(true);
+
+    try {
+      await AIImageSessionsAPI.retryFailedImages(selectedFailedImages);
+      toast.success(`已提交 ${selectedFailedImages.length} 张失败图片重新生成`);
+
+      // 清除选择
+      setSelectedImageIds(new Set());
+
+      // 刷新图片列表
+      if (session.projectId) {
+        const images = await AIImageSessionsAPI.loadImages(session.projectId);
+        setHistoricalImages(images || []);
+      }
+
+    } catch (error) {
+      console.error('批量重试失败:', error);
+      toast.error('重试失败，请稍后再试');
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -815,7 +879,7 @@ export function ImageGenerationStep({
                   </p>
                 )}
               </div>
-              {completedImages.length > 0 && (
+              {(completedImages.length > 0 || failedImages.length > 0) && (
                 <div className="flex items-center gap-3 flex-wrap">
                   <Button
                     variant="ghost"
@@ -824,8 +888,10 @@ export function ImageGenerationStep({
                     className="text-gray-600 hover:text-gray-900"
                   >
                     {(() => {
-                      const filteredCompletedImages = filteredImages.filter(img => img.status === PromptStatus.COMPLETED);
-                      const allSelected = filteredCompletedImages.length > 0 && filteredCompletedImages.every(img => selectedImageIds.has(img.id));
+                      const selectableImages = filteredImages.filter(img =>
+                        img.status === PromptStatus.COMPLETED || img.status === PromptStatus.FAILED
+                      );
+                      const allSelected = selectableImages.length > 0 && selectableImages.every(img => selectedImageIds.has(img.id));
                       return allSelected ? (
                         <CheckSquare className="w-4 h-4 mr-1" />
                       ) : (
@@ -833,8 +899,10 @@ export function ImageGenerationStep({
                       );
                     })()}
                     {(() => {
-                      const filteredCompletedImages = filteredImages.filter(img => img.status === PromptStatus.COMPLETED);
-                      const allSelected = filteredCompletedImages.length > 0 && filteredCompletedImages.every(img => selectedImageIds.has(img.id));
+                      const selectableImages = filteredImages.filter(img =>
+                        img.status === PromptStatus.COMPLETED || img.status === PromptStatus.FAILED
+                      );
+                      const allSelected = selectableImages.length > 0 && selectableImages.every(img => selectedImageIds.has(img.id));
                       return allSelected ? '取消全选' : '全选';
                     })()}
                   </Button>
@@ -844,6 +912,31 @@ export function ImageGenerationStep({
                     <span className="text-sm text-gray-600">
                       已选择 {selectedImageIds.size} 张
                     </span>
+                  )}
+
+                  {/* 重新生成按钮 - 只在有失败图片时显示 */}
+                  {failedImages.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-300 text-red-700 hover:text-red-900 hover:border-red-400"
+                      onClick={handleBatchRetry}
+                      disabled={selectedImageIds.size === 0 || isRetrying}
+                    >
+                      {isRetrying ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                          重试中...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          重新生成
+                        </>
+                      )}
+                    </Button>
                   )}
 
                   <Button
@@ -916,23 +1009,29 @@ export function ImageGenerationStep({
               <div className="grid grid-cols-6 gap-4">
                 {filteredImages.map((image) => {
                   const isCompleted = image.status === PromptStatus.COMPLETED;
+                  const isFailed = image.status === PromptStatus.FAILED;
+                  const isSelectable = isCompleted || isFailed;
                   const isSelected = selectedImageIds.has(image.id);
 
                   return (
                     <div key={image.id}
                          className={`group border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 relative ${
-                           isCompleted && isSelected
-                             ? 'border-blue-300 bg-blue-50'
-                             : isCompleted
-                               ? 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                           isSelected
+                             ? isFailed
+                               ? 'border-red-300 bg-red-50'
+                               : 'border-blue-300 bg-blue-50'
+                             : isSelectable
+                               ? isFailed
+                                 ? 'border-red-200 hover:border-red-300 cursor-pointer'
+                                 : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                                : 'border-gray-200'
                          }`}
-                         onClick={isCompleted ? () => toggleImageSelection(image.id) : undefined}
+                         onClick={isSelectable ? () => toggleImageSelection(image.id) : undefined}
                     >
                       {/* 选择框 - 只有选中状态才显示 */}
-                      {isCompleted && isSelected && (
+                      {isSelectable && isSelected && (
                         <div className="absolute top-2 right-2 p-1.5 rounded-md bg-white/90 backdrop-blur-sm shadow-sm border border-white/20 z-10">
-                          <CheckSquare className="w-4 h-4 text-blue-600" />
+                          <CheckSquare className={`w-4 h-4 ${isFailed ? 'text-red-600' : 'text-blue-600'}`} />
                         </div>
                       )}
 

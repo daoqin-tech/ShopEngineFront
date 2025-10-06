@@ -201,9 +201,18 @@ export function AIImageProjects() {
       return;
     }
 
-    // TODO: 调用重新生成API
-    toast.success(`已提交 ${selectedProjectIds.size} 个项目重新生成`);
-    setSelectedProjectIds(new Set());
+    try {
+      const projectIdsArray = Array.from(selectedProjectIds);
+      await AIImageProjectsAPI.regenerateAIImageProjects(projectIdsArray);
+      toast.success(`已提交 ${selectedProjectIds.size} 个项目重新生成`);
+      setSelectedProjectIds(new Set());
+      fetchProjects(currentPage); // 刷新列表
+    } catch (err) {
+      toast.error('重新生成失败', {
+        description: '请稍后再试'
+      });
+      console.error('Error regenerating projects:', err);
+    }
   };
 
 

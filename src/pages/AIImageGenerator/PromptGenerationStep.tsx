@@ -8,10 +8,10 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 
 // 辅助函数：处理全选/取消全选（只处理可选择的提示词）
 const handleToggleAllPrompts = (messagePrompts: Prompt[], selectedPromptIds: Set<string>, onTogglePromptSelection: (id: string) => void) => {
-  // 只处理状态为PENDING或FAILED的提示词（可以重新生成）
-  const selectablePrompts = messagePrompts.filter(p => p.status === PromptStatus.PENDING || p.status === PromptStatus.FAILED);
+  // 只处理状态为PENDING的提示词（可以生成）
+  const selectablePrompts = messagePrompts.filter(p => p.status === PromptStatus.PENDING);
   const allSelectableSelected = selectablePrompts.every(p => selectedPromptIds.has(p.id));
-  
+
   selectablePrompts.forEach(prompt => {
     if (allSelectableSelected && selectedPromptIds.has(prompt.id)) {
       // 如果全部已选中，则取消全选
@@ -25,25 +25,25 @@ const handleToggleAllPrompts = (messagePrompts: Prompt[], selectedPromptIds: Set
 
 // 辅助函数：渲染全选按钮（只处理可选择的提示词）
 const renderSelectAllButton = (messagePrompts: Prompt[], selectedPromptIds: Set<string>, onTogglePromptSelection: (id: string) => void) => {
-  // 只处理状态为PENDING或FAILED的提示词（可以重新生成）
-  const selectablePrompts = messagePrompts.filter(p => p.status === PromptStatus.PENDING || p.status === PromptStatus.FAILED);
-  
+  // 只处理状态为PENDING的提示词（可以生成）
+  const selectablePrompts = messagePrompts.filter(p => p.status === PromptStatus.PENDING);
+
   // 如果没有可选择的提示词，不显示按钮
   if (selectablePrompts.length === 0) {
     return null;
   }
-  
+
   const allSelectableSelected = selectablePrompts.every(p => selectedPromptIds.has(p.id));
-  
+
   return (
     <button
       onClick={() => handleToggleAllPrompts(messagePrompts, selectedPromptIds, onTogglePromptSelection)}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
-        allSelectableSelected 
-          ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:border-green-300' 
+        allSelectableSelected
+          ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:border-green-300'
           : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300'
       }`}
-      title={allSelectableSelected ? '取消选择所有可重新生成的提示词' : '选择所有可重新生成的提示词'}
+      title={allSelectableSelected ? '取消选择所有待生成的提示词' : '选择所有待生成的提示词'}
     >
       {allSelectableSelected ? (
         <>
@@ -314,12 +314,12 @@ export function PromptGenerationStep({
                               {message.prompts?.map((prompt) => {
                                 const isSelected = selectedPromptIds.has(prompt.id);
                                 const isSelectedForOptimization = selectedPromptsForOptimization.includes(prompt.id);
-                                const canSelect = prompt.status === PromptStatus.PENDING || prompt.status === PromptStatus.FAILED;
+                                const canSelect = prompt.status === PromptStatus.PENDING;
                                 const isQueued = prompt.status === PromptStatus.QUEUED;
                                 const isGenerating = prompt.status === PromptStatus.PROCESSING;
                                 const isCompleted = prompt.status === PromptStatus.COMPLETED;
                                 const isFailed = prompt.status === PromptStatus.FAILED;
-                                
+
                                 // 根据状态确定样式
                                 const getPromptClassName = () => {
                                   if (isSelected) {
@@ -328,7 +328,7 @@ export function PromptGenerationStep({
                                   if (isQueued) return 'bg-blue-50 border-blue-200 opacity-75';
                                   if (isGenerating) return 'bg-yellow-50 border-yellow-200 opacity-75';
                                   if (isCompleted) return 'bg-green-50 border-green-200 opacity-75';
-                                  if (isFailed) return 'bg-red-50 border-red-200 hover:border-red-300 hover:bg-red-100';
+                                  if (isFailed) return 'bg-red-50 border-red-200 opacity-75';
                                   // PENDING状态
                                   return 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50';
                                 };
@@ -337,7 +337,7 @@ export function PromptGenerationStep({
                                   if (isQueued) return '队列中...';
                                   if (isGenerating) return '生成中...';
                                   if (isCompleted) return '已生成';
-                                  if (isFailed) return '生成失败，可重试';
+                                  if (isFailed) return '生成失败';
                                   return null;
                                 };
                                 
