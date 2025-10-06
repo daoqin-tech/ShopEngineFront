@@ -27,6 +27,9 @@ export function AIImageProjects() {
   const [editingName, setEditingName] = useState('');
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
+  // 多选状态
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -169,16 +172,66 @@ export function AIImageProjects() {
     setEditingName('');
   };
 
+  // 切换项目选择
+  const toggleProjectSelection = (projectId: string) => {
+    setSelectedProjectIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+
+  // 全选/取消全选
+  const toggleSelectAll = () => {
+    if (selectedProjectIds.size === projects.length) {
+      setSelectedProjectIds(new Set());
+    } else {
+      setSelectedProjectIds(new Set(projects.map(p => p.id)));
+    }
+  };
+
+  // 重新生成选中的项目
+  const handleRegenerateSelected = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要重新生成的项目');
+      return;
+    }
+
+    // TODO: 调用重新生成API
+    toast.success(`已提交 ${selectedProjectIds.size} 个项目重新生成`);
+    setSelectedProjectIds(new Set());
+  };
+
 
   return (
     <div className="h-full flex flex-col">
       {/* 页面头部 */}
       <div className="flex justify-between items-center p-6 border-b bg-white">
         <h1 className="text-2xl font-bold">AI生图</h1>
-        <Button onClick={handleNewProject} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          新建商品制图
-        </Button>
+        <div className="flex items-center gap-3">
+          {selectedProjectIds.size > 0 && (
+            <span className="text-sm text-gray-600">
+              已选择 {selectedProjectIds.size} 个项目
+            </span>
+          )}
+          <Button
+            onClick={handleRegenerateSelected}
+            disabled={selectedProjectIds.size === 0}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Check className="w-4 h-4" />
+            重新生成
+          </Button>
+          <Button onClick={handleNewProject} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            新建商品制图
+          </Button>
+        </div>
       </div>
 
       {/* 筛选器 */}
@@ -245,23 +298,42 @@ export function AIImageProjects() {
             <div className="flex-1 overflow-auto">
               <div className="bg-white border-l border-r border-t">
                 {/* 表头 */}
-                <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
-                  <div className="col-span-1">缩略图</div>
-                  <div className="col-span-3">项目名称</div>
-                  <div className="col-span-2">总任务数</div>
-                  <div className="col-span-3">状态</div>
-                  <div className="col-span-2">创建时间</div>
-                  <div className="col-span-1">操作</div>
+                <div className="grid grid-cols-[auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={projects.length > 0 && selectedProjectIds.size === projects.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 text-gray-900 focus:ring-2 focus:ring-gray-900 cursor-pointer"
+                    />
+                  </div>
+                  <div>缩略图</div>
+                  <div>项目名称</div>
+                  <div>总任务数</div>
+                  <div>状态</div>
+                  <div>创建时间</div>
+                  <div>操作</div>
                 </div>
 
                 {/* 项目列表 */}
                 {projects.map((project) => (
                   <div
                     key={project.id}
-                    className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 group"
+                    className="grid grid-cols-[auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
                   >
+                    {/* 复选框 */}
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjectIds.has(project.id)}
+                        onChange={() => toggleProjectSelection(project.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 text-gray-900 focus:ring-2 focus:ring-gray-900 cursor-pointer"
+                      />
+                    </div>
+
                     {/* 缩略图 */}
-                    <div className="col-span-1 flex items-center">
+                    <div className="flex items-center">
                       <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
                         {project.thumbnail ? (
                           <img
@@ -278,7 +350,7 @@ export function AIImageProjects() {
                     </div>
 
                     {/* 项目名称 */}
-                    <div className="col-span-3 flex items-center">
+                    <div className="flex items-center">
                       {editingProjectId === project.id ? (
                         <div className="flex items-center gap-2 w-full">
                           <Input
@@ -323,14 +395,14 @@ export function AIImageProjects() {
                     </div>
 
                     {/* 总任务数 */}
-                    <div className="col-span-2 flex items-center">
+                    <div className="flex items-center">
                       <Badge variant="outline" className="text-gray-600">
                         {project.totalTasks}
                       </Badge>
                     </div>
 
                     {/* 状态（合并所有状态） */}
-                    <div className="col-span-3 flex items-center gap-1 flex-wrap">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {project.pendingTasks > 0 && (
                         <Badge variant="outline" className="text-yellow-600 text-xs">
                           等待:{project.pendingTasks}
@@ -357,12 +429,12 @@ export function AIImageProjects() {
                     </div>
 
                     {/* 创建时间 */}
-                    <div className="col-span-2 flex items-center text-sm text-gray-500">
+                    <div className="flex items-center text-sm text-gray-500">
                       {new Date(project.createdAt).toLocaleString('zh-CN')}
                     </div>
 
                     {/* 操作 */}
-                    <div className="col-span-1 flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
