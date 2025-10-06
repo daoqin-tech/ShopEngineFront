@@ -389,49 +389,47 @@ export function AIImageProjects() {
       {/* 分页控件 */}
       {total > pageSize && (
         <div className="border-t bg-white p-4">
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fetchProjects(currentPage - 1)}
-              disabled={currentPage <= 1 || loading}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              上一页
-            </Button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.ceil(total / pageSize) }, (_, i) => i + 1).map(page => (
-                <Button
-                  key={page}
-                  variant={page === currentPage ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => fetchProjects(page)}
-                  disabled={loading}
-                  className="w-8 h-8 p-0"
-                >
-                  {page}
-                </Button>
-              ))}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              共 {total} 个项目，第 {currentPage} 页，共 {Math.ceil(total / pageSize)} 页
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchProjects(currentPage - 1)}
+                disabled={currentPage <= 1 || loading}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                上一页
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fetchProjects(currentPage + 1)}
-              disabled={currentPage >= Math.ceil(total / pageSize) || loading}
-            >
-              下一页
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.ceil(total / pageSize) }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => fetchProjects(page)}
+                    disabled={loading}
+                    className="w-8 h-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchProjects(currentPage + 1)}
+                disabled={currentPage >= Math.ceil(total / pageSize) || loading}
+              >
+                下一页
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* 页面信息 */}
-      {total > 0 && (
-        <div className="text-center text-sm text-gray-500 py-2 bg-white border-t">
-          共 {total} 个项目，第 {currentPage} 页，共 {Math.ceil(total / pageSize)} 页
         </div>
       )}
 

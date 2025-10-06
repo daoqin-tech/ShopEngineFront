@@ -104,4 +104,13 @@ export class AIImageSessionsAPI {
     });
     return response.data; // 返回新增的提示词数组
   }
+
+  // 批量生成图片
+  static async batchGenerateImages(promptIds: string[], count: number): Promise<Prompt[]> {
+    const response = await apiClient.post(`/images/batchGenerate`, {
+      promptIds,
+      count
+    });
+    return response.data; // 返回生成任务的结果
+  }
 }

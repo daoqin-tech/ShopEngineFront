@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Check, Square, HelpCircle, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { MessageSquare, Check, Square, HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { PromptGenerationStepProps, Prompt, PromptStatus } from './types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input';
 
 
 // 辅助函数：处理全选/取消全选（只处理可选择的提示词）
@@ -72,18 +71,12 @@ export function PromptGenerationStep({
   onTogglePromptSelection,
   onTogglePromptForOptimization,
   onChatSubmit,
-  onCopyPrompt
 }: PromptGenerationStepProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lastMessageCount, setLastMessageCount] = useState(0);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [hasOpenedHelp, setHasOpenedHelp] = useState(false);
-  // 复制悬浮面板状态
-  const [activeCopyPromptId, setActiveCopyPromptId] = useState<string>('');
-  const [activeCopyMessageId, setActiveCopyMessageId] = useState<string>('');
-  const [copyCount, setCopyCount] = useState<number | string>(4);
-  const [isCopying, setIsCopying] = useState(false);
   
   // 当帮助对话框第一次打开时，自动展开第一个部分
   useEffect(() => {
@@ -140,51 +133,6 @@ export function PromptGenerationStep({
     }
   }, [session.messages, lastMessageCount]);
   
-  // 处理复制按钮点击
-  const handleCopyClick = (promptId: string, messageId: string) => {
-    if (activeCopyPromptId === promptId) {
-      // 如果点击的是已激活的提示词，关闭面板
-      setActiveCopyPromptId('');
-      setActiveCopyMessageId('');
-    } else {
-      // 激活新的复制面板
-      setActiveCopyPromptId(promptId);
-      setActiveCopyMessageId(messageId);
-      setCopyCount(4); // 重置为默认值
-    }
-  };
-
-  // 处理快捷数量选择
-  const handleQuickCopy = async (promptId: string, count: number, messageId: string) => {
-    if (!onCopyPrompt) return;
-    
-    setIsCopying(true);
-    try {
-      await onCopyPrompt(promptId, count, messageId);
-      setActiveCopyPromptId(''); // 关闭面板
-    } catch (error) {
-      console.error('复制提示词失败:', error);
-    } finally {
-      setIsCopying(false);
-    }
-  };
-
-  // 处理自定义数量复制确认
-  const handleCustomCopyConfirm = async () => {
-    if (!onCopyPrompt || !activeCopyPromptId || !activeCopyMessageId) return;
-    
-    setIsCopying(true);
-    try {
-      const count = typeof copyCount === 'string' ? (copyCount === '' ? 4 : parseInt(copyCount)) : copyCount;
-      await onCopyPrompt(activeCopyPromptId, count, activeCopyMessageId);
-      setActiveCopyPromptId(''); // 关闭面板
-      setActiveCopyMessageId('');
-    } catch (error) {
-      console.error('复制提示词失败:', error);
-    } finally {
-      setIsCopying(false);
-    }
-  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] relative">
@@ -298,54 +246,6 @@ export function PromptGenerationStep({
               </Collapsible>
 
 
-              {/* 复制功能 */}
-              <Collapsible
-                open={openSections['copy']} 
-                onOpenChange={(open) => setOpenSections(prev => ({...prev, copy: open}))}
-              >
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <span className="font-medium">如何复制提示词？</span>
-                  {openSections['copy'] ? 
-                    <ChevronDown className="w-4 h-4" /> : 
-                    <ChevronRight className="w-4 h-4" />
-                  }
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-3 pb-3">
-                  <div className="space-y-3 pt-3 text-sm text-gray-600">
-                    <div className="flex items-start gap-3">
-                      <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">1</span>
-                      <div>
-                        <div className="font-medium text-gray-900">找到想要复制的提示词</div>
-                        <div>在提示词列表中，找到您想要复制的提示词</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">2</span>
-                      <div>
-                        <div className="font-medium text-gray-900">点击复制按钮</div>
-                        <div>点击提示词右侧的复制图标，展开复制面板</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">3</span>
-                      <div>
-                        <div className="font-medium text-gray-900">选择复制数量</div>
-                        <div>可选择快捷数量（4、8、12、24、36）或在自定义框中直接输入数量</div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">4</span>
-                      <div>
-                        <div className="font-medium text-gray-900">确认复制</div>
-                        <div>选择快捷数量会直接复制，自定义数量需点击"确认"按钮</div>
-                      </div>
-                    </div>
-                    <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
-                      💡 <strong>提示：</strong>复制功能适用于快速生成多个相同的提示词，便于批量图片生成
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
             </div>
           </DialogContent>
         </Dialog>
@@ -500,92 +400,9 @@ export function PromptGenerationStep({
                                         >
                                           <MessageSquare className="w-4 h-4" />
                                         </button>
-                                        <button
-                                          onClick={() => handleCopyClick(prompt.id, message.id)}
-                                          className={`p-1.5 transition-all duration-200 flex-shrink-0 rounded ${
-                                            activeCopyPromptId === prompt.id
-                                              ? 'text-blue-600 bg-blue-100' 
-                                              : isSelected 
-                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                                : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                                          }`}
-                                          title="复制此提示词"
-                                        >
-                                          <Copy className="w-4 h-4" />
-                                        </button>
                                       </div>
                                     </div>
                                     
-                                    {/* 复制悬浮面板 */}
-                                    {activeCopyPromptId === prompt.id && (
-                                      <div className="mt-3 p-4 bg-white border border-gray-200 rounded-lg shadow-sm space-y-4">
-                                        <div className="flex items-center justify-between">
-                                          <div className="text-sm font-medium text-gray-900">复制数量</div>
-                                          <div className="text-xs text-gray-500">用于批量生成图片</div>
-                                        </div>
-                                        
-                                        {/* 快捷数量选择 */}
-                                        <div className="flex gap-2">
-                                          {[4, 8, 12, 24, 36].map(count => (
-                                            <button
-                                              key={count}
-                                              onClick={() => handleQuickCopy(prompt.id, count, message.id)}
-                                              disabled={isCopying}
-                                              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                              {count}
-                                            </button>
-                                          ))}
-                                        </div>
-                                        
-                                        {/* 自定义数量 */}
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm text-gray-700">自定义:</span>
-                                          <Input
-                                            type="text"
-                                            value={copyCount.toString()}
-                                            onChange={(e) => {
-                                              const value = e.target.value;
-                                              // 允许空字符串，临时显示为空
-                                              if (value === '') {
-                                                setCopyCount('');
-                                                return;
-                                              }
-                                              // 只允许数字
-                                              if (/^\d+$/.test(value)) {
-                                                const numValue = parseInt(value);
-                                                if (numValue <= 40) {
-                                                  setCopyCount(numValue);
-                                                }
-                                              }
-                                            }}
-                                            className="w-16 h-8 text-sm text-center"
-                                            disabled={isCopying}
-                                          />
-                                        </div>
-                                        
-                                        {/* 操作按钮 */}
-                                        <div className="flex justify-end items-center gap-2 pt-2 border-t border-gray-100">
-                                          <button
-                                            onClick={() => {
-                                              setActiveCopyPromptId('');
-                                              setActiveCopyMessageId('');
-                                            }}
-                                            disabled={isCopying}
-                                            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 underline disabled:opacity-50"
-                                          >
-                                            取消
-                                          </button>
-                                          <button
-                                            onClick={handleCustomCopyConfirm}
-                                            disabled={isCopying}
-                                            className="px-2 py-1 bg-gray-900 text-white text-xs rounded hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                          >
-                                            {isCopying ? '复制中...' : '确认'}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )}
                                   </div>
                                 );
                               })}

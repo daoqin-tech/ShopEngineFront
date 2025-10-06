@@ -14,9 +14,11 @@ import { ImageEditProjects } from "@/pages/ImageEditProjects"
 import { OcrEditor } from "@/pages/Ocr"
 import { OcrProjects } from "@/pages/OcrProjects"
 import { TemplateManagement } from "@/pages/TemplateManagement"
-import { CoverProjects } from "@/pages/CoverProjects"
+import { CoverGeneration } from "@/pages/CoverGeneration"
+import { CoverTaskCreator } from "@/pages/CoverTaskCreator"
 import { TemplateEditor } from "@/pages/TemplateEditor"
-import { CoverEditor } from "@/pages/CoverEditor"
+import { ProductListing } from "@/pages/ProductListing"
+import { BatchProductCreator } from "@/pages/BatchProductCreator"
 import { Toaster } from "sonner"
 
 
@@ -100,30 +102,43 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/workspace/cover-projects" element={
+          <Route path="/workspace/cover-generation" element={
             <ProtectedRoute>
               <WorkspaceLayout>
-                <CoverProjects />
+                <CoverGeneration />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />
-          
-          
+
+          <Route path="/workspace/cover-generation/create" element={
+            <ProtectedRoute>
+              <CoverTaskCreator />
+            </ProtectedRoute>
+          } />
+
           <Route path="/workspace/template/:templateId" element={
             <ProtectedRoute>
               <TemplateEditorWrapper />
             </ProtectedRoute>
           } />
-          
-          <Route path="/workspace/cover-project/:projectId" element={
+
+          <Route path="/workspace/batch-upload" element={
             <ProtectedRoute>
-              <CoverEditor />
+              <WorkspaceLayout>
+                <ProductListing />
+              </WorkspaceLayout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/workspace/batch-upload/create" element={
+            <ProtectedRoute>
+              <BatchProductCreator />
+            </ProtectedRoute>
+          } />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-right" richColors duration={2000} />
       </Router>
     </AuthProvider>
   )

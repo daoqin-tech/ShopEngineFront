@@ -2,6 +2,7 @@ import * as React from "react"
 import {
   SquareTerminal,
   Layers,
+  Package,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -54,8 +55,20 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
             url: "/workspace/template-management",
           },
           {
-            title: "套图项目",
-            url: "/workspace/cover-projects",
+            title: "套图生成",
+            url: "/workspace/cover-generation",
+          },
+        ],
+      },
+      {
+        title: "商品管理",
+        url: "/workspace/product-management",
+        icon: Package,
+        isActive: false,
+        items: [
+          {
+            title: "批量上架(文件版)",
+            url: "/workspace/batch-upload",
           },
         ],
       },

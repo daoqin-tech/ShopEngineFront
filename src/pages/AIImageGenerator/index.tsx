@@ -235,40 +235,6 @@ export function AIImageGenerator() {
     });
   };
 
-  // 处理复制提示词
-  const handleCopyPrompt = async (promptId: string, count: number, messageId: string) => {
-    try {
-      // 调用后端API复制提示词
-      const newPrompts = await AIImageSessionsAPI.copyPrompt(session.id, promptId, count, messageId);
-      
-      // 在原有的消息中添加新的提示词
-      setSession(prev => ({
-        ...prev,
-        messages: prev.messages.map(message => {
-          if (message.id === messageId) {
-            return {
-              ...message,
-              prompts: [...(message.prompts || []), ...newPrompts]
-            };
-          }
-          return message;
-        })
-      }));
-      
-      // 将新的提示词添加到promptsMap
-      setPromptsMap(prev => {
-        const newPromptsMap = new Map(prev);
-        newPrompts.forEach(prompt => {
-          newPromptsMap.set(prompt.id, prompt);
-        });
-        return newPromptsMap;
-      });
-      
-    } catch (error) {
-      console.error('复制提示词失败:', error);
-      throw error; // 重新抛出错误供UI处理
-    }
-  };
 
   const handleChatSubmit = async () => {
     if (!currentChatInput.trim()) return;
@@ -547,16 +513,16 @@ export function AIImageGenerator() {
                 onTogglePromptSelection={togglePromptSelection}
                 onTogglePromptForOptimization={togglePromptForOptimization}
                 onChatSubmit={handleChatSubmit}
-                onCopyPrompt={handleCopyPrompt}
               />
             ) : (
-              <ImageGenerationStep 
+              <ImageGenerationStep
                 session={extendedSession}
                 selectedPromptIds={selectedPromptIds}
                 onGenerateImages={generateImages}
                 refreshTrigger={historyRefreshTrigger}
                 projectName={project?.name}
                 isGeneratingImages={isGeneratingImages}
+                onStartPolling={startPolling}
               />
             )}
           </div>

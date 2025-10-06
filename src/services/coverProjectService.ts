@@ -1,11 +1,16 @@
 import { apiClient } from '@/lib/api'
-import { 
-  CoverProject, 
-  CoverGenerationRequest, 
+import {
+  CoverGenerationRequest,
   CoverGenerationResponse,
   GeneratedCover,
   BatchGenerationStatus
 } from '@/types/template'
+
+// 模板搜索项（只包含id和name）
+export interface TemplateSearchItem {
+  id: string
+  name: string
+}
 
 // 模板选择项（用于cover projects）
 // 切片数据类型（简化版，只包含预览需要的信息）
@@ -29,6 +34,7 @@ export interface TemplateSelectionItem {
   width: number
   height: number
   slicing?: SlicingData
+  layerCount: number
   createdAt: string
   updatedAt: string
 }
@@ -43,117 +49,108 @@ export interface SimpleImageInfo {
   height: number
 }
 
-// 本地替换图片接口
-interface ReplacementImage {
-  id: string
-  originalName: string
-  url: string
-  width: number
-  height: number
-  fileSize: number
+// 任务信息类型
+export interface TaskInfo {
+  taskId: string
+  aiProjectId: string
+  templateId?: string  // 模板ID，用于多模板生成
+  templateName?: string // 模板名称
+  status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed'
+  resultImages?: string[]
+  thumbnail?: string   // 缩略图，取ResultImages的第一个
+  errorMessage?: string
+  createdAt: string
+  completedAt?: string
+}
+
+// 重新生成失败任务请求
+export interface RestartFailedTasksRequest {
+  taskIds: string[]
+}
+
+// 重新生成失败任务响应
+export interface RestartFailedTasksResponse {
+  tasks: {
+    taskId: string
+    aiProjectId: string
+    status: string
+  }[]
+}
+
+// 任务统计响应
+export interface TaskStatsResponse {
+  totalTasks: number      // 总任务数
+  pendingTasks: number    // 等待中任务数
+  queuedTasks: number     // 队列中任务数
+  processingTasks: number // 处理中任务数
+  completedTasks: number  // 已完成任务数
+  failedTasks: number     // 失败任务数
 }
 
 // 套图项目API
 export const coverProjectService = {
-  // 获取套图项目列表
-  getProjects: async (params?: { page?: number; limit?: number }): Promise<{
-    data: CoverProject[]
+  // 获取所有套图生成任务（分页）
+  getAllTasks: async (params: {
+    page: number
+    limit: number
+    status?: string
+    templateId?: string
+    startTime?: number
+    endTime?: number
+    search?: string
+  }): Promise<{
+    data: TaskInfo[]
     total: number
     page: number
     limit: number
   }> => {
-    const response = await apiClient.get('/cover-projects', {
-      params: {
-        page: params?.page || 1,
-        limit: params?.limit || 50
-      }
-    })
-
-    // 处理后端返回的数据结构 {code, message, data}
-    const backendData = response.data
-
-    // 如果后端返回标准格式，直接返回
-    if (backendData && backendData.data && Array.isArray(backendData.data)) {
-      // 暂时模拟分页信息，等后端添加分页字段
-      return {
-        data: backendData.data,
-        total: backendData.data.length, // 临时使用当前页数据长度
-        page: params?.page || 1,
-        limit: params?.limit || 50
-      }
-    }
-
-    // 如果是数组直接返回(兼容旧格式)
-    if (Array.isArray(backendData)) {
-      return {
-        data: backendData,
-        total: backendData.length,
-        page: params?.page || 1,
-        limit: params?.limit || 50
-      }
-    }
-
-    // 默认返回空数据
-    return {
-      data: [],
-      total: 0,
-      page: params?.page || 1,
-      limit: params?.limit || 50
-    }
-  },
-
-  // 获取单个项目详情
-  getProject: async (projectId: string): Promise<CoverProject> => {
-    const response = await apiClient.get(`/cover-projects/${projectId}`)
+    const response = await apiClient.get('/cover-generate/tasks', { params })
     return response.data
   },
 
-  // 创建套图项目
-  createProject: async (): Promise<CoverProject> => {
-    const response = await apiClient.post('/cover-projects')
-    return response.data
-  },
-
-  // 更新项目信息
-  updateProject: async (projectId: string, updates: Partial<CoverProject>): Promise<CoverProject> => {
-    const response = await apiClient.put(`/cover-projects/${projectId}`, updates)
-    return response.data
-  },
-
-  // 删除项目
-  deleteProject: async (projectId: string): Promise<void> => {
-    await apiClient.delete(`/cover-projects/${projectId}`)
-  },
-
-  // 设置项目使用的模板
-  setProjectTemplate: async (projectId: string, templateId: string): Promise<CoverProject> => {
-    const response = await apiClient.put(`/cover-projects/${projectId}/template`, { templateId })
+  // 获取所有已完成的套图（用于商品图选择）
+  getAllCovers: async (params: {
+    page?: number
+    limit?: number
+    status?: string
+  }): Promise<{
+    data: TaskInfo[]
+    total: number
+    page: number
+    limit: number
+  }> => {
+    const response = await apiClient.get('/cover-generate/covers', { params })
     return response.data
   },
 
   // 获取所有模板（用于模板选择）
   getTemplates: async (params?: { name?: string }): Promise<TemplateSelectionItem[]> => {
-    const response = await apiClient.get('/cover-projects/templates', { params })
+    const response = await apiClient.get('/cover-generate/templates', { params })
+    return response.data
+  },
+
+  // 获取模板搜索选项（只包含id和name）
+  getTemplatesForSearch: async (): Promise<TemplateSearchItem[]> => {
+    const response = await apiClient.get('/cover-generate/templatesForSearch')
     return response.data
   },
 
   // 获取AI项目列表（用于项目选择）
   getAIProjects: async (params?: { page?: number; limit?: number; name?: string }) => {
-    const response = await apiClient.get('/cover-projects/projects', { params })
+    const response = await apiClient.get('/cover-generate/projects', { params })
     return response.data
   },
 
-  // 批量获取项目图片
-  batchGetImages: async (projectIds: string[]): Promise<Record<string, SimpleImageInfo[]>> => {
-    const response = await apiClient.post('/cover-projects/images', {
-      projectIds
+  // 获取单个项目图片
+  getProjectImages: async (projectId: string): Promise<SimpleImageInfo[]> => {
+    const response = await apiClient.post('/cover-generate/images', {
+      projectId
     })
     return response.data
   },
 
   // 开始生成套图
   startCoverGeneration: async (params: {
-    coverProjectId: string
     templateId: string
     aiProjectIds: string[]
   }): Promise<{
@@ -163,54 +160,25 @@ export const coverProjectService = {
       status: string
     }[]
   }> => {
-    const response = await apiClient.post(`/cover-projects/${params.coverProjectId}/generate`, {
+    const response = await apiClient.post('/cover-generate/start', {
       templateId: params.templateId,
       aiProjectIds: params.aiProjectIds
     })
     return response.data
   },
 
-  // 获取项目的所有任务
-  getProjectTasks: async (projectId: string): Promise<TaskInfo[]> => {
-    const response = await apiClient.get(`/cover-projects/projects/${projectId}/tasks`)
-    return response.data
-  }
-}
-
-// 素材管理API
-export const replacementImageService = {
-  // 上传替换图片
-  uploadImages: async (projectId: string, files: File[]): Promise<ReplacementImage[]> => {
-    const formData = new FormData()
-    files.forEach(file => {
-      formData.append('images', file)
-    })
-
-    const response = await apiClient.post(`/cover-projects/${projectId}/images`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      }
-    })
+  // 重新生成失败任务
+  restartFailedTasks: async (request: RestartFailedTasksRequest): Promise<RestartFailedTasksResponse> => {
+    const response = await apiClient.post<RestartFailedTasksResponse>('/cover-generate/restart', request)
     return response.data
   },
 
-  // 获取项目的替换图片列表
-  getProjectImages: async (projectId: string): Promise<ReplacementImage[]> => {
-    const response = await apiClient.get(`/cover-projects/${projectId}/images`)
+  // 获取任务统计
+  getTaskStats: async (): Promise<TaskStatsResponse> => {
+    const response = await apiClient.get('/cover-generate/tasks/stats')
     return response.data
   },
 
-  // 删除替换图片
-  deleteImage: async (projectId: string, imageId: string): Promise<void> => {
-    await apiClient.delete(`/cover-projects/${projectId}/images/${imageId}`)
-  },
-
-  // 批量删除替换图片
-  deleteImages: async (projectId: string, imageIds: string[]): Promise<void> => {
-    await apiClient.delete(`/cover-projects/${projectId}/images`, {
-      data: { imageIds }
-    })
-  }
 }
 
 // 套图生成API
@@ -230,7 +198,7 @@ export const coverGenerationService = {
     createdAt: string
     completedAt?: string
   }> => {
-    const response = await apiClient.get(`/cover-projects/tasks/${taskId}`)
+    const response = await apiClient.get(`/cover-generate/tasks/${taskId}`)
     return response.data
   },
 
@@ -251,31 +219,31 @@ export const coverGenerationService = {
     page: number
     limit: number
   }> => {
-    const response = await apiClient.get(`/cover-projects/${projectId}/covers`, { params })
+    const response = await apiClient.get(`/cover-generate/${projectId}/covers`, { params })
     return response.data
   },
 
   // 重新生成单个套图
   regenerateCover: async (projectId: string, coverId: string): Promise<GeneratedCover> => {
-    const response = await apiClient.post(`/cover-projects/${projectId}/covers/${coverId}/regenerate`)
+    const response = await apiClient.post(`/cover-generate/${projectId}/covers/${coverId}/regenerate`)
     return response.data
   },
 
   // 删除生成的套图
   deleteCover: async (projectId: string, coverId: string): Promise<void> => {
-    await apiClient.delete(`/cover-projects/${projectId}/covers/${coverId}`)
+    await apiClient.delete(`/cover-generate/${projectId}/covers/${coverId}`)
   },
 
   // 批量删除套图
   deleteCovers: async (projectId: string, coverIds: string[]): Promise<void> => {
-    await apiClient.delete(`/cover-projects/${projectId}/covers`, {
+    await apiClient.delete(`/cover-generate/${projectId}/covers`, {
       data: { coverIds }
     })
   },
 
   // 下载单个套图
   downloadCover: async (projectId: string, coverId: string, format: 'jpg' | 'png' = 'jpg'): Promise<Blob> => {
-    const response = await apiClient.get(`/cover-projects/${projectId}/covers/${coverId}/download`, {
+    const response = await apiClient.get(`/cover-generate/${projectId}/covers/${coverId}/download`, {
       params: { format },
       responseType: 'blob'
     })
@@ -284,23 +252,12 @@ export const coverGenerationService = {
 
   // 批量下载套图（ZIP）
   downloadCoversZip: async (projectId: string, coverIds?: string[]): Promise<Blob> => {
-    const response = await apiClient.post(`/cover-projects/${projectId}/covers/download-zip`, 
+    const response = await apiClient.post(`/cover-generate/${projectId}/covers/download-zip`,
       { coverIds },
       { responseType: 'blob' }
     )
     return response.data
   }
-}
-
-// 任务信息类型
-export interface TaskInfo {
-  taskId: string
-  aiProjectId: string
-  status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed'
-  resultImages?: string[]
-  errorMessage?: string
-  createdAt: string
-  completedAt?: string
 }
 
 // 任务轮询服务
