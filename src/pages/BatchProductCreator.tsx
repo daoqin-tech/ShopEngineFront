@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Store, Sparkles, Images, Image as ImageIcon, Download, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Store, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TEMU_SHOPS } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
@@ -165,30 +165,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       [field]: value
     }));
   };
-
-  // 切换商品选择状态
-  const toggleProductSelection = (taskId: string, templateName: string, imageUrl: string, createdAt: string) => {
-    const productId = `${taskId}-${imageUrl}`;
-    const isSelected = selectedProducts.some(p => p.id === productId);
-
-    if (isSelected) {
-      // 取消选择
-      setSelectedProducts(prev => prev.filter(p => p.id !== productId));
-      toast.info('已取消选择该商品图');
-    } else {
-      // 选择商品
-      const newProduct: SelectedProduct = {
-        id: productId,
-        taskId,
-        templateName,
-        imageUrl,
-        createdAt
-      };
-      setSelectedProducts(prev => [...prev, newProduct]);
-      toast.success('已选择该商品图');
-    }
-  };
-
 
   // 清空所有选择
   const clearAllSelections = () => {
