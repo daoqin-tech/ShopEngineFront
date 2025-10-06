@@ -838,6 +838,14 @@ export function ImageGenerationStep({
                       return allSelected ? '取消全选' : '全选';
                     })()}
                   </Button>
+
+                  {/* 已选择数量 */}
+                  {selectedImageIds.size > 0 && (
+                    <span className="text-sm text-gray-600">
+                      已选择 {selectedImageIds.size} 张
+                    </span>
+                  )}
+
                   <Button
                     variant="outline"
                     size="sm"
