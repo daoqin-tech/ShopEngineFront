@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Search, ArrowLeft, Image, FileImage, ZoomIn, ZoomOut } from 'lucide-react'
+import { DateTimePicker } from '@/components/ui/date-picker'
+import { Search, ArrowLeft, Image, FileImage, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { coverProjectService, type TemplateSelectionItem, type SimpleImageInfo } from '@/services/coverProjectService'
 import { toast } from 'sonner'
 
@@ -13,8 +14,17 @@ export function CoverTaskCreator() {
   // AI项目相关状态
   const [aiProjects, setAiProjects] = useState<any[]>([])
   const [selectedAiProjects, setSelectedAiProjects] = useState<Set<string>>(new Set())
-  const [aiProjectSearch, setAiProjectSearch] = useState('')
   const [aiProjectImages, setAiProjectImages] = useState<Record<string, SimpleImageInfo[]>>({})
+
+  // AI项目筛选状态
+  const [nameFilter, setNameFilter] = useState('')
+  const [startTime, setStartTime] = useState<Date | undefined>()
+  const [endTime, setEndTime] = useState<Date | undefined>()
+
+  // AI项目分页状态
+  const [currentPage, setCurrentPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [pageSize, setPageSize] = useState(100)
 
   // 模板相关状态
   const [templates, setTemplates] = useState<TemplateSelectionItem[]>([])
@@ -39,16 +49,34 @@ export function CoverTaskCreator() {
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
 
   // 获取AI项目列表
-  const fetchAiProjects = async () => {
+  const fetchAiProjects = async (page: number = currentPage) => {
     try {
       setLoadingAiProjects(true)
-      const params: any = { page: 1, limit: 50 }
-      if (aiProjectSearch.trim()) {
-        params.name = aiProjectSearch.trim()
+
+      // 确保 pageSize 是有效数字
+      const validPageSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100
+
+      const params: any = {
+        page,
+        limit: validPageSize,
+      }
+
+      if (nameFilter.trim()) {
+        params.name = nameFilter.trim()
+      }
+
+      if (startTime) {
+        params.startTime = Math.floor(startTime.getTime() / 1000)
+      }
+
+      if (endTime) {
+        params.endTime = Math.floor(endTime.getTime() / 1000)
       }
 
       const response = await coverProjectService.getAIProjects(params)
       setAiProjects(response.data || [])
+      setTotal(response.total || 0)
+      setCurrentPage(response.page || page)
     } catch (err) {
       toast.error('加载AI项目失败')
       console.error('Error fetching AI projects:', err)
@@ -105,16 +133,9 @@ export function CoverTaskCreator() {
   }
 
   useEffect(() => {
-    fetchAiProjects()
+    fetchAiProjects(1)
     fetchTemplates()
   }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchAiProjects()
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [aiProjectSearch])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -122,6 +143,20 @@ export function CoverTaskCreator() {
     }, 300)
     return () => clearTimeout(timer)
   }, [templateSearch])
+
+  // 应用筛选 - 重置到第一页
+  const handleApplyFilters = () => {
+    fetchAiProjects(1)
+  }
+
+  // 重置筛选
+  const handleResetFilters = () => {
+    setNameFilter('')
+    setStartTime(undefined)
+    setEndTime(undefined)
+    setCurrentPage(1)
+    fetchAiProjects(1)
+  }
 
   // 当选择的AI项目改变时，获取图片
   useEffect(() => {
@@ -348,25 +383,61 @@ export function CoverTaskCreator() {
             </div>
           )}
 
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">选择图片项目</h2>
-              <Badge variant="outline" className="text-blue-600">
-                已选择 {selectedAiProjects.size} 个
-              </Badge>
+          <div className="border-b">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">选择图片项目</h2>
+                <Badge variant="outline" className="text-blue-600">
+                  已选择 {selectedAiProjects.size} 个
+                </Badge>
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                value={aiProjectSearch}
-                onChange={(e) => setAiProjectSearch(e.target.value)}
-                placeholder="搜索AI项目..."
-                className="pl-8"
-              />
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+
+            {/* 筛选器 */}
+            <div className="bg-gray-50 px-4 py-3 border-t">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">项目名称:</label>
+                  <div className="relative">
+                    <Input
+                      value={nameFilter}
+                      onChange={(e) => setNameFilter(e.target.value)}
+                      placeholder="搜索项目名称"
+                      className="w-40 pl-8"
+                    />
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">开始时间:</label>
+                  <DateTimePicker
+                    date={startTime}
+                    onDateChange={setStartTime}
+                    placeholder="选择开始时间"
+                    className="w-40"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">结束时间:</label>
+                  <DateTimePicker
+                    date={endTime}
+                    onDateChange={setEndTime}
+                    placeholder="选择结束时间"
+                    className="w-40"
+                  />
+                </div>
+                <Button onClick={handleApplyFilters} size="sm">
+                  搜索
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetFilters}>
+                  重置
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          {/* 项目列表和分页容器 */}
+          <div className="flex-1 overflow-hidden flex flex-col">
             {loadingAiProjects ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500">加载中...</div>
@@ -379,8 +450,10 @@ export function CoverTaskCreator() {
                 </div>
               </div>
             ) : (
-              <div className="h-full overflow-auto">
-                <div className="bg-white">
+              <>
+                {/* 项目列表 - 可滚动区域 */}
+                <div className="flex-1 overflow-auto">
+                  <div className="bg-white border-l border-r border-t">
                   {/* 表头 */}
                   <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-5">
                     <div className="col-span-1 flex items-center">
@@ -487,6 +560,171 @@ export function CoverTaskCreator() {
                   })}
                 </div>
               </div>
+
+              {/* 分页控件 - 固定在底部 */}
+              {total > 0 && (
+                <div className="border-t border-l border-r bg-white p-4 flex-shrink-0">
+                  <div className="flex items-center gap-4">
+                    {/* 统计信息 */}
+                    <div className="text-sm text-gray-500">
+                      共 {total} 个项目
+                    </div>
+
+                    {/* 每页显示 */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-600">每页</label>
+                      <Input
+                        type="text"
+                        value={pageSize}
+                        onChange={(e) => {
+                          const input = e.target.value
+                          if (!/^\d*$/.test(input)) return
+                          if (input === '') {
+                            setPageSize('' as any)
+                            return
+                          }
+                          const value = parseInt(input)
+                          if (value >= 1 && value <= 200) {
+                            setPageSize(value)
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const input = e.target.value
+                          const value = parseInt(input)
+                          if (!input || !value || value < 1) {
+                            setPageSize(100)
+                          } else if (value > 200) {
+                            setPageSize(200)
+                          }
+                        }}
+                        className="w-16 h-8 text-sm text-center"
+                      />
+                      <span className="text-sm text-gray-600">条</span>
+                    </div>
+
+                    {/* 分隔线 */}
+                    <div className="h-6 w-px bg-gray-300"></div>
+
+                    {/* 上一页按钮 */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchAiProjects(currentPage - 1)}
+                      disabled={currentPage <= 1 || loadingAiProjects}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      上一页
+                    </Button>
+
+                    {/* 页码按钮 */}
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const totalPages = Math.ceil(total / pageSize)
+                        const maxVisiblePages = 7
+
+                        if (totalPages <= maxVisiblePages) {
+                          return Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <Button
+                              key={page}
+                              variant={page === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => fetchAiProjects(page)}
+                              disabled={loadingAiProjects}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          ))
+                        }
+
+                        const pages: (number | string)[] = []
+                        if (currentPage <= 4) {
+                          for (let i = 1; i <= 5; i++) pages.push(i)
+                          pages.push('...')
+                          pages.push(totalPages)
+                        } else if (currentPage >= totalPages - 3) {
+                          pages.push(1)
+                          pages.push('...')
+                          for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i)
+                        } else {
+                          pages.push(1)
+                          pages.push('...')
+                          for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i)
+                          pages.push('...')
+                          pages.push(totalPages)
+                        }
+
+                        return pages.map((page, index) =>
+                          typeof page === 'number' ? (
+                            <Button
+                              key={page}
+                              variant={page === currentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => fetchAiProjects(page)}
+                              disabled={loadingAiProjects}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          ) : (
+                            <span key={`ellipsis-${index}`} className="px-2 text-gray-400">...</span>
+                          )
+                        )
+                      })()}
+                    </div>
+
+                    {/* 下一页按钮 */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchAiProjects(currentPage + 1)}
+                      disabled={currentPage >= Math.ceil(total / pageSize) || loadingAiProjects}
+                    >
+                      下一页
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+
+                    {/* 分隔线 */}
+                    <div className="h-6 w-px bg-gray-300"></div>
+
+                    {/* 跳转输入框 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">跳至</span>
+                      <Input
+                        type="text"
+                        placeholder="页码"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const input = e.currentTarget.value
+                            const value = parseInt(input)
+                            const validPageSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100
+                            const maxPage = Math.ceil(total / validPageSize)
+
+                            if (value >= 1 && value <= maxPage) {
+                              fetchAiProjects(value)
+                              e.currentTarget.value = ''
+                            }
+                          }
+                        }}
+                        onChange={(e) => {
+                          const input = e.target.value
+                          if (!/^\d*$/.test(input)) {
+                            e.target.value = input.replace(/\D/g, '')
+                          }
+                        }}
+                        className="w-16 h-8 text-sm text-center"
+                      />
+                      <span className="text-sm text-gray-600">页</span>
+                    </div>
+
+                    {/* 总页数信息 */}
+                    <span className="text-sm text-gray-500">
+                      共 {Math.ceil(total / pageSize)} 页
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
             )}
           </div>
         </div>

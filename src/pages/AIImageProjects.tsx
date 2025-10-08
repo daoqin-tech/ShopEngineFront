@@ -307,7 +307,7 @@ export function AIImageProjects() {
             <div className="flex-1 overflow-auto">
               <div className="bg-white border-l border-r border-t">
                 {/* 表头 */}
-                <div className="grid grid-cols-[auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
+                <div className="grid grid-cols-[auto_auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -316,7 +316,8 @@ export function AIImageProjects() {
                       className="w-4 h-4 text-gray-900 focus:ring-2 focus:ring-gray-900 cursor-pointer"
                     />
                   </div>
-                  <div>缩略图</div>
+                  <div className="text-center">序号</div>
+                  <div className="text-center">缩略图</div>
                   <div>项目名称</div>
                   <div>总任务数</div>
                   <div>状态</div>
@@ -325,10 +326,10 @@ export function AIImageProjects() {
                 </div>
 
                 {/* 项目列表 */}
-                {projects.map((project) => (
+                {projects.map((project, index) => (
                   <div
                     key={project.id}
-                    className="grid grid-cols-[auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
+                    className="grid grid-cols-[auto_auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
                   >
                     {/* 复选框 */}
                     <div className="flex items-center justify-center">
@@ -341,8 +342,13 @@ export function AIImageProjects() {
                       />
                     </div>
 
+                    {/* 序号 */}
+                    <div className="flex items-center justify-center text-sm text-gray-500">
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </div>
+
                     {/* 缩略图 */}
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center">
                       <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
                         {project.thumbnail ? (
                           <img
