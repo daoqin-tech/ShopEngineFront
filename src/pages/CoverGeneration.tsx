@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Download, X, ChevronLeft, ChevronRight, Image, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import {
@@ -35,7 +36,7 @@ export function CoverGeneration() {
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(100)
 
   // 筛选状态
   const [statusFilter, setStatusFilter] = useState('')
@@ -57,9 +58,12 @@ export function CoverGeneration() {
     try {
       setLoading(true)
 
+      // 确保 pageSize 是有效数字
+      const validPageSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100
+
       const params: any = {
         page,
-        limit: pageSize,
+        limit: validPageSize,
       }
 
       if (statusFilter && statusFilter !== 'all') {
@@ -299,7 +303,7 @@ export function CoverGeneration() {
 
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex flex-col">
       {/* 页面头部 */}
       <div className="flex justify-between items-center p-6 border-b bg-white">
         <div className="flex items-center gap-6">
@@ -421,14 +425,14 @@ export function CoverGeneration() {
         </div>
       </div>
 
-      {/* 任务列表容器 - 可滚动 */}
-      <div className="flex-1 overflow-hidden mt-4">
+      {/* 任务列表容器 */}
+      <div className="mt-4">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center py-20">
             <div className="text-gray-500">加载中...</div>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <Plus className="w-12 h-12 text-gray-400" />
@@ -442,154 +446,160 @@ export function CoverGeneration() {
             </div>
           </div>
         ) : (
-          <div className="h-full overflow-auto">
-            <div className="bg-white border-l border-r">
-              {/* 表头 */}
-              <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-5">
-                <div className="col-span-1 flex items-center">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                    checked={(() => {
-                      const selectableTasks = tasks.filter(t =>
-                        (t.status === 'completed' && t.resultImages?.length) || t.status === 'failed'
-                      )
-                      return selectableTasks.length > 0 && selectableTasks.every(t => selectedTaskIds.has(t.taskId))
-                    })()}
-                    onChange={toggleSelectAll}
-                  />
-                </div>
-                <div className="col-span-1">缩略图</div>
-                <div className="col-span-3">模板名称</div>
-                <div className="col-span-2">状态</div>
-                <div className="col-span-3">创建时间</div>
-                <div className="col-span-2">操作</div>
+          <div className="bg-white border-l border-r">
+            {/* 表头 */}
+            <div className="grid grid-cols-[auto_auto_2fr_2fr_1fr_2fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-5">
+              <div className="flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                  checked={(() => {
+                    const selectableTasks = tasks.filter(t =>
+                      (t.status === 'completed' && t.resultImages?.length) || t.status === 'failed'
+                    )
+                    return selectableTasks.length > 0 && selectableTasks.every(t => selectedTaskIds.has(t.taskId))
+                  })()}
+                  onChange={toggleSelectAll}
+                />
               </div>
+              <div className="flex items-center justify-center">缩略图</div>
+              <div className="flex items-center">项目名称</div>
+              <div className="flex items-center">模板名称</div>
+              <div className="flex items-center">状态</div>
+              <div className="flex items-center">创建时间</div>
+              <div className="flex items-center">操作</div>
+            </div>
 
-              {/* 任务列表 */}
-              {tasks.map((task) => {
-                const isCompleted = task.status === 'completed'
-                const hasImages = task.resultImages && task.resultImages.length > 0
-                const isFailed = task.status === 'failed'
-                const canSelect = (isCompleted && hasImages) || isFailed
-                const isSelected = selectedTaskIds.has(task.taskId)
+            {/* 任务列表 */}
+            {tasks.map((task) => {
+              const isCompleted = task.status === 'completed'
+              const hasImages = task.resultImages && task.resultImages.length > 0
+              const isFailed = task.status === 'failed'
+              const canSelect = (isCompleted && hasImages) || isFailed
+              const isSelected = selectedTaskIds.has(task.taskId)
 
-                return (
-                  <div
-                    key={task.taskId}
-                    className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 group"
-                  >
-                    {/* 选择框 */}
-                    <div className="col-span-1 flex items-center">
-                      {canSelect ? (
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                          checked={isSelected}
-                          onChange={() => toggleTaskSelection(task.taskId)}
+              return (
+                <div
+                  key={task.taskId}
+                  className="grid grid-cols-[auto_auto_2fr_2fr_1fr_2fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
+                >
+                  {/* 选择框 */}
+                  <div className="flex items-center justify-center">
+                    {canSelect ? (
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        checked={isSelected}
+                        onChange={() => toggleTaskSelection(task.taskId)}
+                      />
+                    ) : (
+                      <div className="w-4 h-4"></div>
+                    )}
+                  </div>
+
+                  {/* 缩略图 */}
+                  <div className="flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
+                      {task.thumbnail ? (
+                        <img
+                          src={task.thumbnail}
+                          alt={task.templateName || '模板缩略图'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : task.resultImages && task.resultImages.length > 0 ? (
+                        <img
+                          src={task.resultImages[0]}
+                          alt={task.templateName || '模板缩略图'}
+                          className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-4 h-4"></div>
-                      )}
-                    </div>
-
-                    {/* 缩略图 */}
-                    <div className="col-span-1 flex items-center">
-                      <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                        {task.thumbnail ? (
-                          <img
-                            src={task.thumbnail}
-                            alt={task.templateName || '模板缩略图'}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : task.resultImages && task.resultImages.length > 0 ? (
-                          <img
-                            src={task.resultImages[0]}
-                            alt={task.templateName || '模板缩略图'}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Image className="w-6 h-6 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 模板名称 */}
-                    <div className="col-span-3 flex items-center">
-                      <div className="text-sm text-gray-700 truncate" title={task.templateName || '暂无模板'}>
-                        {task.templateName || '暂无模板'}
-                      </div>
-                    </div>
-
-                    {/* 状态 */}
-                    <div className="col-span-2 flex items-center">
-                      <Badge
-                        className={`${getStatusStyle(task.status)} font-medium`}
-                      >
-                        {getStatusText(task.status)}
-                      </Badge>
-                    </div>
-
-                    {/* 创建时间 */}
-                    <div className="col-span-3 flex items-center text-sm text-gray-500">
-                      {new Date(task.createdAt).toLocaleString('zh-CN')}
-                    </div>
-
-                    {/* 操作 */}
-                    <div className="col-span-2 flex items-center justify-start">
-                      {isCompleted && hasImages && (
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
-                            onClick={() => setPreviewImages({ taskId: task.taskId, images: task.resultImages! })}
-                          >
-                            预览
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-green-500 hover:text-green-700 text-xs"
-                            onClick={() => {
-                              setSelectedTaskIds(new Set([task.taskId]))
-                              handleBatchDownload()
-                            }}
-                          >
-                            下载
-                          </Button>
-                        </div>
-                      )}
-                      {task.status === 'failed' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-red-500 hover:text-red-700 text-xs"
-                          onClick={() => handleRestartSingleTask(task.taskId)}
-                        >
-                          <RefreshCw className="w-3 h-3 mr-1" />
-                          重新生成
-                        </Button>
-                      )}
-                      {task.status === 'processing' && (
-                        <div className="flex items-center gap-2 text-sm text-blue-600">
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span>处理中...</span>
-                        </div>
-                      )}
-                      {(task.status === 'pending' || task.status === 'queued') && (
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                          <span>等待中...</span>
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Image className="w-6 h-6 text-gray-400" />
                         </div>
                       )}
                     </div>
                   </div>
-                )
-              })}
-            </div>
+
+                  {/* 项目名称 */}
+                  <div className="flex items-center">
+                    <div className="text-sm text-gray-700 truncate" title={task.projectName || '暂无项目'}>
+                      {task.projectName || '暂无项目'}
+                    </div>
+                  </div>
+
+                  {/* 模板名称 */}
+                  <div className="flex items-center">
+                    <div className="text-sm text-gray-700 truncate" title={task.templateName || '暂无模板'}>
+                      {task.templateName || '暂无模板'}
+                    </div>
+                  </div>
+
+                  {/* 状态 */}
+                  <div className="flex items-center">
+                    <Badge
+                      className={`${getStatusStyle(task.status)} font-medium`}
+                    >
+                      {getStatusText(task.status)}
+                    </Badge>
+                  </div>
+
+                  {/* 创建时间 */}
+                  <div className="flex items-center text-sm text-gray-500">
+                    {new Date(task.createdAt).toLocaleString('zh-CN')}
+                  </div>
+
+                  {/* 操作 */}
+                  <div className="flex items-center">
+                    {isCompleted && hasImages && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
+                          onClick={() => setPreviewImages({ taskId: task.taskId, images: task.resultImages! })}
+                        >
+                          预览
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-green-500 hover:text-green-700 text-xs"
+                          onClick={() => {
+                            setSelectedTaskIds(new Set([task.taskId]))
+                            handleBatchDownload()
+                          }}
+                        >
+                          下载
+                        </Button>
+                      </div>
+                    )}
+                    {task.status === 'failed' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-red-500 hover:text-red-700 text-xs"
+                        onClick={() => handleRestartSingleTask(task.taskId)}
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1" />
+                        重新生成
+                      </Button>
+                    )}
+                    {task.status === 'processing' && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span>处理中...</span>
+                      </div>
+                    )}
+                    {(task.status === 'pending' || task.status === 'queued') && (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                        <span>等待中...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -597,25 +607,66 @@ export function CoverGeneration() {
       {/* 分页控件 */}
       {total > 0 && (
         <div className="border-t bg-white p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* 统计信息 */}
             <div className="text-sm text-gray-500">
-              共 {total} 个任务，第 {currentPage} 页，共 {Math.ceil(total / pageSize)} 页
+              共 {total} 个任务
             </div>
 
-            {total > pageSize && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchTasks(currentPage - 1)}
-                  disabled={currentPage <= 1 || loading}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  上一页
-                </Button>
+            {/* 每页显示 */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">每页</label>
+              <Input
+                type="text"
+                value={pageSize}
+                onChange={(e) => {
+                  const input = e.target.value;
+                  if (!/^\d*$/.test(input)) return;
+                  if (input === '') {
+                    setPageSize('' as any);
+                    return;
+                  }
+                  const value = parseInt(input);
+                  if (value >= 1 && value <= 200) {
+                    setPageSize(value);
+                  }
+                }}
+                onBlur={(e) => {
+                  const input = e.target.value;
+                  const value = parseInt(input);
+                  if (!input || !value || value < 1) {
+                    setPageSize(100);
+                  } else if (value > 200) {
+                    setPageSize(200);
+                  }
+                }}
+                className="w-16 h-8 text-sm text-center"
+              />
+              <span className="text-sm text-gray-600">条</span>
+            </div>
 
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.ceil(total / pageSize) }, (_, i) => i + 1).map(page => (
+            {/* 分隔线 */}
+            <div className="h-6 w-px bg-gray-300"></div>
+
+            {/* 上一页按钮 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchTasks(currentPage - 1)}
+              disabled={currentPage <= 1 || loading}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              上一页
+            </Button>
+
+            {/* 页码按钮 */}
+            <div className="flex items-center gap-1">
+              {(() => {
+                const totalPages = Math.ceil(total / pageSize);
+                const maxVisiblePages = 7;
+
+                if (totalPages <= maxVisiblePages) {
+                  return Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                     <Button
                       key={page}
                       variant={page === currentPage ? "default" : "outline"}
@@ -626,20 +677,93 @@ export function CoverGeneration() {
                     >
                       {page}
                     </Button>
-                  ))}
-                </div>
+                  ));
+                }
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchTasks(currentPage + 1)}
-                  disabled={currentPage >= Math.ceil(total / pageSize) || loading}
-                >
-                  下一页
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+                const pages: (number | string)[] = [];
+                if (currentPage <= 4) {
+                  for (let i = 1; i <= 5; i++) pages.push(i);
+                  pages.push('...');
+                  pages.push(totalPages);
+                } else if (currentPage >= totalPages - 3) {
+                  pages.push(1);
+                  pages.push('...');
+                  for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+                } else {
+                  pages.push(1);
+                  pages.push('...');
+                  for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                  pages.push('...');
+                  pages.push(totalPages);
+                }
+
+                return pages.map((page, index) =>
+                  typeof page === 'number' ? (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => fetchTasks(page)}
+                      disabled={loading}
+                      className="w-8 h-8 p-0"
+                    >
+                      {page}
+                    </Button>
+                  ) : (
+                    <span key={`ellipsis-${index}`} className="px-2 text-gray-400">...</span>
+                  )
+                );
+              })()}
+            </div>
+
+            {/* 下一页按钮 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchTasks(currentPage + 1)}
+              disabled={currentPage >= Math.ceil(total / pageSize) || loading}
+            >
+              下一页
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+
+            {/* 分隔线 */}
+            <div className="h-6 w-px bg-gray-300"></div>
+
+            {/* 跳转输入框 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">跳至</span>
+              <Input
+                type="text"
+                placeholder="页码"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const input = e.currentTarget.value;
+                    const value = parseInt(input);
+                    const validPageSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
+                    const maxPage = Math.ceil(total / validPageSize);
+
+                    if (value >= 1 && value <= maxPage) {
+                      fetchTasks(value);
+                      e.currentTarget.value = '';
+                    }
+                  }
+                }}
+                onChange={(e) => {
+                  const input = e.target.value;
+                  if (!/^\d*$/.test(input)) {
+                    e.target.value = input.replace(/\D/g, '');
+                  }
+                }}
+                className="w-16 h-8 text-sm text-center"
+              />
+              <span className="text-sm text-gray-600">页</span>
+            </div>
+
+            {/* 总页数信息 */}
+            <span className="text-sm text-gray-500">
+              共 {Math.ceil(total / pageSize)} 页
+            </span>
           </div>
         </div>
       )}

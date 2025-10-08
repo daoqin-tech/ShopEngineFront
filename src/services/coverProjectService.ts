@@ -53,6 +53,7 @@ export interface SimpleImageInfo {
 export interface TaskInfo {
   taskId: string
   aiProjectId: string
+  projectName?: string // 项目名称
   templateId?: string  // 模板ID，用于多模板生成
   templateName?: string // 模板名称
   status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed'

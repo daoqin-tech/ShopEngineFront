@@ -577,24 +577,24 @@ export function CoverTaskCreator() {
                         type="text"
                         value={pageSize}
                         onChange={(e) => {
-                          const input = e.target.value
-                          if (!/^\d*$/.test(input)) return
+                          const input = e.target.value;
+                          if (!/^\d*$/.test(input)) return;
                           if (input === '') {
-                            setPageSize('' as any)
-                            return
+                            setPageSize('' as any);
+                            return;
                           }
-                          const value = parseInt(input)
+                          const value = parseInt(input);
                           if (value >= 1 && value <= 200) {
-                            setPageSize(value)
+                            setPageSize(value);
                           }
                         }}
                         onBlur={(e) => {
-                          const input = e.target.value
-                          const value = parseInt(input)
+                          const input = e.target.value;
+                          const value = parseInt(input);
                           if (!input || !value || value < 1) {
-                            setPageSize(100)
+                            setPageSize(100);
                           } else if (value > 200) {
-                            setPageSize(200)
+                            setPageSize(200);
                           }
                         }}
                         className="w-16 h-8 text-sm text-center"
@@ -637,21 +637,21 @@ export function CoverTaskCreator() {
                           ))
                         }
 
-                        const pages: (number | string)[] = []
+                        const pages: (number | string)[] = [];
                         if (currentPage <= 4) {
-                          for (let i = 1; i <= 5; i++) pages.push(i)
-                          pages.push('...')
-                          pages.push(totalPages)
+                          for (let i = 1; i <= 5; i++) pages.push(i);
+                          pages.push('...');
+                          pages.push(totalPages);
                         } else if (currentPage >= totalPages - 3) {
-                          pages.push(1)
-                          pages.push('...')
-                          for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i)
+                          pages.push(1);
+                          pages.push('...');
+                          for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
                         } else {
-                          pages.push(1)
-                          pages.push('...')
-                          for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i)
-                          pages.push('...')
-                          pages.push(totalPages)
+                          pages.push(1);
+                          pages.push('...');
+                          for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                          pages.push('...');
+                          pages.push(totalPages);
                         }
 
                         return pages.map((page, index) =>
@@ -669,7 +669,7 @@ export function CoverTaskCreator() {
                           ) : (
                             <span key={`ellipsis-${index}`} className="px-2 text-gray-400">...</span>
                           )
-                        )
+                        );
                       })()}
                     </div>
 
@@ -695,21 +695,21 @@ export function CoverTaskCreator() {
                         placeholder="页码"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            const input = e.currentTarget.value
-                            const value = parseInt(input)
-                            const validPageSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100
-                            const maxPage = Math.ceil(total / validPageSize)
+                            const input = e.currentTarget.value;
+                            const value = parseInt(input);
+                            const validPageSize = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 100;
+                            const maxPage = Math.ceil(total / validPageSize);
 
                             if (value >= 1 && value <= maxPage) {
-                              fetchAiProjects(value)
-                              e.currentTarget.value = ''
+                              fetchAiProjects(value);
+                              e.currentTarget.value = '';
                             }
                           }
                         }}
                         onChange={(e) => {
-                          const input = e.target.value
+                          const input = e.target.value;
                           if (!/^\d*$/.test(input)) {
-                            e.target.value = input.replace(/\D/g, '')
+                            e.target.value = input.replace(/\D/g, '');
                           }
                         }}
                         className="w-16 h-8 text-sm text-center"
