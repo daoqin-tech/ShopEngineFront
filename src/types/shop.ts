@@ -54,13 +54,13 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '5270A',
     description: '主要售卖 15.2cm*15.2cm，40张，定价80元/12美元的产品',
     account: '18071105270',
-    categoryName: '办公用品/日常办公用品/办公用纸张/办公学生用纸/文具纸',
-    categoryId: '1113',
+    categoryName: '艺术品、工艺品和缝纫用品 > 工艺工具和用品 > 纸艺 > 工艺纸张 > 装饰纸',
+    categoryId: '39715',
     freightTemplateId: 'HFT-16021353711616191272',
     freightTemplateName: '森梵模板仓库',
     operatingSite: '美国',
-    length: 15.0,
-    width: 15.0,
+    length: 15.2,
+    width: 15.2,
     height: 1.0,
     weight: 90,
     declaredPrice: 80,
@@ -108,8 +108,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '5270B',
     description: '主要售卖 30cm*30cm，20张，定价100元/15美元的产品',
     account: '18071105270',
-    categoryName: '',
-    categoryId: ''
+    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/其他（剪贴、压印）',
+    categoryId: '39421'
   },
   {
     id: 'jolly-wrappings',
@@ -157,8 +157,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '8060A',
     description: '主要售卖 15.2cm*15.2cm，40张，定价80元/12美元的产品',
     account: '13318288060',
-    categoryName: '',
-    categoryId: ''
+    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/纸',
+    categoryId: '39489'
   },
   {
     id: 'wrap-wonder-paper-co',
@@ -168,8 +168,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '8060B',
     description: '主要售卖 30cm*30cm，20张，定价100元/15美元的产品',
     account: '13318288060',
-    categoryName: '',
-    categoryId: ''
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工彩纸',
+    categoryId: '39714'
   },
 
   // Temu 卖家账号D (18986183395)
@@ -208,8 +208,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '3395A',
     description: '主要售卖 15.2cm*15.2cm，40张，定价80元/12美元的产品',
     account: '18986183395',
-    categoryName: '',
-    categoryId: ''
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/其他（纸艺）',
+    categoryId: '39704'
   },
   {
     id: 'merry-measure-paper-co',
@@ -219,8 +219,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '3395B',
     description: '主要售卖 30cm*30cm，20张，定价100元/15美元的产品',
     account: '18986183395',
-    categoryName: '',
-    categoryId: ''
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工折纸',
+    categoryId: '39717'
   },
   {
     id: 'artisan-wrap-depot',

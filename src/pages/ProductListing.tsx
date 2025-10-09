@@ -3,15 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Search, Plus, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
+import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 
 export function ProductListing() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 选择状态
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -89,6 +94,98 @@ export function ProductListing() {
     }
   };
 
+  // 切换商品选择
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  // 全选/取消全选
+  const toggleSelectAll = () => {
+    const productIds = products.map(p => p.id);
+    const allSelected = productIds.every(id => selectedProductIds.has(id));
+
+    if (allSelected) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(productIds));
+    }
+  };
+
+  // 导出功能
+  const handleExport = () => {
+    if (selectedProductIds.size === 0) {
+      toast.error('请至少选择一个商品');
+      return;
+    }
+
+    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+
+    // 准备导出数据
+    const exportData = selectedProducts.map(product => {
+      // 查找对应的店铺配置
+      const shopConfig = TEMU_SHOPS.find(shop => shop.shopId === product.shopId);
+
+      return {
+        '产品标题': product.nameZh || '',
+        '英文标题': product.nameEn || '',
+        '变种名称': shopConfig?.variantName || '',
+        '变种属性名称一': shopConfig?.variantAttributeName1 || '',
+        '变种属性值一': shopConfig?.variantAttributeValue1 || '',
+        '预览图': product.previewImage || '',
+        '申报价格': shopConfig?.declaredPrice || '',
+        '长': shopConfig?.length || '',
+        '宽': shopConfig?.width || '',
+        '高': shopConfig?.height || '',
+        '重量': shopConfig?.weight || '',
+        '轮播图': '', // 待补充
+        '产品素材图': '', // 待补充
+        '建议零售价(建议零售价币种)': shopConfig?.suggestedRetailPrice ? `${shopConfig.suggestedRetailPrice} USD` : '',
+        '库存': shopConfig?.stock || '',
+        '发货时效': shopConfig?.shippingTime || '',
+        '分类id': shopConfig?.categoryId || '',
+        '产品属性': '', // 待补充
+        'SPU属性': '', // 待补充
+        'SKC属性': '', // 待补充
+        'SKU属性': '', // 待补充
+        '产地': '', // 待补充
+        'SKU分类': '', // 待补充
+        'SKU分类数量': '', // 待补充
+        'SKU分类单位': '', // 待补充
+        '净含量数值': '', // 待补充
+        '总净含量': '', // 待补充
+        '总净含量单位': '', // 待补充
+        'SKU分类总数量': '', // 待补充
+        '包装清单': '', // 待补充
+        '运费模板（模板id）': shopConfig?.freightTemplateId || '',
+        '经营站点': shopConfig?.operatingSite || '',
+        '所属店铺': product.shopName || '',
+        'SKUID': product.productId || '',
+        '创建时间': new Date(product.createdAt).toLocaleString('zh-CN'),
+        '更新时间': product.updatedAt ? new Date(product.updatedAt).toLocaleString('zh-CN') : ''
+      };
+    });
+
+    // 创建工作簿
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '商品列表');
+
+    // 导出文件
+    const fileName = `商品列表_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    toast.success(`成功导出 ${selectedProductIds.size} 个商品`);
+    setSelectedProductIds(new Set());
+  };
+
   return (
     <div className="flex-1 p-6">
       {/* 页面标题 */}
@@ -97,10 +194,18 @@ export function ProductListing() {
           <h1 className="text-2xl font-bold text-gray-900">批量上架(文件版)</h1>
           <p className="text-gray-600">商品信息管理</p>
         </div>
-        <Button onClick={() => navigate('/workspace/batch-upload/create')} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          批量新建商品
-        </Button>
+        <div className="flex items-center gap-3">
+          {selectedProductIds.size > 0 && (
+            <Button onClick={handleExport} variant="outline" className="flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              导出选中商品 ({selectedProductIds.size})
+            </Button>
+          )}
+          <Button onClick={() => navigate('/workspace/batch-upload/create')} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            批量新建商品
+          </Button>
+        </div>
       </div>
 
       {/* 搜索 */}
@@ -128,6 +233,14 @@ export function ProductListing() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
+                    <th className="px-6 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        checked={products.length > 0 && products.every(p => selectedProductIds.has(p.id))}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预览图</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">商品信息</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">店铺</th>
@@ -138,6 +251,14 @@ export function ProductListing() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {products.map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          checked={selectedProductIds.has(product.id)}
+                          onChange={() => toggleProductSelection(product.id)}
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         {product.previewImage ? (
                           <img
