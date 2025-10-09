@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, Search, Plus, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
-import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -130,32 +129,29 @@ export function ProductListing() {
 
     // 准备导出数据
     const exportData = selectedProducts.map(product => {
-      // 查找对应的店铺配置
-      const shopConfig = TEMU_SHOPS.find(shop => shop.shopId === product.shopId);
-
       return {
         '产品标题': product.nameZh || '',
         '英文标题': product.nameEn || '',
-        '变种名称': shopConfig?.variantName || '',
-        '变种属性名称一': shopConfig?.variantAttributeName1 || '',
-        '变种属性值一': shopConfig?.variantAttributeValue1 || '',
+        '变种名称': product.variantName || '',
+        '变种属性名称一': product.variantAttributeName1 || '',
+        '变种属性值一': product.variantAttributeValue1 || '',
         '预览图': product.previewImage || '',
-        '申报价格': shopConfig?.declaredPrice || '',
-        '长': shopConfig?.length || '',
-        '宽': shopConfig?.width || '',
-        '高': shopConfig?.height || '',
-        '重量': shopConfig?.weight || '',
-        '轮播图': '', // 待补充
-        '产品素材图': '', // 待补充
-        '建议零售价(建议零售价币种)': shopConfig?.suggestedRetailPrice ? `${shopConfig.suggestedRetailPrice} USD` : '',
-        '库存': shopConfig?.stock || '',
-        '发货时效': shopConfig?.shippingTime || '',
-        '分类id': shopConfig?.categoryId || '',
+        '申报价格': product.declaredPrice || '',
+        '长': product.length || '',
+        '宽': product.width || '',
+        '高': product.height || '',
+        '重量': product.weight || '',
+        '轮播图': product.carouselImages?.join('\n') || '', // 多个URL用换行分隔
+        '产品素材图': product.materialImage || '',
+        '建议零售价(建议零售价币种)': product.suggestedRetailPrice ? `${product.suggestedRetailPrice} USD` : '',
+        '库存': product.stock || '',
+        '发货时效': product.shippingTime || '',
+        '分类id': product.categoryId || '',
         '产品属性': '', // 待补充
         'SPU属性': '', // 待补充
         'SKC属性': '', // 待补充
         'SKU属性': '', // 待补充
-        '产地': '', // 待补充
+        '产地': product.origin || '',
         'SKU分类': '', // 待补充
         'SKU分类数量': '', // 待补充
         'SKU分类单位': '', // 待补充
@@ -164,12 +160,12 @@ export function ProductListing() {
         '总净含量单位': '', // 待补充
         'SKU分类总数量': '', // 待补充
         '包装清单': '', // 待补充
-        '运费模板（模板id）': shopConfig?.freightTemplateId || '',
-        '经营站点': shopConfig?.operatingSite || '',
-        '所属店铺': product.shopName || '',
-        'SKUID': product.productId || '',
+        '运费模板（模板id）': product.freightTemplateId || '',
+        '经营站点': product.operatingSite || '',
+        '所属店铺': product.shopName || product.shopAccount || '',
+        'SKUID': product.productCode || '',
         '创建时间': new Date(product.createdAt).toLocaleString('zh-CN'),
-        '更新时间': product.updatedAt ? new Date(product.updatedAt).toLocaleString('zh-CN') : ''
+        '更新时间': new Date(product.updatedAt).toLocaleString('zh-CN')
       };
     });
 

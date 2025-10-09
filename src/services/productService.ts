@@ -67,14 +67,35 @@ export interface BatchCreateProductResponse {
 export interface Product {
   id: string
   taskId: string
-  shopId: string
-  shopName: string
-  productId?: string        // 平台商品ID
-  nameZh?: string           // AI生成的中文标题
-  nameEn?: string           // AI生成的英文标题
-  categoryName?: string     // 分类名称
-  previewImage?: string     // 预览图
+  userId: string
   status: 'pending' | 'success' | 'failed'
+  shopId: string
+  shopName?: string
+  shopAccount: string
+  categoryId: string
+  categoryName: string
+  origin: string
+  nameEn: string
+  nameZh: string
+  carouselImages: string[]
+  materialImage: string
+  previewImage: string
+  freightTemplateId: string
+  freightTemplateName: string
+  operatingSite: string
+  length: number
+  width: number
+  height: number
+  weight: number
+  declaredPrice: number
+  suggestedRetailPrice: number
+  variantName: string
+  variantAttributeName1: string
+  variantAttributeValue1: string
+  stock: number
+  shippingTime: number
+  productCode: string
+  productId?: string        // 平台商品ID
   errorMessage?: string
   createdAt: string
   updatedAt: string
