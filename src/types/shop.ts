@@ -41,6 +41,15 @@ export interface ShopInfo {
 
   // 货号
   productCodePrefix?: string;   // 货号前缀
+
+  // 产品属性
+  productAttributes?: string;   // 产品属性JSON字符串
+
+  // 商品规格
+  productSpec?: string;         // 商品规格描述
+
+  // 用途
+  productUsage?: string;        // 商品用途描述
 }
 
 // Temu店铺数据
@@ -56,8 +65,7 @@ export const TEMU_SHOPS: ShopInfo[] = [
     account: '18071105270',
     categoryName: '艺术品、工艺品和缝纫用品 > 工艺工具和用品 > 纸艺 > 工艺纸张 > 装饰纸',
     categoryId: '39715',
-    freightTemplateId: 'HFT-16021353711616191272',
-    freightTemplateName: '森梵模板仓库',
+    freightTemplateId: 'HFT-16191232475259000806',
     operatingSite: '美国',
     length: 15.2,
     width: 15.2,
@@ -70,7 +78,10 @@ export const TEMU_SHOPS: ShopInfo[] = [
     variantAttributeValue1: '纸',
     stock: 99999,
     shippingTime: 9,
-    productCodePrefix: '5270A'
+    productCodePrefix: '5270A',
+    productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":931632,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"}]',
+    productSpec: '40 张15.2cmx15.2cm',
+    productUsage: '适用于拼贴、DIY手艺纸、装饰纸、贺卡制作及礼物包装与家居装饰'
   },
   {
     id: 'artful-spirals',
@@ -109,7 +120,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     description: '主要售卖 30cm*30cm，20张，定价100元/15美元的产品',
     account: '18071105270',
     categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/其他（剪贴、压印）',
-    categoryId: '39421'
+    categoryId: '39421',
+    freightTemplateId: 'HFT-16191270999941411888'
   },
   {
     id: 'jolly-wrappings',
@@ -158,7 +170,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     description: '主要售卖 15.2cm*15.2cm，40张，定价80元/12美元的产品',
     account: '13318288060',
     categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/纸',
-    categoryId: '39489'
+    categoryId: '39489',
+    freightTemplateId: 'HFT-16191228050268220413'
   },
   {
     id: 'wrap-wonder-paper-co',
@@ -169,7 +182,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     description: '主要售卖 30cm*30cm，20张，定价100元/15美元的产品',
     account: '13318288060',
     categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工彩纸',
-    categoryId: '39714'
+    categoryId: '39714',
+    freightTemplateId: 'HFT-16191332236779530083'
   },
 
   // Temu 卖家账号D (18986183395)
@@ -209,7 +223,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     description: '主要售卖 15.2cm*15.2cm，40张，定价80元/12美元的产品',
     account: '18986183395',
     categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/其他（纸艺）',
-    categoryId: '39704'
+    categoryId: '39704',
+    freightTemplateId: 'HFT-16191226267689110996'
   },
   {
     id: 'merry-measure-paper-co',
@@ -220,7 +235,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     description: '主要售卖 30cm*30cm，20张，定价100元/15美元的产品',
     account: '18986183395',
     categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工折纸',
-    categoryId: '39717'
+    categoryId: '39717',
+    freightTemplateId: 'HFT-16191333641871510968'
   },
   {
     id: 'artisan-wrap-depot',

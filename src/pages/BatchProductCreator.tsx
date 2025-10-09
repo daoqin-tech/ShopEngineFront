@@ -261,6 +261,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     stock: selectedShop.stock,
                     shippingTime: selectedShop.shippingTime,
                     productCodePrefix: selectedShop.productCodePrefix,
+                    productSpec: selectedShop.productSpec,
+                    productUsage: selectedShop.productUsage,
                     taskIds
                   };
 
@@ -268,19 +270,27 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     setCreating(true);
                     await productService.batchCreate(submitData);
 
-                    // 创建成功后直接跳转到商品列表页
-                    toast.success(`已提交 ${taskIds.length} 个商品的创建任务`);
+                    // 任务已提交，立即跳转到商品列表页
+                    toast.success(
+                      `已提交 ${taskIds.length} 个商品的创建任务，正在后台处理中...`,
+                      {
+                        description: '商品标题由AI生成，请在商品列表查看进度',
+                        duration: 5000
+                      }
+                    );
+
+                    // 立即跳转，不等待任务完成
                     navigate('/workspace/batch-upload');
                   } catch (error: any) {
                     console.error('批量创建商品失败:', error);
-                    toast.error(error.response?.data?.message || '批量创建商品失败');
+                    toast.error(error.response?.data?.message || '提交任务失败，请重试');
                     setCreating(false);
                   }
                 }}
                 disabled={creating || !formData.shopAccount || selectedProducts.length === 0}
                 className="min-w-24"
               >
-                {creating ? '创建中...' : `创建商品 (${selectedProducts.length})`}
+                {creating ? '提交中...' : `提交任务 (${selectedProducts.length})`}
               </Button>
             </div>
           </div>

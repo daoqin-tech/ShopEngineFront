@@ -42,6 +42,12 @@ export interface BatchCreateProductRequest {
   // 货号前缀
   productCodePrefix?: string
 
+  // 商品规格
+  productSpec?: string
+
+  // 用途
+  productUsage?: string
+
   // 任务ID列表（每个任务对应一个商品，后端通过taskId查询图片信息）
   taskIds: string[]
 }
@@ -105,9 +111,10 @@ export interface Product {
 export interface GetProductsRequest {
   page?: number
   limit?: number
-  status?: 'pending' | 'success' | 'failed'
-  shopId?: string
-  keyword?: string
+  productCodes?: string  // 货号，逗号分隔
+  shopId?: string        // 店铺ID
+  startTime?: number     // 开始时间（秒级时间戳）
+  endTime?: number       // 结束时间（秒级时间戳）
 }
 
 // 获取商品列表的响应
