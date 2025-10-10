@@ -25,37 +25,17 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
   const getNavItems = () => {
     return [
       {
-        title: "图片素材制作",
+        title: "生成产品图和商品图",
         url: "/workspace",
         icon: SquareTerminal,
         isActive: true,
         items: [
           {
-            title: "图像生成",
+            title: "生成产品图(手账纸业务)",
             url: "/workspace/product-images",
           },
           {
-            title: "以图识文",
-            url: "/workspace/ocr-projects",
-          },
-          {
-            title: "AI编辑图片",
-            url: "/workspace/image-edit-projects",
-          },
-        ],
-      },
-      {
-        title: "模板套图",
-        url: "/workspace/template-management",
-        icon: Layers,
-        isActive: false,
-        items: [
-          {
-            title: "模板管理",
-            url: "/workspace/template-management",
-          },
-          {
-            title: "套图生成",
+            title: "生成商品图",
             url: "/workspace/cover-generation",
           },
         ],
@@ -69,6 +49,34 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           {
             title: "批量上架(文件版)",
             url: "/workspace/batch-upload",
+          },
+        ],
+      },
+      {
+        title: "图片智能工具",
+        url: "/workspace/image-tools",
+        icon: Layers,
+        isActive: false,
+        items: [
+          {
+            title: "以图识文",
+            url: "/workspace/ocr-projects",
+          },
+          {
+            title: "AI编辑图片",
+            url: "/workspace/image-edit-projects",
+          },
+        ],
+      },
+      {
+        title: "模板管理",
+        url: "/workspace/template-management",
+        icon: Layers,
+        isActive: false,
+        items: [
+          {
+            title: "模板管理",
+            url: "/workspace/template-management",
           },
         ],
       },

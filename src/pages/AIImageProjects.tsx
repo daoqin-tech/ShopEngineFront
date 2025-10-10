@@ -220,7 +220,7 @@ export function AIImageProjects() {
     <div className="h-full flex flex-col">
       {/* 页面头部 */}
       <div className="flex justify-between items-center p-6 border-b bg-white">
-        <h1 className="text-2xl font-bold">AI生图</h1>
+        <h1 className="text-2xl font-bold">手账纸产品图制作</h1>
         <div className="flex items-center gap-3">
           {selectedProjectIds.size > 0 && (
             <span className="text-sm text-gray-600">
