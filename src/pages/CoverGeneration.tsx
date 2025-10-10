@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Download, X, ChevronLeft, ChevronRight, Image, RefreshCw } from 'lucide-react'
+import { Plus, Download, X, ChevronLeft, ChevronRight, Image, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -271,6 +271,55 @@ export function CoverGeneration() {
     }
   }
 
+  // 删除单个任务
+  const handleDeleteSingleTask = async (taskId: string) => {
+    if (!confirm('确定要删除这个任务吗？')) {
+      return
+    }
+
+    try {
+      await coverProjectService.deleteTasks([taskId])
+      toast.success('任务删除成功')
+
+      // 刷新任务列表
+      await fetchTasks()
+      await refreshStats()
+    } catch (error) {
+      console.error('删除任务失败:', error)
+      toast.error('删除失败，请重试')
+    }
+  }
+
+  // 批量删除任务
+  const handleBatchDelete = async () => {
+    const completedTaskIds = Array.from(selectedTaskIds).filter(taskId => {
+      const task = tasks.find(t => t.taskId === taskId)
+      return task?.status === 'completed'
+    })
+
+    if (completedTaskIds.length === 0) {
+      toast.warning('没有选择的已完成任务')
+      return
+    }
+
+    if (!confirm(`确定要删除 ${completedTaskIds.length} 个已完成的任务吗？`)) {
+      return
+    }
+
+    try {
+      await coverProjectService.deleteTasks(completedTaskIds)
+      toast.success(`已删除 ${completedTaskIds.length} 个任务`)
+
+      // 清空选择并刷新任务列表
+      setSelectedTaskIds(new Set())
+      await fetchTasks()
+      await refreshStats()
+    } catch (error) {
+      console.error('批量删除任务失败:', error)
+      toast.error('批量删除失败，请重试')
+    }
+  }
+
   // 获取状态显示文本
   const getStatusText = (status: TaskInfo['status']) => {
     switch (status) {
@@ -417,6 +466,19 @@ export function CoverGeneration() {
                   <Button variant="outline" onClick={handleBatchRestartFailed} className="text-red-600 hover:text-red-700">
                     <RefreshCw className="w-4 h-4 mr-2" />
                     重新生成失败任务 ({failedTaskCount})
+                  </Button>
+                )
+              })()}
+              {(() => {
+                const completedTaskCount = Array.from(selectedTaskIds).filter(taskId => {
+                  const task = tasks.find(t => t.taskId === taskId)
+                  return task?.status === 'completed'
+                }).length
+
+                return completedTaskCount > 0 && (
+                  <Button variant="outline" onClick={handleBatchDelete} className="text-red-600 hover:text-red-700">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    批量删除 ({completedTaskCount})
                   </Button>
                 )
               })()}
@@ -570,6 +632,14 @@ export function CoverGeneration() {
                           }}
                         >
                           下载
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-red-500 hover:text-red-700 text-xs"
+                          onClick={() => handleDeleteSingleTask(task.taskId)}
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     )}

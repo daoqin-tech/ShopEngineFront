@@ -80,36 +80,36 @@ export const TEMU_SHOPS: ShopInfo[] = [
     shippingTime: 9,
     productCodePrefix: '5270A',
     productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":931632,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"}]',
-    productSpec: '40 张15.2cmx15.2cm',
+    productSpec: '40张15.2cmx15.2cm',
     productUsage: '适用于拼贴、DIY手艺纸、装饰纸、贺卡制作及礼物包装与家居装饰'
   },
-  {
-    id: 'artful-spirals',
-    name: 'Artful Spirals',
-    shopId: '634418226384302',
-    type: '全托',
-    account: '18071105270',
-    categoryName: '',
-    categoryId: ''
-  },
-  {
-    id: 'the-gifted-page',
-    name: 'The Gifted Page',
-    shopId: '634418226384222',
-    type: '全托',
-    account: '18071105270',
-    categoryName: '',
-    categoryId: ''
-  },
-  {
-    id: 'the-green-spiral',
-    name: 'The Green Spiral',
-    shopId: '634418226370526',
-    type: '全托',
-    account: '18071105270',
-    categoryName: '',
-    categoryId: ''
-  },
+  // {
+  //   id: 'artful-spirals',
+  //   name: 'Artful Spirals',
+  //   shopId: '634418226384302',
+  //   type: '全托',
+  //   account: '18071105270',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
+  // {
+  //   id: 'the-gifted-page',
+  //   name: 'The Gifted Page',
+  //   shopId: '634418226384222',
+  //   type: '全托',
+  //   account: '18071105270',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
+  // {
+  //   id: 'the-green-spiral',
+  //   name: 'The Green Spiral',
+  //   shopId: '634418226370526',
+  //   type: '全托',
+  //   account: '18071105270',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
 
   {
     id: 'present-perfect-papers',
@@ -123,44 +123,44 @@ export const TEMU_SHOPS: ShopInfo[] = [
     categoryId: '39421',
     freightTemplateId: 'HFT-16191270999941411888'
   },
-  {
-    id: 'jolly-wrappings',
-    name: 'Jolly Wrappings',
-    shopId: '634418226370462',
-    type: '半托',
-    account: '18071105270',
-    categoryName: '',
-    categoryId: ''
-  },
+  // {
+  //   id: 'jolly-wrappings',
+  //   name: 'Jolly Wrappings',
+  //   shopId: '634418226370462',
+  //   type: '半托',
+  //   account: '18071105270',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
 
   // Temu 卖家账号C (13318288060)
-  {
-    id: 'festive-fold-papers',
-    name: 'Festive Fold Papers',
-    shopId: '634418226385393',
-    type: '全托',
-    account: '13318288060',
-    categoryName: '',
-    categoryId: ''
-  },
-  {
-    id: 'the-gift-wrap-collective',
-    name: 'The Gift Wrap Collective',
-    shopId: '634418226385374',
-    type: '全托',
-    account: '13318288060',
-    categoryName: '',
-    categoryId: ''
-  },
-  {
-    id: 'rainbowhive-products',
-    name: 'RainbowHive Products',
-    shopId: '634418222312396',
-    type: '全托',
-    account: '13318288060',
-    categoryName: '',
-    categoryId: ''
-  },
+  // {
+  //   id: 'festive-fold-papers',
+  //   name: 'Festive Fold Papers',
+  //   shopId: '634418226385393',
+  //   type: '全托',
+  //   account: '13318288060',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
+  // {
+  //   id: 'the-gift-wrap-collective',
+  //   name: 'The Gift Wrap Collective',
+  //   shopId: '634418226385374',
+  //   type: '全托',
+  //   account: '13318288060',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
+  // {
+  //   id: 'rainbowhive-products',
+  //   name: 'RainbowHive Products',
+  //   shopId: '634418222312396',
+  //   type: '全托',
+  //   account: '13318288060',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
   {
     id: 'paper-palette-gifts',
     name: 'Paper Palette Gifts',
@@ -171,7 +171,23 @@ export const TEMU_SHOPS: ShopInfo[] = [
     account: '13318288060',
     categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/纸',
     categoryId: '39489',
-    freightTemplateId: 'HFT-16191228050268220413'
+    freightTemplateId: 'HFT-16191228050268220413',
+    operatingSite: '美国',
+    length: 15.2,
+    width: 15.2,
+    height: 1.0,
+    weight: 90,
+    declaredPrice: 80,
+    suggestedRetailPrice: 12,
+    variantName: '纸',
+    variantAttributeName1: '材质',
+    variantAttributeValue1: '纸',
+    stock: 99999,
+    shippingTime: 9,
+    productCodePrefix: '8060A',
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]',
+    productSpec: '40张15.2cmx15.2cm',
+    productUsage: '适用于拼贴、DIY手艺纸、装饰纸、贺卡制作及礼物包装与家居装饰'
   },
   {
     id: 'wrap-wonder-paper-co',
@@ -187,33 +203,33 @@ export const TEMU_SHOPS: ShopInfo[] = [
   },
 
   // Temu 卖家账号D (18986183395)
-  {
-    id: 'the-impressory',
-    name: 'The Impressory',
-    shopId: '634418226386473',
-    type: '全托',
-    account: '18986183395',
-    categoryName: '',
-    categoryId: ''
-  },
-  {
-    id: 'precision-press-paper-co',
-    name: 'Precision Press Paper Co',
-    shopId: '634418226386048',
-    type: '全托',
-    account: '18986183395',
-    categoryName: '',
-    categoryId: ''
-  },
-  {
-    id: 'ecochic-wrappings',
-    name: 'EcoChic Wrappings',
-    shopId: '634418226385986',
-    type: '全托',
-    account: '18986183395',
-    categoryName: '',
-    categoryId: ''
-  },
+  // {
+  //   id: 'the-impressory',
+  //   name: 'The Impressory',
+  //   shopId: '634418226386473',
+  //   type: '全托',
+  //   account: '18986183395',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
+  // {
+  //   id: 'precision-press-paper-co',
+  //   name: 'Precision Press Paper Co',
+  //   shopId: '634418226386048',
+  //   type: '全托',
+  //   account: '18986183395',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
+  // {
+  //   id: 'ecochic-wrappings',
+  //   name: 'EcoChic Wrappings',
+  //   shopId: '634418226385986',
+  //   type: '全托',
+  //   account: '18986183395',
+  //   categoryName: '',
+  //   categoryId: ''
+  // },
   {
     id: 'kaleidowrap-designs',
     name: 'KaleidoWrap Designs',
@@ -224,7 +240,23 @@ export const TEMU_SHOPS: ShopInfo[] = [
     account: '18986183395',
     categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/其他（纸艺）',
     categoryId: '39704',
-    freightTemplateId: 'HFT-16191226267689110996'
+    freightTemplateId: 'HFT-16191226267689110996',
+    operatingSite: '美国',
+    length: 15.2,
+    width: 15.2,
+    height: 1.0,
+    weight: 90,
+    declaredPrice: 80,
+    suggestedRetailPrice: 12,
+    variantName: '纸',
+    variantAttributeName1: '材质',
+    variantAttributeValue1: '纸',
+    stock: 99999,
+    shippingTime: 9,
+    productCodePrefix: '3395A',
+    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":446173,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]',
+    productSpec: '40张15.2cmx15.2cm',
+    productUsage: '适用于拼贴、DIY手艺纸、装饰纸、贺卡制作及礼物包装与家居装饰'
   },
   {
     id: 'merry-measure-paper-co',
@@ -238,13 +270,13 @@ export const TEMU_SHOPS: ShopInfo[] = [
     categoryId: '39717',
     freightTemplateId: 'HFT-16191333641871510968'
   },
-  {
-    id: 'artisan-wrap-depot',
-    name: 'Artisan Wrap Depot',
-    shopId: '634418226385538',
-    type: '半托',
-    account: '18986183395',
-    categoryName: '',
-    categoryId: ''
-  }
+  // {
+  //   id: 'artisan-wrap-depot',
+  //   name: 'Artisan Wrap Depot',
+  //   shopId: '634418226385538',
+  //   type: '半托',
+  //   account: '18986183395',
+  //   categoryName: '',
+  //   categoryId: ''
+  // }
 ];

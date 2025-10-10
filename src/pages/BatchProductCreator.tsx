@@ -169,40 +169,33 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 清空所有选择
   const clearAllSelections = () => {
     setSelectedProducts([]);
-    toast.info('已清空所有选择');
   };
 
-  // 全选功能
+  // 全选功能 - 一个任务 = 一个商品
   const toggleSelectAll = () => {
-    // 获取所有可选择的商品
-    const allSelectableProducts: SelectedProduct[] = [];
-    availableImages.forEach(imageSet => {
-      imageSet.images.forEach(imageUrl => {
-        allSelectableProducts.push({
-          id: `${imageSet.taskId}-${imageUrl}`,
-          taskId: imageSet.taskId,
-          templateName: imageSet.templateName,
-          imageUrl,
-          createdAt: imageSet.createdAt
-        });
-      });
-    });
+    // 获取所有可选择的商品（每个任务对应一个商品）
+    const allSelectableProducts: SelectedProduct[] = availableImages.map(imageSet => ({
+      id: imageSet.taskId,
+      taskId: imageSet.taskId,
+      templateName: imageSet.templateName,
+      imageUrl: imageSet.images[0] || '', // 使用第一张图作为代表
+      thumbnailUrl: imageSet.thumbnail,
+      createdAt: imageSet.createdAt
+    }));
 
     const allSelected = allSelectableProducts.every(product =>
-      selectedProducts.some(p => p.id === product.id)
+      selectedProducts.some(p => p.taskId === product.taskId)
     );
 
     if (allSelected) {
       // 取消全选
       setSelectedProducts([]);
-      toast.info('已取消全选');
     } else {
-      // 全选
+      // 全选 - 只添加未选中的任务
       const newProducts = allSelectableProducts.filter(product =>
-        !selectedProducts.some(p => p.id === product.id)
+        !selectedProducts.some(p => p.taskId === product.taskId)
       );
       setSelectedProducts([...selectedProducts, ...newProducts]);
-      toast.success(`已全选 ${allSelectableProducts.length} 个商品`);
     }
   };
 
@@ -542,23 +535,9 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                         <input
                           type="checkbox"
                           className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                          checked={(() => {
-                            const allSelectableProducts: SelectedProduct[] = [];
-                            availableImages.forEach(imageSet => {
-                              imageSet.images.forEach(imageUrl => {
-                                allSelectableProducts.push({
-                                  id: `${imageSet.taskId}-${imageUrl}`,
-                                  taskId: imageSet.taskId,
-                                  templateName: imageSet.templateName,
-                                  imageUrl,
-                                  createdAt: imageSet.createdAt
-                                });
-                              });
-                            });
-                            return allSelectableProducts.length > 0 && allSelectableProducts.every(product =>
-                              selectedProducts.some(p => p.id === product.id)
-                            );
-                          })()}
+                          checked={availableImages.length > 0 && availableImages.every(imageSet =>
+                            selectedProducts.some(p => p.taskId === imageSet.taskId)
+                          )}
                           onChange={toggleSelectAll}
                         />
                       </div>
@@ -571,43 +550,37 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
                     {/* 任务列表 */}
                     {availableImages.map((imageSet) => {
-                      // 计算该任务下有多少图片被选中
-                      const taskSelectedCount = imageSet.images.filter(imageUrl =>
-                        selectedProducts.some(p => p.id === `${imageSet.taskId}-${imageUrl}`)
-                      ).length;
-                      const allTaskImagesSelected = taskSelectedCount === imageSet.images.length;
+                      // 检查该任务是否被选中（一个任务 = 一个商品）
+                      const isTaskSelected = selectedProducts.some(p => p.taskId === imageSet.taskId);
 
                       return (
                         <div
                           key={imageSet.taskId}
                           className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 group"
                         >
-                          {/* 选择框 - 全选该任务的所有图片 */}
+                          {/* 选择框 - 选择该任务作为一个商品 */}
                           <div className="col-span-1 flex items-center">
                             <input
                               type="checkbox"
                               className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                              checked={allTaskImagesSelected}
+                              checked={isTaskSelected}
                               onChange={() => {
-                                if (allTaskImagesSelected) {
-                                  // 取消选择该任务的所有图片
+                                if (isTaskSelected) {
+                                  // 取消选择该任务
                                   setSelectedProducts(prev =>
-                                    prev.filter(p => !imageSet.images.some(img => p.id === `${imageSet.taskId}-${img}`))
+                                    prev.filter(p => p.taskId !== imageSet.taskId)
                                   );
-                                  toast.info('已取消选择该任务的所有图片');
                                 } else {
-                                  // 选择该任务的所有图片
-                                  const newProducts = imageSet.images.map(imageUrl => ({
-                                    id: `${imageSet.taskId}-${imageUrl}`,
+                                  // 选择该任务（作为一个商品）
+                                  const newProduct: SelectedProduct = {
+                                    id: imageSet.taskId,
                                     taskId: imageSet.taskId,
                                     templateName: imageSet.templateName,
-                                    imageUrl,
+                                    imageUrl: imageSet.images[0] || '',
+                                    thumbnailUrl: imageSet.thumbnail,
                                     createdAt: imageSet.createdAt
-                                  })).filter(product =>
-                                    !selectedProducts.some(p => p.id === product.id)
-                                  );
-                                  setSelectedProducts(prev => [...prev, ...newProducts]);
-                                  toast.success(`已选择 ${imageSet.images.length} 张图片`);
+                                  };
+                                  setSelectedProducts(prev => [...prev, newProduct]);
                                 }
                               }}
                             />
@@ -634,11 +607,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                           <div className="col-span-3 flex items-center">
                             <div className="text-sm text-gray-700 truncate" title={imageSet.templateName}>
                               {imageSet.templateName}
-                              {taskSelectedCount > 0 && (
-                                <span className="ml-2 text-xs text-blue-600">
-                                  (已选 {taskSelectedCount}/{imageSet.images.length})
-                                </span>
-                              )}
                             </div>
                           </div>
 

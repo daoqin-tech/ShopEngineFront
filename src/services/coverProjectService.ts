@@ -180,6 +180,12 @@ export const coverProjectService = {
     return response.data
   },
 
+  // 删除任务
+  deleteTasks: async (taskIds: string[]): Promise<{ success: boolean; deletedCount: number }> => {
+    const response = await apiClient.post('/cover-generate/tasks/delete', { taskIds })
+    return response.data
+  },
+
 }
 
 // 套图生成API
