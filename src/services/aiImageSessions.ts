@@ -121,4 +121,11 @@ export class AIImageSessionsAPI {
     });
     return response.data;
   }
+
+  // 批量删除图片(按提示词ID删除)
+  static async deleteImages(promptIds: string[]): Promise<void> {
+    await apiClient.post('/images/batch-delete', {
+      promptIds
+    });
+  }
 }

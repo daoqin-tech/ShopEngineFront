@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy } from 'lucide-react';
+import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2 } from 'lucide-react';
 import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage, ASPECT_RATIOS } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -112,6 +112,9 @@ export function ImageGenerationStep({
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [copyCount, setCopyCount] = useState(1);
   const [isCopying, setIsCopying] = useState(false);
+
+  // 批量删除相关状态
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // PDF导出相关状态
   const [showPdfDialog, setShowPdfDialog] = useState(false);
@@ -408,6 +411,40 @@ export function ImageGenerationStep({
       toast.error('重试失败，请稍后再试');
     } finally {
       setIsRetrying(false);
+    }
+  };
+
+  // 批量删除图片
+  const handleBatchDelete = async () => {
+    if (selectedImageIds.size === 0) {
+      toast.error('请选择要删除的图片');
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // 获取选中图片对应的 promptId
+      const selectedImages = historicalImages.filter(img => selectedImageIds.has(img.id));
+      const promptIds = selectedImages.map(img => img.promptId);
+
+      await AIImageSessionsAPI.deleteImages(promptIds);
+      toast.success(`已删除 ${promptIds.length} 张图片`);
+
+      // 清除选择
+      setSelectedImageIds(new Set());
+
+      // 刷新图片列表
+      if (session.projectId) {
+        const images = await AIImageSessionsAPI.loadImages(session.projectId);
+        setHistoricalImages(images || []);
+      }
+
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      toast.error('删除失败，请稍后再试');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -871,7 +908,7 @@ export function ImageGenerationStep({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  历史图片 ({historicalImages.length}张)
+                  历史图片 ({completedImages.length}张)
                 </h3>
                 {historicalImages.length > 0 && (
                   <p className="text-sm text-gray-500 mt-1">
@@ -994,6 +1031,25 @@ export function ImageGenerationStep({
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     导出PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-300 text-red-700 hover:text-red-900 hover:border-red-400"
+                    onClick={handleBatchDelete}
+                    disabled={selectedImageIds.size === 0 || isDeleting}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        删除中...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        批量删除
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
