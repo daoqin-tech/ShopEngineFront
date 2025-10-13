@@ -30,6 +30,7 @@ export function CoverTaskCreator() {
   const [templates, setTemplates] = useState<TemplateSelectionItem[]>([])
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set())
   const [templateSearch, setTemplateSearch] = useState('')
+  const [selectedLayerCountGroup, setSelectedLayerCountGroup] = useState<number | 'all'>('all')
 
   // 加载状态
   const [loadingAiProjects, setLoadingAiProjects] = useState(true)
@@ -263,6 +264,28 @@ export function CoverTaskCreator() {
 
   const handleCanvasMouseUp = () => {
     setIsPanning(false)
+  }
+
+  // 按可替换图片数量分组模板
+  const groupedTemplates = () => {
+    // 获取所有唯一的layerCount值并排序
+    const layerCounts = Array.from(new Set(templates.map(t => t.layerCount || 0))).sort((a, b) => a - b)
+
+    // 创建分组
+    const groups: Record<number, TemplateSelectionItem[]> = {}
+    layerCounts.forEach(count => {
+      groups[count] = templates.filter(t => (t.layerCount || 0) === count)
+    })
+
+    return { layerCounts, groups }
+  }
+
+  // 获取当前显示的模板列表
+  const getFilteredTemplates = () => {
+    if (selectedLayerCountGroup === 'all') {
+      return templates
+    }
+    return templates.filter(t => (t.layerCount || 0) === selectedLayerCountGroup)
   }
 
   // 开始生成
@@ -817,21 +840,59 @@ export function CoverTaskCreator() {
             </div>
           )}
 
-          <div className="p-4 border-b">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold">选择模板</h2>
-              <Badge variant="outline" className="text-green-600">
-                已选择 {selectedTemplates.size} 个
-              </Badge>
+          <div className="border-b">
+            <div className="p-4 pb-0">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">选择模板</h2>
+                <Badge variant="outline" className="text-green-600">
+                  已选择 {selectedTemplates.size} 个
+                </Badge>
+              </div>
+              <div className="relative mb-3">
+                <Input
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  placeholder="搜索模板..."
+                  className="pl-8"
+                />
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                value={templateSearch}
-                onChange={(e) => setTemplateSearch(e.target.value)}
-                placeholder="搜索模板..."
-                className="pl-8"
-              />
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+
+            {/* 标签页分组 */}
+            <div className="px-4 pb-3 overflow-x-auto">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedLayerCountGroup('all')}
+                  className={`
+                    px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
+                    ${selectedLayerCountGroup === 'all'
+                      ? 'bg-green-100 text-green-700 border border-green-300'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }
+                  `}
+                >
+                  全部 ({templates.length})
+                </button>
+                {groupedTemplates().layerCounts.map(count => {
+                  const group = groupedTemplates().groups[count]
+                  return (
+                    <button
+                      key={count}
+                      onClick={() => setSelectedLayerCountGroup(count)}
+                      className={`
+                        px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
+                        ${selectedLayerCountGroup === count
+                          ? 'bg-green-100 text-green-700 border border-green-300'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }
+                      `}
+                    >
+                      {count}图 ({group.length})
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
@@ -848,116 +909,69 @@ export function CoverTaskCreator() {
                 </div>
               </div>
             ) : (
-              <div className="h-full overflow-auto">
-                <div className="bg-white">
-                  {/* 表头 */}
-                  <div className="grid grid-cols-16 gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-5">
-                    <div className="col-span-1 flex items-center">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 text-green-600 focus:ring-green-500"
-                        checked={templates.length > 0 && templates.every(t => selectedTemplates.has(t.id))}
-                        onChange={() => {
-                          if (templates.every(t => selectedTemplates.has(t.id))) {
-                            setSelectedTemplates(new Set())
-                          } else {
-                            setSelectedTemplates(new Set(templates.map(t => t.id)))
-                          }
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-1">缩略图</div>
-                    <div className="col-span-4">模板名称</div>
-                    <div className="col-span-2">尺寸</div>
-                    <div className="col-span-2">可替换图片</div>
-                    <div className="col-span-2">生成商品图</div>
-                    <div className="col-span-2">创建时间</div>
-                    <div className="col-span-2">操作</div>
-                  </div>
-
-                  {/* 模板列表 */}
-                  {templates.map((template) => {
+              <div className="h-full overflow-auto p-4">
+                <div className="grid grid-cols-4 gap-3">
+                  {getFilteredTemplates().map((template) => {
                     const isSelected = selectedTemplates.has(template.id)
 
                     return (
                       <div
                         key={template.id}
-                        className={`grid grid-cols-16 gap-4 p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                          isSelected ? 'bg-green-50' : ''
-                        }`}
+                        className={`
+                          relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all
+                          ${isSelected
+                            ? 'border-green-500 bg-green-50 shadow-md'
+                            : 'border-gray-200 hover:border-green-300 hover:shadow-sm'
+                          }
+                        `}
                         onClick={() => toggleTemplate(template.id)}
                       >
                         {/* 选择框 */}
-                        <div className="col-span-1 flex items-center">
+                        <div className="absolute top-1.5 left-1.5 z-10">
                           <input
                             type="checkbox"
-                            className="w-4 h-4 text-green-600 focus:ring-green-500"
+                            className="w-4 h-4 text-green-600 focus:ring-green-500 cursor-pointer"
                             checked={isSelected}
                             onChange={() => toggleTemplate(template.id)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
 
-                        {/* 缩略图 */}
-                        <div className="col-span-1 flex items-center">
-                          <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                            {template.thumbnailUrl ? (
-                              <img
-                                src={template.thumbnailUrl}
-                                alt={template.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <FileImage className="w-6 h-6 text-gray-400" />
-                              </div>
-                            )}
-                          </div>
+                        {/* 可替换图片数量徽章 */}
+                        <div className="absolute top-1.5 right-1.5 z-10">
+                          <Badge className="bg-blue-500 text-white text-xs px-1.5 py-0.5">
+                            {template.layerCount || 0}图
+                          </Badge>
                         </div>
 
-                        {/* 模板名称 */}
-                        <div className="col-span-4 flex items-center">
-                          <div className="font-medium text-gray-900 truncate">{template.name}</div>
+                        {/* 预览图 */}
+                        <div className="aspect-square bg-gray-100">
+                          {template.thumbnailUrl ? (
+                            <img
+                              src={template.thumbnailUrl}
+                              alt={template.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <FileImage className="w-12 h-12 text-gray-400" />
+                            </div>
+                          )}
                         </div>
 
-                        {/* 尺寸 */}
-                        <div className="col-span-2 flex items-center">
-                          <div className="text-sm text-gray-600">
-                            {template.width} × {template.height}
-                          </div>
-                        </div>
-
-                        {/* 可替换图片 */}
-                        <div className="col-span-2 flex items-center">
-                          <div className="text-sm text-gray-600">
-                            {template.layerCount || 0} 张
-                          </div>
-                        </div>
-
-                        {/* 生成商品图 */}
-                        <div className="col-span-2 flex items-center">
-                          <div className="text-sm text-gray-600">
-                            {template.slicing?.regions?.length || 0} 张
-                          </div>
-                        </div>
-
-                        {/* 创建时间 */}
-                        <div className="col-span-2 flex items-center text-sm text-gray-500">
-                          {new Date(template.createdAt).toLocaleString('zh-CN')}
-                        </div>
-
-                        {/* 操作 */}
-                        <div className="col-span-2 flex items-center gap-1">
+                        {/* 模板信息 */}
+                        <div className="p-2 bg-white flex items-center justify-between gap-2">
+                          <div className="text-sm font-medium text-gray-900 truncate flex-1">{template.name}</div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
+                            className="h-6 px-1.5 text-blue-500 hover:text-blue-700 text-xs flex-shrink-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleViewTemplate(template)
                             }}
                           >
-                            查看
+                            <ZoomIn className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>

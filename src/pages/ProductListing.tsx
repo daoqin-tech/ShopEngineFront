@@ -362,8 +362,20 @@ export function ProductListing() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '商品列表');
 
-    // 导出文件
-    const fileName = `商品列表_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}.xlsx`;
+    // 生成文件名：店铺名称_年月日时分
+    const now = new Date();
+    const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // 获取唯一店铺列表
+    const uniqueShopIds = Array.from(new Set(selectedProducts.map(p => p.shopId)));
+    let shopNamePrefix = '多店铺';
+
+    if (uniqueShopIds.length === 1) {
+      // 只有一个店铺，使用店铺名称
+      shopNamePrefix = getShopName(uniqueShopIds[0]) || '商品列表';
+    }
+
+    const fileName = `${shopNamePrefix}_${dateTimeStr}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
     toast.success(`成功导出 ${selectedProductIds.size} 个商品`);

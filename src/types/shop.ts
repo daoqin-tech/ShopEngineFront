@@ -71,7 +71,7 @@ export const PRODUCT_SPECS: ProductSpec[] = [
     stock: 99999,
     shippingTime: 9,
     productSpec: '40张15.2cmx15.2cm',
-    productUsage: '适用于拼贴、DIY手艺纸、装饰纸、贺卡制作及礼物包装与家居装饰'
+    productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   },
   {
     id: '20-sheets-30x30',
@@ -90,7 +90,7 @@ export const PRODUCT_SPECS: ProductSpec[] = [
     stock: 99999,
     shippingTime: 9,
     productSpec: '20张30cmx30cm',
-    productUsage: '适用于拼贴、DIY手艺纸、装饰纸、贺卡制作及礼物包装与家居装饰'
+    productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   }
 ];
 
