@@ -10,8 +10,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Store, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { TEMU_SHOPS } from '@/types/shop';
+import { ArrowLeft, Store, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { TEMU_SHOPS, PRODUCT_SPECS } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 // 商品信息表单数据
 interface ProductFormData {
   shopAccount: string;        // 店铺账号
+  productSpec: string;        // 商品规格ID
   titleChinese: string;      // 产品标题（中文）
   titleEnglish: string;      // 英文标题
   origin: string;            // 产地
@@ -51,6 +52,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<ProductFormData>({
     shopAccount: '',
+    productSpec: '',
     titleChinese: '',
     titleEnglish: '',
     origin: '中国-湖北省',
@@ -230,6 +232,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
+                  const selectedSpec = PRODUCT_SPECS.find(spec => spec.id === formData.productSpec);
+                  if (!selectedSpec) {
+                    toast.error('请选择商品规格');
+                    return;
+                  }
+
                   // 获取所有已选任务的唯一taskId列表
                   const taskIds = Array.from(new Set(selectedProducts.map(p => p.taskId)));
 
@@ -242,20 +250,20 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     freightTemplateId: selectedShop.freightTemplateId,
                     freightTemplateName: selectedShop.freightTemplateName,
                     operatingSite: selectedShop.operatingSite,
-                    length: selectedShop.length,
-                    width: selectedShop.width,
-                    height: selectedShop.height,
-                    weight: selectedShop.weight,
-                    declaredPrice: selectedShop.declaredPrice,
-                    suggestedRetailPrice: selectedShop.suggestedRetailPrice,
-                    variantName: selectedShop.variantName,
-                    variantAttributeName1: selectedShop.variantAttributeName1,
-                    variantAttributeValue1: selectedShop.variantAttributeValue1,
-                    stock: selectedShop.stock,
-                    shippingTime: selectedShop.shippingTime,
-                    productCodePrefix: selectedShop.productCodePrefix,
-                    productSpec: selectedShop.productSpec,
-                    productUsage: selectedShop.productUsage,
+                    length: selectedSpec.length,
+                    width: selectedSpec.width,
+                    height: selectedSpec.height,
+                    weight: selectedSpec.weight,
+                    declaredPrice: selectedSpec.declaredPrice,
+                    suggestedRetailPrice: selectedSpec.suggestedRetailPrice,
+                    variantName: selectedSpec.variantName,
+                    variantAttributeName1: selectedSpec.variantAttributeName1,
+                    variantAttributeValue1: selectedSpec.variantAttributeValue1,
+                    stock: selectedSpec.stock,
+                    shippingTime: selectedSpec.shippingTime,
+                    productCodePrefix: selectedShop.businessCode,
+                    productSpec: selectedSpec.productSpec,
+                    productUsage: selectedSpec.productUsage,
                     taskIds
                   };
 
@@ -280,7 +288,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     setCreating(false);
                   }
                 }}
-                disabled={creating || !formData.shopAccount || selectedProducts.length === 0}
+                disabled={creating || !formData.shopAccount || !formData.productSpec || selectedProducts.length === 0}
                 className="min-w-24"
               >
                 {creating ? '提交中...' : `提交任务 (${selectedProducts.length})`}
@@ -306,133 +314,75 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 <span className="font-medium">商品标题将由AI自动生成</span>
               </div>
             </div>
-            {/* 店铺选择 */}
-            <div className="space-y-2 mb-6">
-              <Label htmlFor="shopAccount" className="text-base font-medium text-gray-700">店铺账号 *</Label>
-              <Select value={formData.shopAccount} onValueChange={(value) => updateFormData('shopAccount', value)}>
-                <SelectTrigger className="w-full h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-200">
-                  <SelectValue placeholder="选择店铺账号" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TEMU_SHOPS
-                    .sort((a, b) => {
-                      // 有描述的在前面
-                      if (a.description && !b.description) return -1;
-                      if (!a.description && b.description) return 1;
-                      // 都有描述或都没有描述时，按名称排序
-                      return a.name.localeCompare(b.name);
-                    })
-                    .map((shop) => (
-                      <SelectItem key={shop.id} value={shop.id}>
-                        {shop.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+            {/* 店铺选择 - 卡片式 */}
+            <div className="space-y-3 mb-6">
+              <Label className="text-sm font-medium">店铺账号 *</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {TEMU_SHOPS
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((shop) => (
+                    <button
+                      key={shop.id}
+                      type="button"
+                      onClick={() => {
+                        updateFormData('shopAccount', shop.id);
+                        // 切换店铺时清空规格选择
+                        updateFormData('productSpec', '');
+                      }}
+                      className={`
+                        relative p-4 rounded-md border-2 text-left transition-colors
+                        ${formData.shopAccount === shop.id
+                          ? 'border-primary bg-background'
+                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                        }
+                      `}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="font-medium text-sm">
+                          {shop.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {shop.businessCode}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+              </div>
             </div>
 
-            {/* 店铺详细信息（选中店铺后显示） */}
-            {formData.shopAccount && (() => {
-              const selectedShop = TEMU_SHOPS.find(shop => shop.id === formData.shopAccount);
-              if (!selectedShop) return null;
-
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* 店铺描述 */}
-                  {selectedShop.description && (
-                    <div className="space-y-2">
-                      <Label className="text-sm text-gray-600">店铺描述</Label>
-                      <div className="text-sm text-gray-900">{selectedShop.description}</div>
-                    </div>
-                  )}
-
-                  {/* 产品分类 */}
-                  <div className="space-y-2">
-                    <Label className="text-sm text-gray-600">产品分类</Label>
-                    <div className="text-sm text-gray-900">
-                      {selectedShop.categoryName || '暂无分类信息'}
-                    </div>
-                  </div>
-
-                  {/* 产地 */}
-                  <div className="space-y-2">
-                    <Label className="text-sm text-gray-600">产地</Label>
-                    <div className="text-sm text-gray-900">中国-湖北省</div>
-                  </div>
-
-                  {selectedShop.freightTemplateId && (
-                    <>
-                      {/* 运费模板 */}
+            {/* 商品规格选择（选中店铺后显示） */}
+            {formData.shopAccount && (
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  商品规格 *
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {PRODUCT_SPECS.map((spec) => (
+                    <button
+                      key={spec.id}
+                      type="button"
+                      onClick={() => updateFormData('productSpec', spec.id)}
+                      className={`
+                        p-4 rounded-md border-2 text-left transition-colors
+                        ${formData.productSpec === spec.id
+                          ? 'border-primary bg-background'
+                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                        }
+                      `}
+                    >
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">运费模板</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.freightTemplateName}</div>
-                        <div className="text-xs text-gray-500">{selectedShop.freightTemplateId}</div>
-                      </div>
-
-                      {/* 经营站点 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">经营站点</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.operatingSite}</div>
-                      </div>
-
-                      {/* 发货时效 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">发货时效</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.shippingTime} 天</div>
-                      </div>
-
-                      {/* 商品尺寸 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">商品尺寸 (长×宽×高)</Label>
-                        <div className="text-sm text-gray-900">
-                          {selectedShop.length} × {selectedShop.width} × {selectedShop.height} cm
+                        <div className="font-medium text-sm">{spec.name}</div>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div>{spec.sheets}张 • {spec.size}</div>
+                          <div>¥{spec.declaredPrice} / ${spec.suggestedRetailPrice}</div>
                         </div>
                       </div>
-
-                      {/* 商品重量 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">商品重量</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.weight} g</div>
-                      </div>
-
-                      {/* 价格 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">申报价格 / 建议零售价</Label>
-                        <div className="text-sm text-gray-900">
-                          ¥{selectedShop.declaredPrice} / ${selectedShop.suggestedRetailPrice}
-                        </div>
-                      </div>
-
-                      {/* 变种名称 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">变种名称</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.variantName}</div>
-                      </div>
-
-                      {/* 变种属性 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">变种属性</Label>
-                        <div className="text-sm text-gray-900">
-                          {selectedShop.variantAttributeName1}: {selectedShop.variantAttributeValue1}
-                        </div>
-                      </div>
-
-                      {/* 库存 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">库存</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.stock?.toLocaleString()}</div>
-                      </div>
-
-                      {/* 货号前缀 */}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-gray-600">货号前缀</Label>
-                        <div className="text-sm text-gray-900">{selectedShop.productCodePrefix}</div>
-                      </div>
-                    </>
-                  )}
+                    </button>
+                  ))}
                 </div>
-              );
-            })()}
+              </div>
+            )}
           </div>
 
           {/* 2. 商品图选择卡片 */}
