@@ -111,7 +111,7 @@ export interface Product {
 export interface GetProductsRequest {
   page?: number
   limit?: number
-  productCodes?: string  // 货号，逗号分隔
+  productCodes?: string  // 货号，包含逗号时为精确查询（逗号分隔），否则为模糊查询
   shopId?: string        // 店铺ID
   startTime?: number     // 开始时间（秒级时间戳）
   endTime?: number       // 结束时间（秒级时间戳）

@@ -23,7 +23,7 @@ export function ProductListing() {
   const [pageSize, setPageSize] = useState<number | ''>(100);
 
   // 筛选条件
-  const [productCodes, setProductCodes] = useState(''); // 货号，逗号分隔
+  const [productCodes, setProductCodes] = useState(''); // 货号，包含逗号时精确查询，否则模糊查询
   const [shopId, setShopId] = useState(''); // 店铺ID
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
@@ -412,7 +412,7 @@ export function ProductListing() {
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700 whitespace-nowrap">货号:</label>
             <Input
-              placeholder="例如：5270A001,5270A002"
+              placeholder="支持模糊查询和逗号分割查询"
               value={productCodes}
               onChange={(e) => setProductCodes(e.target.value)}
               onKeyDown={(e) => {
@@ -420,7 +420,7 @@ export function ProductListing() {
                   handleApplyFilters();
                 }
               }}
-              className="w-60"
+              className="w-64"
             />
           </div>
 

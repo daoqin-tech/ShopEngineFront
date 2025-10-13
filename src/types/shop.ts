@@ -146,9 +146,9 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '5270B',
     account: '18071105270',
-    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/其他（剪贴、压印）',
-    categoryId: '39421',
-    productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":461971,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"}]',
+    categoryName: '办公用品/日常办公用品/办公用纸张/卡片/卡片',
+    categoryId: '1107',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495436,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]',
     freightTemplateId: 'HFT-16191270999941411888',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
