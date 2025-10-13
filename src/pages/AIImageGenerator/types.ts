@@ -30,6 +30,7 @@ export interface GeneratedImage {
   status: PromptStatus; // 生成状态，与PromptStatus一致
   width: number; // 图片宽度
   height: number; // 图片高度
+  errorMessage?: string; // 错误信息（当状态为failed时）
 }
 
 export interface Message {

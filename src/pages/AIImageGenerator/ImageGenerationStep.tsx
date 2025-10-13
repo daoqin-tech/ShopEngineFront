@@ -1117,7 +1117,7 @@ export function ImageGenerationStep({
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[200px] bg-gray-50">
+                        <div className="flex flex-col items-center justify-center min-h-[200px] bg-gray-50 p-3">
                           <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
                             {image.status === PromptStatus.PROCESSING ? (
                               <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -1127,11 +1127,16 @@ export function ImageGenerationStep({
                               <MessageSquare className="w-6 h-6 text-gray-400" />
                             )}
                           </div>
-                          <p className="text-xs text-gray-400 text-center">
+                          <p className="text-xs text-gray-400 text-center mb-2">
                             {image.status === PromptStatus.PROCESSING ? '正在生成中...' :
                              image.status === PromptStatus.FAILED ? '生成失败' :
                              '等待处理'}
                           </p>
+                          {image.status === PromptStatus.FAILED && image.errorMessage && (
+                            <p className="text-xs text-red-600 text-center break-words max-w-full px-2" title={image.errorMessage}>
+                              {image.errorMessage}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
