@@ -861,9 +861,13 @@ export function CoverTaskCreator() {
 
             {/* 标签页分组 */}
             <div className="px-4 pb-3 overflow-x-auto">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-between">
+                <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setSelectedLayerCountGroup('all')}
+                  onClick={() => {
+                    setSelectedLayerCountGroup('all')
+                    setSelectedTemplates(new Set()) // 切换分组时清空选择
+                  }}
                   className={`
                     px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
                     ${selectedLayerCountGroup === 'all'
@@ -879,7 +883,10 @@ export function CoverTaskCreator() {
                   return (
                     <button
                       key={count}
-                      onClick={() => setSelectedLayerCountGroup(count)}
+                      onClick={() => {
+                        setSelectedLayerCountGroup(count)
+                        setSelectedTemplates(new Set()) // 切换分组时清空选择
+                      }}
                       className={`
                         px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
                         ${selectedLayerCountGroup === count
@@ -892,6 +899,38 @@ export function CoverTaskCreator() {
                     </button>
                   )
                 })}
+                </div>
+                {/* 全选按钮 */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentFiltered = getFilteredTemplates()
+                    const allSelected = currentFiltered.every(t => selectedTemplates.has(t.id))
+                    if (allSelected) {
+                      // 取消选择当前筛选的所有模板
+                      setSelectedTemplates(prev => {
+                        const newSet = new Set(prev)
+                        currentFiltered.forEach(t => newSet.delete(t.id))
+                        return newSet
+                      })
+                    } else {
+                      // 选择当前筛选的所有模板
+                      setSelectedTemplates(prev => {
+                        const newSet = new Set(prev)
+                        currentFiltered.forEach(t => newSet.add(t.id))
+                        return newSet
+                      })
+                    }
+                  }}
+                  className="h-10 text-sm whitespace-nowrap"
+                >
+                  {(() => {
+                    const currentFiltered = getFilteredTemplates()
+                    const allSelected = currentFiltered.length > 0 && currentFiltered.every(t => selectedTemplates.has(t.id))
+                    return allSelected ? '取消全选' : '全选'
+                  })()}
+                </Button>
               </div>
             </div>
           </div>
