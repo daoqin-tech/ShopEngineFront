@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, Store } from 'lucide-react';
+import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
 import { TEMU_SHOPS, PRODUCT_SPECS } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
