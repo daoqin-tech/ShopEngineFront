@@ -84,4 +84,13 @@ export class AIImageProjectsAPI {
     });
     return response.data;
   }
+
+  // 批量拆分项目
+  static async splitProjects(projectIds: string[], splitCount: number): Promise<null> {
+    const response = await apiClient.post('/projects/split', {
+      projectIds,
+      splitCount
+    });
+    return response.data;
+  }
 }

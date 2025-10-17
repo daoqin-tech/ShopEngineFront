@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Check, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Scissors } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { toast } from 'sonner';
 import {
@@ -17,6 +17,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 export function AIImageProjects() {
   const navigate = useNavigate();
@@ -26,6 +35,11 @@ export function AIImageProjects() {
   const [selectedProject, setSelectedProject] = useState<AIImageProject | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+
+  // 拆分对话框状态
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  const [splitCount, setSplitCount] = useState<number>(2);
+  const [splitting, setSplitting] = useState(false);
 
   // 多选状态
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
@@ -215,6 +229,47 @@ export function AIImageProjects() {
     }
   };
 
+  // 打开批量拆分对话框
+  const handleOpenSplitDialog = () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要拆分的项目');
+      return;
+    }
+    setSplitCount(2);
+    setSplitDialogOpen(true);
+  };
+
+  // 确认批量拆分项目
+  const handleConfirmSplit = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要拆分的项目');
+      return;
+    }
+
+    if (splitCount < 2) {
+      toast.error('请输入有效的拆分数量（最小为2）');
+      return;
+    }
+
+    try {
+      setSplitting(true);
+      const projectIdsArray = Array.from(selectedProjectIds);
+      await AIImageProjectsAPI.splitProjects(projectIdsArray, splitCount);
+      toast.success(`已成功拆分 ${selectedProjectIds.size} 个项目`);
+      setSplitDialogOpen(false);
+      setSelectedProjectIds(new Set());
+      setSplitCount(2);
+      fetchProjects(currentPage); // 刷新列表
+    } catch (err: any) {
+      toast.error('项目拆分失败', {
+        description: err.response?.data?.message || '请稍后再试'
+      });
+      console.error('Error splitting projects:', err);
+    } finally {
+      setSplitting(false);
+    }
+  };
+
 
   return (
     <div className="h-full flex flex-col">
@@ -235,6 +290,15 @@ export function AIImageProjects() {
           >
             <Check className="w-4 h-4" />
             重新生成
+          </Button>
+          <Button
+            onClick={handleOpenSplitDialog}
+            disabled={selectedProjectIds.size === 0}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Scissors className="w-4 h-4" />
+            拆分项目
           </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -659,6 +723,62 @@ export function AIImageProjects() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 拆分项目对话框 */}
+      <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scissors className="w-5 h-5 text-purple-600" />
+              拆分项目
+            </DialogTitle>
+            <DialogDescription>
+              将项目拆分成多个子项目，每个子项目包含均等数量的任务
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="splitCount">拆分数量</Label>
+              <Input
+                id="splitCount"
+                type="number"
+                min={2}
+                value={splitCount}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value >= 2) {
+                    setSplitCount(value);
+                  }
+                }}
+                placeholder="输入拆分数量（最小为2）"
+                className="w-full"
+              />
+              <p className="text-sm text-gray-500">
+                项目将被拆分成 {splitCount} 个新项目，每个项目包含约等数量的任务
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSplitDialogOpen(false);
+                setSplitCount(2);
+              }}
+              disabled={splitting}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmSplit}
+              disabled={splitting || splitCount < 2}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {splitting ? '拆分中...' : '确认拆分'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
