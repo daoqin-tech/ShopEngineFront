@@ -83,7 +83,7 @@ export interface Product {
   origin: string
   nameEn: string
   nameZh: string
-  carouselImages: string[]
+  carouselImages: string[]   // 商品图(用于商品展示)
   materialImage: string
   previewImage: string
   freightTemplateId: string
@@ -125,6 +125,11 @@ export interface GetProductsResponse {
   limit: number
 }
 
+// 批量获取任务图片的响应
+export interface BatchGetTaskImagesResponse {
+  [taskId: string]: string[]
+}
+
 export const productService = {
   // 批量创建商品
   batchCreate: async (request: BatchCreateProductRequest): Promise<BatchCreateProductResponse> => {
@@ -135,6 +140,12 @@ export const productService = {
   // 获取商品列表
   getProducts: async (params?: GetProductsRequest): Promise<GetProductsResponse> => {
     const response = await apiClient.get('/products', { params })
+    return response.data
+  },
+
+  // 批量获取任务图片
+  batchGetTaskImages: async (taskIds: string[]): Promise<BatchGetTaskImagesResponse> => {
+    const response = await apiClient.post('/products/batch-get-task-images', { taskIds })
     return response.data
   }
 }

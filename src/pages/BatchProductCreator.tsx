@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Store, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, Store } from 'lucide-react';
 import { TEMU_SHOPS, PRODUCT_SPECS } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
@@ -201,6 +201,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     }
   };
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 头部 */}
@@ -306,7 +307,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
-                <Store className="w-5 h-5 text-blue-600" />
+                <Package className="w-5 h-5 text-blue-600" />
               </div>
               <h2 className="text-lg font-semibold text-gray-900">基本信息</h2>
               <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full">

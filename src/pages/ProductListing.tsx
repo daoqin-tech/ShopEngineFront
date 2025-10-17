@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
@@ -27,6 +27,11 @@ export function ProductListing() {
   const [shopId, setShopId] = useState(''); // 店铺ID
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
+
+  // PDF导出相关状态
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [pdfPageSize, setPdfPageSize] = useState<'small' | 'large'>('small');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // 获取商品列表
   const fetchProducts = async (page: number = currentPage) => {
@@ -150,7 +155,197 @@ export function ProductListing() {
     }
   };
 
-  // 导出功能
+  // PDF页面尺寸配置（单位：mm）
+  // 实际PDF尺寸 = 规格尺寸 + 6mm(打印机预留空间)
+  const PAGE_SIZES = {
+    small: {
+      width: 158,   // 15.2cm + 0.6cm = 15.8cm
+      height: 158,
+      label: '15.2 × 15.2 cm',
+      displayLabel: '15.2 × 15.2 cm'
+    },
+    large: {
+      width: 306,   // 30cm + 0.6cm = 30.6cm
+      height: 306,
+      label: '30 × 30 cm',
+      displayLabel: '30 × 30 cm'
+    }
+  };
+
+  // 导出产品图PDF
+  const handleExportProductPdf = async () => {
+    if (selectedProductIds.size === 0) {
+      toast.error('请至少选择一个商品');
+      return;
+    }
+
+    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+
+    setIsGeneratingPdf(true);
+
+    try {
+      // 获取所有选中商品的taskId
+      const taskIds = selectedProducts.map(p => p.taskId);
+
+      // 批量获取产品图
+      const taskImagesMap = await productService.batchGetTaskImages(taskIds);
+
+      // 过滤出有图片的商品
+      const productsWithImages = selectedProducts.filter(p => {
+        const images = taskImagesMap[p.taskId];
+        return images && images.length > 0;
+      });
+
+      if (productsWithImages.length === 0) {
+        toast.error('所选商品没有产品图');
+        setIsGeneratingPdf(false);
+        return;
+      }
+
+      // 动态导入jsPDF和JSZip
+      const jsPDF = (await import('jspdf')).default;
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+
+      // 获取选择的页面尺寸
+      const pageSize = PAGE_SIZES[pdfPageSize];
+
+      // 为每个商品生成一个PDF(包含所有产品图)
+      for (const product of productsWithImages) {
+        const productImages = taskImagesMap[product.taskId];
+        if (!productImages || productImages.length === 0) continue;
+
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: [pageSize.width, pageSize.height]
+        });
+
+        const pageWidth = pageSize.width;
+        const pageHeight = pageSize.height;
+
+        let isFirstPage = true;
+
+        // 为该商品的所有产品图创建页面(每张图后面跟一个空白页,确保图片在正面)
+        for (const imageUrl of productImages) {
+            try {
+              const response = await fetch(imageUrl, {
+                mode: 'cors',
+                headers: {
+                  'Accept': 'image/*',
+                }
+              });
+
+              if (!response.ok) {
+                console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
+                continue;
+              }
+
+              const blob = await response.blob();
+              const imageDataUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result as string);
+                reader.readAsDataURL(blob);
+              });
+
+              // 如果不是第一页，添加新页
+              if (!isFirstPage) {
+                pdf.addPage();
+              }
+              isFirstPage = false;
+
+              // 获取图片尺寸
+              const img = new Image();
+              await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = imageDataUrl;
+              });
+
+              const imgWidth = img.naturalWidth;
+              const imgHeight = img.naturalHeight;
+
+              // 计算图片显示尺寸，保持比例并铺满页面
+              const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+              const displayWidth = imgWidth * ratio;
+              const displayHeight = imgHeight * ratio;
+
+              // 居中显示
+              const x = (pageWidth - displayWidth) / 2;
+              const y = (pageHeight - displayHeight) / 2;
+
+              pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
+
+              // 在每张产品图后添加一个空白页,确保下一张产品图在正面
+              pdf.addPage();
+
+          } catch (error) {
+            console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+          }
+        }
+
+        // 此时最后一页是空白页(最后一张产品图的背面)
+        // 需要再添加一页空白页(新纸张的正面),然后货号页在其背面
+        pdf.addPage(); // 新纸张的正面(空白页)
+        pdf.addPage(); // 新纸张的背面(货号页)
+
+        // 设置货号文字样式 - 居中显示
+        pdf.setFontSize(40);
+        pdf.setTextColor(0, 0, 0);
+        const productCode = product.productCode || product.id;
+        const textWidth = pdf.getTextWidth(productCode);
+        const textX = (pageWidth - textWidth) / 2;
+        const textY = pageHeight / 2;
+        pdf.text(productCode, textX, textY);
+
+        // 添加右下角黑色标记 (用于分本)
+        // 黑标尺寸: 宽10mm (1cm), 高5mm (0.5cm)
+        // 位置: 距离右边缘0mm, 距离底部5mm (0.5cm)
+        const blackMarkWidth = 10;  // 1cm
+        const blackMarkHeight = 5;  // 0.5cm
+        const blackMarkX = pageWidth - blackMarkWidth;  // 右对齐
+        const blackMarkY = pageHeight - blackMarkHeight - 5;  // 距离底部0.5cm
+
+        pdf.setFillColor(0, 0, 0);  // 黑色
+        pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');  // 'F' = filled
+
+        // 生成PDF blob并添加到压缩包
+        const pdfBlob = pdf.output('blob');
+        const pdfFileName = `${product.productCode || product.id}.pdf`;
+        zip.file(pdfFileName, pdfBlob);
+      }
+
+      // 生成压缩包
+      const zipContent = await zip.generateAsync({ type: 'blob' });
+
+      // 生成文件名
+      const now = new Date();
+      const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      const filename = `产品图PDF_${dateTimeStr}.zip`;
+
+      // 下载压缩包
+      const url = window.URL.createObjectURL(zipContent);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`成功导出 ${productsWithImages.length} 个商品的PDF`);
+      setSelectedProductIds(new Set());
+      setShowPdfDialog(false);
+
+    } catch (error) {
+      console.error('导出PDF失败:', error);
+      toast.error('导出PDF失败，请重试');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // 导出Excel功能
   const handleExport = () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
@@ -409,6 +604,15 @@ export function ProductListing() {
           >
             <Download className="w-4 h-4" />
             导出选中商品 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+          </Button>
+          <Button
+            onClick={() => setShowPdfDialog(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={selectedProductIds.size === 0}
+          >
+            <FileText className="w-4 h-4" />
+            导出产品图PDF {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button onClick={() => navigate('/workspace/batch-upload/create')} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -764,6 +968,85 @@ export function ProductListing() {
           </div>
         )}
       </div>
+
+      {/* PDF导出弹窗 */}
+      {showPdfDialog && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowPdfDialog(false)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 头部 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">导出产品图PDF</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowPdfDialog(false)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* 内容区域 */}
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="text-sm text-gray-600">
+                  已选择 <span className="font-semibold text-gray-900">{selectedProductIds.size}</span> 个商品
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    规格
+                  </label>
+                  <select
+                    value={pdfPageSize}
+                    onChange={(e) => setPdfPageSize(e.target.value as 'small' | 'large')}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="small">{PAGE_SIZES.small.displayLabel}</option>
+                    <option value="large">{PAGE_SIZES.large.displayLabel}</option>
+                  </select>
+                  <p className="mt-2 text-xs text-gray-500">
+                    实际打印尺寸会比规格多 6mm，为打印机预留空间
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 底部按钮 */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <Button
+                variant="outline"
+                onClick={() => setShowPdfDialog(false)}
+                disabled={isGeneratingPdf}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleExportProductPdf}
+                disabled={isGeneratingPdf || selectedProductIds.size === 0}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    开始导出
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
