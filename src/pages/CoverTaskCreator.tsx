@@ -30,7 +30,7 @@ export function CoverTaskCreator() {
   const [templates, setTemplates] = useState<TemplateSelectionItem[]>([])
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set())
   const [templateSearch, setTemplateSearch] = useState('')
-  const [selectedLayerCountGroup, setSelectedLayerCountGroup] = useState<number | 'all'>('all')
+  const [selectedLayerCountGroup, setSelectedLayerCountGroup] = useState<number | null>(null)
 
   // 加载状态
   const [loadingAiProjects, setLoadingAiProjects] = useState(true)
@@ -144,6 +144,16 @@ export function CoverTaskCreator() {
     }, 300)
     return () => clearTimeout(timer)
   }, [templateSearch])
+
+  // 模板加载完成后，默认选中第一个分组
+  useEffect(() => {
+    if (templates.length > 0 && selectedLayerCountGroup === null) {
+      const { layerCounts } = groupedTemplates()
+      if (layerCounts.length > 0) {
+        setSelectedLayerCountGroup(layerCounts[0])
+      }
+    }
+  }, [templates])
 
   // 应用筛选 - 重置到第一页
   const handleApplyFilters = () => {
@@ -282,8 +292,8 @@ export function CoverTaskCreator() {
 
   // 获取当前显示的模板列表
   const getFilteredTemplates = () => {
-    if (selectedLayerCountGroup === 'all') {
-      return templates
+    if (selectedLayerCountGroup === null) {
+      return []
     }
     return templates.filter(t => (t.layerCount || 0) === selectedLayerCountGroup)
   }
@@ -863,21 +873,6 @@ export function CoverTaskCreator() {
             <div className="px-4 pb-3 overflow-x-auto">
               <div className="flex items-center gap-2 justify-between">
                 <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedLayerCountGroup('all')
-                    setSelectedTemplates(new Set()) // 切换分组时清空选择
-                  }}
-                  className={`
-                    px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
-                    ${selectedLayerCountGroup === 'all'
-                      ? 'bg-green-100 text-green-700 border border-green-300'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }
-                  `}
-                >
-                  全部 ({templates.length})
-                </button>
                 {groupedTemplates().layerCounts.map(count => {
                   const group = groupedTemplates().groups[count]
                   return (
