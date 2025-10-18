@@ -11,4 +11,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // 将 jspdf 和 jszip 打包到单独的 chunk 中,避免动态导入问题
+          'pdf-libs': ['jspdf', 'jszip']
+        }
+      }
+    }
+  }
 })

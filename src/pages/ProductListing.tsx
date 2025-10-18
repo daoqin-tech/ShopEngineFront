@@ -8,6 +8,8 @@ import { productService, type Product } from '@/services/productService';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx-js-style';
+import jsPDF from 'jspdf';
+import JSZip from 'jszip';
 
 export function ProductListing() {
   const navigate = useNavigate();
@@ -202,9 +204,7 @@ export function ProductListing() {
         return;
       }
 
-      // 动态导入jsPDF和JSZip
-      const jsPDF = (await import('jspdf')).default;
-      const JSZip = (await import('jszip')).default;
+      // 创建 JSZip 实例
       const zip = new JSZip();
 
       // 获取选择的页面尺寸
