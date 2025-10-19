@@ -371,7 +371,7 @@ export function ProductListing() {
         '变种属性值二': '',
         '预览图': product.previewImage || '',
         '申报价格': product.declaredPrice || '',
-        'SKU货号': '',
+        'SKU货号': product.productCode || '',
         '长': product.length || '',
         '宽': product.width || '',
         '高': product.height || '',
