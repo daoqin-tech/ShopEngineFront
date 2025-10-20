@@ -105,13 +105,22 @@ export class AIImageSessionsAPI {
     return response.data; // 返回新增的提示词数组
   }
 
-  // 批量生成图片
+  // 批量生成图片(手账纸模式：异步生成类似图片)
   static async batchGenerateImages(promptIds: string[], count: number): Promise<Prompt[]> {
     const response = await apiClient.post(`/images/batchGenerate`, {
       promptIds,
       count
     });
     return response.data; // 返回生成任务的结果
+  }
+
+  // 批量复制图片(牛皮纸袋模式：直接复制相同图片)
+  static async batchDuplicateImages(promptIds: string[], count: number): Promise<void> {
+    const response = await apiClient.post(`/images/batchDuplicate`, {
+      promptIds,
+      count
+    });
+    return response.data;
   }
 
   // 批量重新生成失败的图片

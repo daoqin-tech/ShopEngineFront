@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2 } from 'lucide-react';
 import { ImageGenerationStepProps, AspectRatio, PromptStatus, GeneratedImage, ASPECT_RATIOS } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
@@ -112,6 +113,7 @@ export function ImageGenerationStep({
   const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [copyCount, setCopyCount] = useState(1);
   const [isCopying, setIsCopying] = useState(false);
+  const [copyType, setCopyType] = useState<'regenerate' | 'duplicate'>('regenerate'); // 复制类型
 
   // 批量删除相关状态
   const [isDeleting, setIsDeleting] = useState(false);
@@ -337,22 +339,28 @@ export function ImageGenerationStep({
       const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
       const promptIds = selectedImages.map(img => img.promptId);
 
-      // 调用批量生成图片API
-      await AIImageSessionsAPI.batchGenerateImages(promptIds, copyCount);
-
-      toast.success(`成功提交批量生成任务：${selectedImageIds.size} 个提示词，每个生成 ${copyCount} 张图片`);
+      if (copyType === 'regenerate') {
+        // 手账纸模式：异步生成类似图片
+        await AIImageSessionsAPI.batchGenerateImages(promptIds, copyCount);
+        toast.success(`成功提交批量生成任务：${selectedImageIds.size} 个提示词，每个生成 ${copyCount} 张图片`);
+      } else {
+        // 牛皮纸袋模式：直接复制相同图片
+        await AIImageSessionsAPI.batchDuplicateImages(promptIds, copyCount);
+        toast.success(`成功复制图片：${selectedImageIds.size} 张图片，每张复制 ${copyCount} 份`);
+      }
 
       // 清除选择和重置状态
       setSelectedImageIds(new Set());
       setCopyCount(1);
       setShowCopyDialog(false);
+      setCopyType('regenerate');
 
       // 跳转到项目列表页面
       navigate('/workspace/product-images');
 
     } catch (error) {
-      console.error('批量生成图片失败:', error);
-      toast.error('生成失败，请重试');
+      console.error('批量复制图片失败:', error);
+      toast.error('复制失败，请重试');
     } finally {
       setIsCopying(false);
     }
@@ -1372,35 +1380,84 @@ export function ImageGenerationStep({
 
               {/* 内容 */}
               <div className="p-6">
-                <div className="space-y-4">
-                  <div className="text-sm text-gray-600">
-                    已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
-                  </div>
+                <Tabs value={copyType} onValueChange={(value) => setCopyType(value as 'regenerate' | 'duplicate')}>
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="regenerate">手账纸模式</TabsTrigger>
+                    <TabsTrigger value="duplicate">牛皮纸袋模式</TabsTrigger>
+                  </TabsList>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      每张图片复制数量
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="40"
-                      value={copyCount}
-                      onChange={(e) => setCopyCount(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
-                      className="w-full"
-                      placeholder="输入复制数量"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      每张图片最多可复制 40 个
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg">
+                  <TabsContent value="regenerate" className="space-y-4">
                     <div className="text-sm text-gray-600">
-                      将生成：<span className="font-semibold text-gray-900">{selectedImageIds.size * copyCount}</span> 张新图片
+                      已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
                     </div>
-                  </div>
-                </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        <strong>手账纸模式：</strong>异步生成类似但不同的图片，每张图片都会重新生成。
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        每张图片生成数量
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="40"
+                        value={copyCount}
+                        onChange={(e) => setCopyCount(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
+                        className="w-full"
+                        placeholder="输入生成数量"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        每张图片最多可生成 40 个类似图片
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="text-sm text-gray-600">
+                        将生成：<span className="font-semibold text-gray-900">{selectedImageIds.size * copyCount}</span> 张新图片
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="duplicate" className="space-y-4">
+                    <div className="text-sm text-gray-600">
+                      已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-sm text-green-800">
+                        <strong>牛皮纸袋模式：</strong>直接复制相同的图片，每份都完全一样。
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        每张图片复制份数
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="40"
+                        value={copyCount}
+                        onChange={(e) => setCopyCount(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
+                        className="w-full"
+                        placeholder="输入复制份数"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        每张图片最多可复制 40 份
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="text-sm text-gray-600">
+                        将复制：<span className="font-semibold text-gray-900">{selectedImageIds.size * copyCount}</span> 张图片（完全相同）
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
 
               {/* 底部按钮 */}
@@ -1420,12 +1477,12 @@ export function ImageGenerationStep({
                   {isCopying ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      复制中...
+                      {copyType === 'regenerate' ? '生成中...' : '复制中...'}
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4 mr-2" />
-                      开始复制
+                      {copyType === 'regenerate' ? '开始生成' : '开始复制'}
                     </>
                   )}
                 </Button>

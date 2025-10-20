@@ -84,6 +84,7 @@ export interface Product {
   nameEn: string
   nameZh: string
   carouselImages: string[]   // 商品图(用于商品展示)
+  productImages: string[]    // 产品图片(从关联的AI项目获取)
   materialImage: string
   previewImage: string
   freightTemplateId: string

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
@@ -34,6 +34,13 @@ export function ProductListing() {
   const [showPdfDialog, setShowPdfDialog] = useState(false);
   const [pdfPageSize, setPdfPageSize] = useState<'small' | 'large'>('small');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // 图片预览状态
+  const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
+
+  // 导出状态
+  const [isExportingCarouselImages, setIsExportingCarouselImages] = useState(false);
+  const [isExportingProductImages, setIsExportingProductImages] = useState(false);
 
   // 获取商品列表
   const fetchProducts = async (page: number = currentPage) => {
@@ -357,17 +364,8 @@ export function ProductListing() {
     setIsGeneratingPdf(true);
 
     try {
-      // 获取所有选中商品的taskId
-      const taskIds = selectedProducts.map(p => p.taskId);
-
-      // 批量获取产品图
-      const taskImagesMap = await productService.batchGetTaskImages(taskIds);
-
-      // 过滤出有图片的商品
-      const productsWithImages = selectedProducts.filter(p => {
-        const images = taskImagesMap[p.taskId];
-        return images && images.length > 0;
-      });
+      // 过滤出有产品图的商品
+      const productsWithImages = selectedProducts.filter(p => p.productImages && p.productImages.length > 0);
 
       if (productsWithImages.length === 0) {
         toast.error('所选商品没有产品图');
@@ -383,7 +381,7 @@ export function ProductListing() {
 
       // 为每个商品生成一个PDF
       for (const product of productsWithImages) {
-        const productImages = taskImagesMap[product.taskId];
+        const productImages = product.productImages;
         if (!productImages || productImages.length === 0) continue;
 
         const pdf = new jsPDF({
@@ -497,6 +495,142 @@ export function ProductListing() {
       toast.error('导出PDF失败，请重试');
     } finally {
       setIsGeneratingPdf(false);
+    }
+  };
+
+  // 商品图预览
+  const handlePreviewCarouselImages = (product: Product) => {
+    if (!product.carouselImages || product.carouselImages.length === 0) {
+      toast.error('该商品没有商品图');
+      return;
+    }
+    setPreviewImages({
+      images: product.carouselImages,
+      title: `商品图预览 - ${product.productCode || product.id}`
+    });
+  };
+
+  // 产品图预览
+  const handlePreviewProductImages = (product: Product) => {
+    if (!product.productImages || product.productImages.length === 0) {
+      toast.error('该商品没有产品图');
+      return;
+    }
+    setPreviewImages({
+      images: product.productImages,
+      title: `产品图预览 - ${product.productCode || product.id}`
+    });
+  };
+
+  // 批量导出商品图
+  const handleExportCarouselImages = async () => {
+    if (selectedProductIds.size === 0) {
+      toast.error('请至少选择一个商品');
+      return;
+    }
+
+    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+    const productsWithImages = selectedProducts.filter(p => p.carouselImages && p.carouselImages.length > 0);
+
+    if (productsWithImages.length === 0) {
+      toast.error('所选商品没有商品图');
+      return;
+    }
+
+    setIsExportingCarouselImages(true);
+    try {
+      const zip = new JSZip();
+
+      for (const product of productsWithImages) {
+        const productCode = product.productCode || product.id;
+        const folder = zip.folder(productCode);
+
+        if (folder) {
+          for (let i = 0; i < product.carouselImages.length; i++) {
+            const imageUrl = product.carouselImages[i];
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
+            folder.file(`商品图_${i + 1}.${ext}`, blob);
+          }
+        }
+      }
+
+      const zipContent = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipContent);
+      const link = document.createElement('a');
+      link.href = url;
+      const now = new Date();
+      const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      link.download = `商品图_${dateTimeStr}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`成功导出 ${productsWithImages.length} 个商品的商品图`);
+      setSelectedProductIds(new Set());
+    } catch (error) {
+      console.error('导出商品图失败:', error);
+      toast.error('导出商品图失败');
+    } finally {
+      setIsExportingCarouselImages(false);
+    }
+  };
+
+  // 批量导出产品图
+  const handleExportProductImages = async () => {
+    if (selectedProductIds.size === 0) {
+      toast.error('请至少选择一个商品');
+      return;
+    }
+
+    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+    const productsWithImages = selectedProducts.filter(p => p.productImages && p.productImages.length > 0);
+
+    if (productsWithImages.length === 0) {
+      toast.error('所选商品没有产品图');
+      return;
+    }
+
+    setIsExportingProductImages(true);
+    try {
+      const zip = new JSZip();
+
+      for (const product of productsWithImages) {
+        const productCode = product.productCode || product.id;
+        const folder = zip.folder(productCode);
+
+        if (folder) {
+          for (let i = 0; i < product.productImages.length; i++) {
+            const imageUrl = product.productImages[i];
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
+            folder.file(`产品图_${i + 1}.${ext}`, blob);
+          }
+        }
+      }
+
+      const zipContent = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipContent);
+      const link = document.createElement('a');
+      link.href = url;
+      const now = new Date();
+      const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      link.download = `产品图_${dateTimeStr}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`成功导出 ${productsWithImages.length} 个商品的产品图`);
+      setSelectedProductIds(new Set());
+    } catch (error) {
+      console.error('导出产品图失败:', error);
+      toast.error('导出产品图失败');
+    } finally {
+      setIsExportingProductImages(false);
     }
   };
 
@@ -752,13 +886,49 @@ export function ProductListing() {
             刷新
           </Button>
           <Button
+            onClick={handleExportCarouselImages}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={selectedProductIds.size === 0 || isExportingCarouselImages}
+          >
+            {isExportingCarouselImages ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                导出中...
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-4 h-4" />
+                导出商品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleExportProductImages}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={selectedProductIds.size === 0 || isExportingProductImages}
+          >
+            {isExportingProductImages ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                导出中...
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-4 h-4" />
+                导出产品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+              </>
+            )}
+          </Button>
+          <Button
             onClick={handleExport}
             variant="outline"
             className="flex items-center gap-2"
             disabled={selectedProductIds.size === 0}
           >
             <Download className="w-4 h-4" />
-            导出选中商品 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+            导出上架表格 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
             onClick={() => setShowPdfDialog(true)}
@@ -872,6 +1042,7 @@ export function ProductListing() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">店铺</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -941,6 +1112,26 @@ export function ProductListing() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(product.createdAt).toLocaleString('zh-CN')}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePreviewCarouselImages(product)}
+                            className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
+                          >
+                            商品图
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePreviewProductImages(product)}
+                            className="h-7 px-2 text-green-600 hover:text-green-700 text-xs"
+                          >
+                            产品图
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1197,6 +1388,59 @@ export function ProductListing() {
                     开始导出
                   </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 图片预览弹窗 */}
+      {previewImages && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          onClick={() => setPreviewImages(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 头部 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">{previewImages.title}</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPreviewImages(null)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* 图片列表 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {previewImages.images.map((imageUrl, index) => (
+                  <div key={index} className="border rounded-lg overflow-hidden">
+                    <img
+                      src={imageUrl}
+                      alt={`图片 ${index + 1}`}
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 底部 */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <div className="text-sm text-gray-600">
+                共 {previewImages.images.length} 张图片
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setPreviewImages(null)}
+              >
+                关闭
               </Button>
             </div>
           </div>
