@@ -103,14 +103,8 @@ export interface AspectRatio {
 
 // 预设的图片比例和尺寸 (根据新模型推荐尺寸)
 export const ASPECT_RATIOS: AspectRatio[] = [
-  { name: 'square', label: '1:1', width: 1024, height: 1024, description: '正方形 - 适合头像、LOGO' },
-  { name: 'standard', label: '4:3', width: 1152, height: 864, description: '标准 - 适合产品图' },
-  { name: 'classic', label: '3:4', width: 864, height: 1152, description: '经典比例 - 适合传统照片' },
-  { name: 'landscape', label: '16:9', width: 1280, height: 720, description: '横向 - 适合横幅、背景' },
-  { name: 'portrait', label: '9:16', width: 720, height: 1280, description: '竖向 - 适合海报、封面' },
-  { name: 'cinema', label: '3:2', width: 1248, height: 832, description: '电影比例 - 适合风景图' },
-  { name: 'wide', label: '2:3', width: 832, height: 1248, description: '高比例 - 适合竖版海报' },
-  { name: 'widescreen', label: '21:9', width: 1344, height: 576, description: '超宽屏 - 适合全景图' }
+  { name: 'square', label: '1:1', width: 1024, height: 1024, description: '手账纸' },
+  { name: 'paper_bag', label: '66:35', width: 1312, height: 704, description: '手提纸袋' }
 ];
 
 // 图片生成参数（UI层面）

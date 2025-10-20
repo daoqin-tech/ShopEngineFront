@@ -24,7 +24,6 @@ export interface OcrProjectDetail extends OcrProject {
 
 // OCR请求
 export interface OcrRequest {
-  projectId: string
   imageUrl: string
 }
 

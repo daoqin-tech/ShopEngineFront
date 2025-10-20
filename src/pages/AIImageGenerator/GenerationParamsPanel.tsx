@@ -1,0 +1,268 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { AspectRatio, ASPECT_RATIOS, ImageGenerationParams } from './types';
+
+// 验证尺寸是否符合新模型API要求
+const validateDimension = (value: number): number => {
+  // 限制在256-1440范围内
+  const clamped = Math.max(256, Math.min(1440, value));
+  // 确保是32的倍数
+  return Math.round(clamped / 32) * 32;
+};
+
+// 智能验证并调整尺寸组合以符合所有约束
+const validateDimensions = (width: number, height: number): { width: number; height: number } => {
+  // 首先验证单个尺寸范围并调整为32的倍数
+  let validWidth = validateDimension(width);
+  let validHeight = validateDimension(height);
+
+  return { width: validWidth, height: validHeight };
+};
+
+// 检查尺寸是否满足所有约束（不调整，仅检查）
+const checkDimensionsValid = (width: number, height: number): { valid: boolean; reason?: string } => {
+  // 检查基本范围（单个维度）
+  if (width < 256 || width > 1440) {
+    return { valid: false, reason: '宽度必须在256-1440范围内' };
+  }
+  if (height < 256 || height > 1440) {
+    return { valid: false, reason: '高度必须在256-1440范围内' };
+  }
+
+  // 检查32的倍数
+  if (width % 32 !== 0 || height % 32 !== 0) {
+    return { valid: false, reason: '尺寸必须是32的倍数' };
+  }
+
+  return { valid: true };
+};
+
+interface GenerationParamsPanelProps {
+  selectedPromptsCount: number;
+  isGeneratingImages?: boolean;
+  onGenerateImages: (params: ImageGenerationParams) => void;
+}
+
+export function GenerationParamsPanel({
+  selectedPromptsCount,
+  isGeneratingImages,
+  onGenerateImages
+}: GenerationParamsPanelProps) {
+  // 生成参数状态
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0]); // 默认选择1:1
+  const [customWidth, setCustomWidth] = useState<number>(1024);
+  const [customHeight, setCustomHeight] = useState<number>(1024);
+  const [useCustomSize, setUseCustomSize] = useState(false);
+
+  // 输入验证反馈状态
+  const [widthAdjusted, setWidthAdjusted] = useState(false);
+  const [heightAdjusted, setHeightAdjusted] = useState(false);
+
+  // 处理比例选择变化
+  const handleAspectRatioChange = (aspectRatio: AspectRatio) => {
+    setSelectedAspectRatio(aspectRatio);
+    if (!useCustomSize) {
+      setCustomWidth(aspectRatio.width);
+      setCustomHeight(aspectRatio.height);
+    }
+  };
+
+  // 处理自定义尺寸变化 - 允许用户输入，不立即验证
+  const handleCustomWidthChange = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    setCustomWidth(numValue);
+  };
+
+  const handleCustomHeightChange = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    setCustomHeight(numValue);
+  };
+
+  // 输入框失焦时验证
+  const handleWidthBlur = () => {
+    const result = validateDimensions(customWidth, customHeight);
+    if (result.width !== customWidth) {
+      setCustomWidth(result.width);
+      setWidthAdjusted(true);
+      // 3秒后清除提示
+      setTimeout(() => setWidthAdjusted(false), 3000);
+    }
+    if (result.height !== customHeight) {
+      setCustomHeight(result.height);
+      setHeightAdjusted(true);
+      // 3秒后清除提示
+      setTimeout(() => setHeightAdjusted(false), 3000);
+    }
+  };
+
+  const handleHeightBlur = () => {
+    const result = validateDimensions(customWidth, customHeight);
+    if (result.width !== customWidth) {
+      setCustomWidth(result.width);
+      setWidthAdjusted(true);
+      // 3秒后清除提示
+      setTimeout(() => setWidthAdjusted(false), 3000);
+    }
+    if (result.height !== customHeight) {
+      setCustomHeight(result.height);
+      setHeightAdjusted(true);
+      // 3秒后清除提示
+      setTimeout(() => setHeightAdjusted(false), 3000);
+    }
+  };
+
+  return (
+    <div className="w-80 flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto">
+      <div className="p-6">
+        <h3 className="text-base font-semibold text-gray-900 mb-6">生成参数</h3>
+
+        {/* 比例选择 */}
+        <div className="mb-6">
+          <label className="text-sm font-medium text-gray-700 mb-3 block">选择比例</label>
+          <div className="grid grid-cols-2 gap-2">
+            {ASPECT_RATIOS.map((ratio) => (
+              <button
+                key={ratio.name}
+                onClick={() => handleAspectRatioChange(ratio)}
+                className={`p-3 text-left border rounded-lg transition-all duration-200 ${
+                  selectedAspectRatio.name === ratio.name
+                    ? 'border-gray-900 bg-gray-900 text-white'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-sm font-medium mb-1">{ratio.description}</div>
+                <div className="text-xs opacity-75">{ratio.label} ({ratio.width}×{ratio.height})</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 自定义尺寸选项 */}
+        <div>
+          <label className="flex items-center gap-2 mb-3">
+            <input
+              type="checkbox"
+              checked={useCustomSize}
+              onChange={(e) => setUseCustomSize(e.target.checked)}
+              className="w-4 h-4 text-gray-900 focus:ring-2 focus:ring-gray-900"
+            />
+            <span className="text-sm font-medium text-gray-700">自定义尺寸</span>
+          </label>
+
+          {useCustomSize && (
+            <>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">宽度</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={customWidth || ''}
+                      onChange={(e) => handleCustomWidthChange(e.target.value)}
+                      onBlur={handleWidthBlur}
+                      min="256"
+                      max="1440"
+                      step="32"
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        widthAdjusted
+                          ? 'border-amber-400 bg-amber-50 focus:ring-amber-400'
+                          : 'border-gray-200 focus:ring-gray-900'
+                      }`}
+                      placeholder="256-1440"
+                    />
+                    {widthAdjusted && (
+                      <div className="absolute -bottom-6 left-0 text-xs text-amber-600">
+                        已自动调整为 {customWidth}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">高度</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={customHeight || ''}
+                      onChange={(e) => handleCustomHeightChange(e.target.value)}
+                      onBlur={handleHeightBlur}
+                      min="256"
+                      max="1440"
+                      step="32"
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${
+                        heightAdjusted
+                          ? 'border-amber-400 bg-amber-50 focus:ring-amber-400'
+                          : 'border-gray-200 focus:ring-gray-900'
+                      }`}
+                      placeholder="256-1440"
+                    />
+                    {heightAdjusted && (
+                      <div className="absolute -bottom-6 left-0 text-xs text-amber-600">
+                        已自动调整为 {customHeight}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 text-xs text-gray-500 space-y-1">
+                <div>• 尺寸范围：256-1440像素</div>
+                <div>• 必须是32的倍数</div>
+              </div>
+            </>
+          )}
+
+          <div className="mt-4 text-sm text-gray-700 bg-white p-3 rounded-lg border">
+            最终尺寸: <span className="font-mono font-semibold">
+              {useCustomSize ? customWidth : selectedAspectRatio.width} × {useCustomSize ? customHeight : selectedAspectRatio.height}
+            </span>
+
+            {useCustomSize && (() => {
+              const validation = checkDimensionsValid(customWidth, customHeight);
+
+              return (
+                <div className="mt-2 space-y-1 text-xs">
+                  <div className={validation.valid ? "text-green-600" : "text-red-600"}>
+                    {validation.valid ? "✓ 参数验证通过" : `✗ ${validation.reason}`}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* 生成图片按钮 */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <Button
+            onClick={() => onGenerateImages({
+              width: useCustomSize ? customWidth : selectedAspectRatio.width,
+              height: useCustomSize ? customHeight : selectedAspectRatio.height,
+              aspectRatio: selectedAspectRatio.name
+            })}
+            disabled={selectedPromptsCount === 0 || isGeneratingImages}
+            className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingImages ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                生成中...
+              </>
+            ) : (
+              <>
+                生成图片
+                {selectedPromptsCount > 0 && (
+                  <span className="ml-2 text-sm opacity-75">
+                    ({selectedPromptsCount}个)
+                  </span>
+                )}
+              </>
+            )}
+          </Button>
+          {selectedPromptsCount === 0 && (
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              请先在上一步选择提示词
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

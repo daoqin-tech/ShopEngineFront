@@ -8,11 +8,9 @@ import { WechatCallback } from "@/pages/WechatCallback"
 import { NotFound } from "@/pages/NotFound"
 import { AIImageProjects } from "@/pages/AIImageProjects"
 import { AIImageGenerator } from "@/pages/AIImageGenerator"
-import { OCRRecognition } from "@/pages/OCRRecognition"
 import { ImageEditor } from "@/pages/ImageEdit"
 import { ImageEditProjects } from "@/pages/ImageEditProjects"
 import { OcrEditor } from "@/pages/Ocr"
-import { OcrProjects } from "@/pages/OcrProjects"
 import { TemplateManagement } from "@/pages/TemplateManagement"
 import { CoverGeneration } from "@/pages/CoverGeneration"
 import { CoverTaskCreator } from "@/pages/CoverTaskCreator"
@@ -57,26 +55,12 @@ function App() {
               <AIImageGenerator />
             </ProtectedRoute>
           } />
-          
-          <Route path="/workspace/ocr-recognition" element={
+
+          <Route path="/workspace/ocr" element={
             <ProtectedRoute>
               <WorkspaceLayout>
-                <OCRRecognition />
+                <OcrEditor />
               </WorkspaceLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/workspace/ocr-projects" element={
-            <ProtectedRoute>
-              <WorkspaceLayout>
-                <OcrProjects />
-              </WorkspaceLayout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/workspace/ocr-project/:projectId" element={
-            <ProtectedRoute>
-              <OcrEditor />
             </ProtectedRoute>
           } />
           

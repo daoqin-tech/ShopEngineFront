@@ -59,8 +59,8 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         isActive: false,
         items: [
           {
-            title: "以图识文",
-            url: "/workspace/ocr-projects",
+            title: "智能识图",
+            url: "/workspace/ocr",
           },
           {
             title: "AI编辑图片",

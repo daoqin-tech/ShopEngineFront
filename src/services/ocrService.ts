@@ -99,8 +99,8 @@ export const ocrRecognitionApi = {
   },
 
   // 获取OCR历史记录
-  async getOcrHistory(projectId: string): Promise<OcrRecord[]> {
-    const response = await apiClient.get(`/image-analysis/results/${projectId}`)
+  async getOcrHistory(): Promise<OcrRecord[]> {
+    const response = await apiClient.get(`/image-analysis/results`)
     return response.data || []
   }
 }
