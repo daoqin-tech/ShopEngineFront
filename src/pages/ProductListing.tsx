@@ -174,7 +174,178 @@ export function ProductListing() {
     }
   };
 
-  // 导出产品图PDF
+  // 导出产品图PDF - 旧版本(双面打印,保留备用)
+  // const handleExportProductPdf_DoubleSided = async () => {
+  //   if (selectedProductIds.size === 0) {
+  //     toast.error('请至少选择一个商品');
+  //     return;
+  //   }
+
+  //   const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+
+  //   setIsGeneratingPdf(true);
+
+  //   try {
+  //     // 获取所有选中商品的taskId
+  //     const taskIds = selectedProducts.map(p => p.taskId);
+
+  //     // 批量获取产品图
+  //     const taskImagesMap = await productService.batchGetTaskImages(taskIds);
+
+  //     // 过滤出有图片的商品
+  //     const productsWithImages = selectedProducts.filter(p => {
+  //       const images = taskImagesMap[p.taskId];
+  //       return images && images.length > 0;
+  //     });
+
+  //     if (productsWithImages.length === 0) {
+  //       toast.error('所选商品没有产品图');
+  //       setIsGeneratingPdf(false);
+  //       return;
+  //     }
+
+  //     // 创建 JSZip 实例
+  //     const zip = new JSZip();
+
+  //     // 获取选择的页面尺寸
+  //     const pageSize = PAGE_SIZES[pdfPageSize];
+
+  //     // 为每个商品生成一个PDF(包含所有产品图)
+  //     for (const product of productsWithImages) {
+  //       const productImages = taskImagesMap[product.taskId];
+  //       if (!productImages || productImages.length === 0) continue;
+
+  //       const pdf = new jsPDF({
+  //         orientation: 'portrait',
+  //         unit: 'mm',
+  //         format: [pageSize.width, pageSize.height]
+  //       });
+
+  //       const pageWidth = pageSize.width;
+  //       const pageHeight = pageSize.height;
+
+  //       let isFirstPage = true;
+
+  //       // 为该商品的所有产品图创建页面(每张图后面跟一个空白页,确保图片在正面)
+  //       for (const imageUrl of productImages) {
+  //           try {
+  //             const response = await fetch(imageUrl, {
+  //               mode: 'cors',
+  //               headers: {
+  //                 'Accept': 'image/*',
+  //               }
+  //             });
+
+  //             if (!response.ok) {
+  //               console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
+  //               continue;
+  //             }
+
+  //             const blob = await response.blob();
+  //             const imageDataUrl = await new Promise<string>((resolve) => {
+  //               const reader = new FileReader();
+  //               reader.onload = (e) => resolve(e.target?.result as string);
+  //               reader.readAsDataURL(blob);
+  //             });
+
+  //             // 如果不是第一页，添加新页
+  //             if (!isFirstPage) {
+  //               pdf.addPage();
+  //             }
+  //             isFirstPage = false;
+
+  //             // 获取图片尺寸
+  //             const img = new Image();
+  //             await new Promise((resolve, reject) => {
+  //               img.onload = resolve;
+  //               img.onerror = reject;
+  //               img.src = imageDataUrl;
+  //             });
+
+  //             const imgWidth = img.naturalWidth;
+  //             const imgHeight = img.naturalHeight;
+
+  //             // 计算图片显示尺寸，保持比例并铺满页面
+  //             const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+  //             const displayWidth = imgWidth * ratio;
+  //             const displayHeight = imgHeight * ratio;
+
+  //             // 居中显示
+  //             const x = (pageWidth - displayWidth) / 2;
+  //             const y = (pageHeight - displayHeight) / 2;
+
+  //             pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
+
+  //             // 在每张产品图后添加一个空白页,确保下一张产品图在正面
+  //             pdf.addPage();
+
+  //         } catch (error) {
+  //           console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+  //         }
+  //       }
+
+  //       // 此时最后一页是空白页(最后一张产品图的背面)
+  //       // 需要再添加一页空白页(新纸张的正面),然后货号页在其背面
+  //       pdf.addPage(); // 新纸张的正面(空白页)
+  //       pdf.addPage(); // 新纸张的背面(货号页)
+
+  //       // 设置货号文字样式 - 居中显示
+  //       pdf.setFontSize(40);
+  //       pdf.setTextColor(0, 0, 0);
+  //       const productCode = product.productCode || product.id;
+  //       const textWidth = pdf.getTextWidth(productCode);
+  //       const textX = (pageWidth - textWidth) / 2;
+  //       const textY = pageHeight / 2;
+  //       pdf.text(productCode, textX, textY);
+
+  //       // 添加右下角黑色标记 (用于分本)
+  //       // 黑标尺寸: 宽10mm (1cm), 高5mm (0.5cm)
+  //       // 位置: 距离右边缘0mm, 距离底部5mm (0.5cm)
+  //       const blackMarkWidth = 10;  // 1cm
+  //       const blackMarkHeight = 5;  // 0.5cm
+  //       const blackMarkX = pageWidth - blackMarkWidth;  // 右对齐
+  //       const blackMarkY = pageHeight - blackMarkHeight - 5;  // 距离底部0.5cm
+
+  //       pdf.setFillColor(0, 0, 0);  // 黑色
+  //       pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');  // 'F' = filled
+
+  //       // 生成PDF blob并添加到压缩包
+  //       const pdfBlob = pdf.output('blob');
+  //       const pdfFileName = `${product.productCode || product.id}.pdf`;
+  //       zip.file(pdfFileName, pdfBlob);
+  //     }
+
+  //     // 生成压缩包
+  //     const zipContent = await zip.generateAsync({ type: 'blob' });
+
+  //     // 生成文件名
+  //     const now = new Date();
+  //     const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  //     const filename = `产品图PDF_${dateTimeStr}.zip`;
+
+  //     // 下载压缩包
+  //     const url = window.URL.createObjectURL(zipContent);
+  //     const link = document.createElement('a');
+  //     link.href = url;
+  //     link.download = filename;
+  //     document.body.appendChild(link);
+  //     link.click();
+  //     document.body.removeChild(link);
+  //     window.URL.revokeObjectURL(url);
+
+  //     toast.success(`成功导出 ${productsWithImages.length} 个商品的PDF`);
+  //     setSelectedProductIds(new Set());
+  //     setShowPdfDialog(false);
+
+  //   } catch (error) {
+  //     console.error('导出PDF失败:', error);
+  //     toast.error('导出PDF失败，请重试');
+  //   } finally {
+  //     setIsGeneratingPdf(false);
+  //   }
+  // };
+
+  // 导出产品图PDF - 新版本(单面打印,货号在第一页)
   const handleExportProductPdf = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
@@ -210,7 +381,7 @@ export function ProductListing() {
       // 获取选择的页面尺寸
       const pageSize = PAGE_SIZES[pdfPageSize];
 
-      // 为每个商品生成一个PDF(包含所有产品图)
+      // 为每个商品生成一个PDF
       for (const product of productsWithImages) {
         const productImages = taskImagesMap[product.taskId];
         if (!productImages || productImages.length === 0) continue;
@@ -224,72 +395,7 @@ export function ProductListing() {
         const pageWidth = pageSize.width;
         const pageHeight = pageSize.height;
 
-        let isFirstPage = true;
-
-        // 为该商品的所有产品图创建页面(每张图后面跟一个空白页,确保图片在正面)
-        for (const imageUrl of productImages) {
-            try {
-              const response = await fetch(imageUrl, {
-                mode: 'cors',
-                headers: {
-                  'Accept': 'image/*',
-                }
-              });
-
-              if (!response.ok) {
-                console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
-                continue;
-              }
-
-              const blob = await response.blob();
-              const imageDataUrl = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target?.result as string);
-                reader.readAsDataURL(blob);
-              });
-
-              // 如果不是第一页，添加新页
-              if (!isFirstPage) {
-                pdf.addPage();
-              }
-              isFirstPage = false;
-
-              // 获取图片尺寸
-              const img = new Image();
-              await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-                img.src = imageDataUrl;
-              });
-
-              const imgWidth = img.naturalWidth;
-              const imgHeight = img.naturalHeight;
-
-              // 计算图片显示尺寸，保持比例并铺满页面
-              const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-              const displayWidth = imgWidth * ratio;
-              const displayHeight = imgHeight * ratio;
-
-              // 居中显示
-              const x = (pageWidth - displayWidth) / 2;
-              const y = (pageHeight - displayHeight) / 2;
-
-              pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
-
-              // 在每张产品图后添加一个空白页,确保下一张产品图在正面
-              pdf.addPage();
-
-          } catch (error) {
-            console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
-          }
-        }
-
-        // 此时最后一页是空白页(最后一张产品图的背面)
-        // 需要再添加一页空白页(新纸张的正面),然后货号页在其背面
-        pdf.addPage(); // 新纸张的正面(空白页)
-        pdf.addPage(); // 新纸张的背面(货号页)
-
-        // 设置货号文字样式 - 居中显示
+        // 第一页: 货号页
         pdf.setFontSize(40);
         pdf.setTextColor(0, 0, 0);
         const productCode = product.productCode || product.id;
@@ -299,15 +405,64 @@ export function ProductListing() {
         pdf.text(productCode, textX, textY);
 
         // 添加右下角黑色标记 (用于分本)
-        // 黑标尺寸: 宽10mm (1cm), 高5mm (0.5cm)
-        // 位置: 距离右边缘0mm, 距离底部5mm (0.5cm)
         const blackMarkWidth = 10;  // 1cm
         const blackMarkHeight = 5;  // 0.5cm
-        const blackMarkX = pageWidth - blackMarkWidth;  // 右对齐
-        const blackMarkY = pageHeight - blackMarkHeight - 5;  // 距离底部0.5cm
+        const blackMarkX = pageWidth - blackMarkWidth;
+        const blackMarkY = pageHeight - blackMarkHeight - 5;
+        pdf.setFillColor(0, 0, 0);
+        pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
 
-        pdf.setFillColor(0, 0, 0);  // 黑色
-        pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');  // 'F' = filled
+        // 后续页: 产品图(紧跟在货号页后面,不需要空白页)
+        for (const imageUrl of productImages) {
+          try {
+            const response = await fetch(imageUrl, {
+              mode: 'cors',
+              headers: {
+                'Accept': 'image/*',
+              }
+            });
+
+            if (!response.ok) {
+              console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
+              continue;
+            }
+
+            const blob = await response.blob();
+            const imageDataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target?.result as string);
+              reader.readAsDataURL(blob);
+            });
+
+            // 添加新页
+            pdf.addPage();
+
+            // 获取图片尺寸
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = imageDataUrl;
+            });
+
+            const imgWidth = img.naturalWidth;
+            const imgHeight = img.naturalHeight;
+
+            // 计算图片显示尺寸，保持比例并铺满页面
+            const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+            const displayWidth = imgWidth * ratio;
+            const displayHeight = imgHeight * ratio;
+
+            // 居中显示
+            const x = (pageWidth - displayWidth) / 2;
+            const y = (pageHeight - displayHeight) / 2;
+
+            pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
+
+          } catch (error) {
+            console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+          }
+        }
 
         // 生成PDF blob并添加到压缩包
         const pdfBlob = pdf.output('blob');
