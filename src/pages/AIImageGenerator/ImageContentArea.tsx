@@ -369,17 +369,7 @@ export function ImageContentArea({
     try {
       const jsPDF = (await import('jspdf')).default;
 
-      const pageSize = PAGE_SIZES[pdfPageSize];
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: [pageSize.width, pageSize.height]
-      });
-
-      const pageWidth = pageSize.width;
-      const pageHeight = pageSize.height;
-      const availableWidth = pageWidth;
-      const availableHeight = pageHeight;
+      let pdf: any = null;
 
       for (let i = 0; i < pdfImages.length; i++) {
         const image = pdfImages[i];
@@ -404,10 +394,6 @@ export function ImageContentArea({
             reader.readAsDataURL(blob);
           });
 
-          if (i > 0) {
-            pdf.addPage();
-          }
-
           const imgWidth = image.width || 800;
           const imgHeight = image.height || 600;
 
@@ -416,14 +402,46 @@ export function ImageContentArea({
             continue;
           }
 
-          const ratio = Math.min(availableWidth / imgWidth, availableHeight / imgHeight);
-          const displayWidth = imgWidth * ratio;
-          const displayHeight = imgHeight * ratio;
+          // 获取页面基础尺寸
+          const pageSize = PAGE_SIZES[pdfPageSize];
 
-          pdf.addImage(imageDataUrl, 'JPEG', 0, 0, displayWidth, displayHeight);
+          // 计算图片宽高比
+          const imgRatio = imgWidth / imgHeight;
+
+          // 根据图片方向决定PDF页面方向
+          // 如果图片是横向(宽>高)且页面也应该是横向，或者图片是竖向且页面应该是竖向
+          let pdfWidth, pdfHeight;
+          if (imgRatio > 1) {
+            // 图片是横向的，让PDF页面也横向(宽>高)
+            pdfWidth = Math.max(pageSize.width, pageSize.height);
+            pdfHeight = Math.min(pageSize.width, pageSize.height);
+          } else {
+            // 图片是竖向的，让PDF页面也竖向(高>宽)
+            pdfWidth = Math.min(pageSize.width, pageSize.height);
+            pdfHeight = Math.max(pageSize.width, pageSize.height);
+          }
+
+          // 第一页时创建PDF实例
+          if (!pdf) {
+            pdf = new jsPDF({
+              orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+              unit: 'mm',
+              format: [pdfWidth, pdfHeight]
+            });
+          } else {
+            pdf.addPage([pdfWidth, pdfHeight], pdfWidth > pdfHeight ? 'landscape' : 'portrait');
+          }
+
+          // 使用图片完全填充页面，不留空白
+          pdf.addImage(imageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         } catch (error) {
           console.warn(`跳过图片 ${image.id}，CORS限制或网络错误:`, error);
         }
+      }
+
+      if (!pdf) {
+        alert('没有有效的图片可以生成PDF');
+        return;
       }
 
       const filename = projectName ? `${projectName}.pdf` : `generated-images-${Date.now()}.pdf`;
