@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 const PAGE_SIZES = {
   small: { width: 158, height: 158, label: '小尺寸 (15.8 × 15.8 cm)' },
   large: { width: 306, height: 306, label: '大尺寸 (30.6 × 30.6 cm)' },
-  paperBag: { width: 660, height: 350, label: '手提纸袋 (66.0 × 35.0 cm)' }
+  paperBag: { width: 350, height: 660, label: '手提纸袋 (35.0 × 66.0 cm)' }
 };
 
 // 获取图片实际尺寸
