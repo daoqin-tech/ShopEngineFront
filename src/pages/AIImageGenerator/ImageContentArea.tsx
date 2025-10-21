@@ -9,10 +9,11 @@ import { FileUploadAPI } from '@/services/fileUpload';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// PDF页面尺寸配置（单位：cm）
+// PDF页面尺寸配置（单位：mm）
 const PAGE_SIZES = {
   small: { width: 158, height: 158, label: '小尺寸 (15.8 × 15.8 cm)' },
-  large: { width: 306, height: 306, label: '大尺寸 (30.6 × 30.6 cm)' }
+  large: { width: 306, height: 306, label: '大尺寸 (30.6 × 30.6 cm)' },
+  paperBag: { width: 660, height: 350, label: '手提纸袋 (66.0 × 35.0 cm)' }
 };
 
 // 获取图片实际尺寸
@@ -74,7 +75,7 @@ export function ImageContentArea({
 
   // PDF导出相关状态
   const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [pdfPageSize, setPdfPageSize] = useState<'small' | 'large'>('small');
+  const [pdfPageSize, setPdfPageSize] = useState<'small' | 'large' | 'paperBag'>('small');
   const [pdfImages, setPdfImages] = useState<GeneratedImage[]>([]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -729,10 +730,11 @@ export function ImageContentArea({
                       <label className="block text-sm font-medium text-gray-700 mb-2">页面尺寸</label>
                       <select
                         value={pdfPageSize}
-                        onChange={(e) => setPdfPageSize(e.target.value as 'small' | 'large')}
+                        onChange={(e) => setPdfPageSize(e.target.value as 'small' | 'large' | 'paperBag')}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                         <option value="small">{PAGE_SIZES.small.label}</option>
                         <option value="large">{PAGE_SIZES.large.label}</option>
+                        <option value="paperBag">{PAGE_SIZES.paperBag.label}</option>
                       </select>
                     </div>
                   </div>
