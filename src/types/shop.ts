@@ -1,6 +1,15 @@
 // 店铺类型
 export type ShopType = '全托' | '半托';
 
+// 商品分类类型定义
+export interface ProductCategory {
+  id: string;                   // 分类ID
+  name: string;                 // 分类显示名称
+  categoryName: string;         // 分类完整路径
+  categoryId: string;           // 分类ID
+  productAttributes: string;    // 产品属性JSON字符串
+}
+
 // 商品规格类型定义
 export interface ProductSpec {
   id: string;                   // 规格ID (如: '40-sheets-15.2x15.2')
@@ -285,4 +294,50 @@ export const TEMU_SHOPS: ShopInfo[] = [
   //   categoryName: '',
   //   categoryId: ''
   // }
+];
+
+// 商品分类数据 - 对应6个启用的店铺
+export const PRODUCT_CATEGORIES: ProductCategory[] = [
+  {
+    id: 'paper-petals-category',
+    name: '卡片',
+    categoryName: '办公用品/日常办公用品/办公用纸张/卡片/卡片',
+    categoryId: '1107',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495436,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]'
+  },
+  {
+    id: 'present-perfect-papers-category',
+    name: '卡片',
+    categoryName: '办公用品/日常办公用品/办公用纸张/卡片/卡片',
+    categoryId: '1107',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495436,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]'
+  },
+  {
+    id: 'paper-palette-gifts-category',
+    name: '纸',
+    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/纸',
+    categoryId: '39489',
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]'
+  },
+  {
+    id: 'wrap-wonder-paper-co-category',
+    name: '手工彩纸',
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工彩纸',
+    categoryId: '39714',
+    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":958166,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]'
+  },
+  {
+    id: 'kaleidowrap-designs-category',
+    name: '卡片纸',
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/卡片纸',
+    categoryId: '39721',
+    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":952989,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]'
+  },
+  {
+    id: 'merry-measure-paper-co-category',
+    name: '纸',
+    categoryName: '艺术品、工艺品和缝纫用品 > 剪贴、压印 > 纸张和卡片 > 纸',
+    categoryId: '39489',
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]'
+  }
 ];

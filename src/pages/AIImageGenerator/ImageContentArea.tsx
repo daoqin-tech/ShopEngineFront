@@ -93,6 +93,7 @@ export function ImageContentArea({
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
+  const [sortedSelectedImages, setSortedSelectedImages] = useState<GeneratedImage[]>([]);
 
   // 获取可导出的图片
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
@@ -289,8 +290,36 @@ export function ImageContentArea({
       return;
     }
 
+    // 初始化排序后的图片列表
+    const selected = completedImages.filter(img => selectedImageIds.has(img.id));
+    setSortedSelectedImages(selected);
+
     setShowTemplateDialog(true);
     loadTemplateProjects();
+  };
+
+  // 处理图片拖拽排序
+  const handleImageDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleImageDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleImageDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+
+    if (dragIndex === dropIndex) return;
+
+    const newImages = [...sortedSelectedImages];
+    const [draggedItem] = newImages.splice(dragIndex, 1);
+    newImages.splice(dropIndex, 0, draggedItem);
+
+    setSortedSelectedImages(newImages);
   };
 
   // 加载图片到Image对象
@@ -377,8 +406,8 @@ export function ImageContentArea({
       return;
     }
 
-    const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
-    if (selectedImages.length === 0) {
+    // 使用排序后的图片列表
+    if (sortedSelectedImages.length === 0) {
       toast.error('没有可用的图片');
       return;
     }
@@ -391,16 +420,16 @@ export function ImageContentArea({
 
       // 检查替换区域数量是否匹配
       const regionCount = templateDetail.regions.length;
-      if (selectedImages.length < regionCount) {
-        toast.error(`模板需要 ${regionCount} 张图片，但只选择了 ${selectedImages.length} 张`);
+      if (sortedSelectedImages.length < regionCount) {
+        toast.error(`模板需要 ${regionCount} 张图片，但只选择了 ${sortedSelectedImages.length} 张`);
         setIsReplacing(false);
         return;
       }
 
-      toast.info(`正在合成 ${selectedImages.length} 张图片...`);
+      toast.info(`正在合成 ${sortedSelectedImages.length} 张图片...`);
 
-      // 准备替换图片的URL列表（取前regionCount张）
-      const replacementImageUrls = selectedImages.slice(0, regionCount).map(img => img.imageUrl);
+      // 准备替换图片的URL列表（使用排序后的顺序，取前regionCount张）
+      const replacementImageUrls = sortedSelectedImages.slice(0, regionCount).map(img => img.imageUrl);
 
       // 合成图片
       const { blob, width, height } = await compositeImages(
@@ -412,7 +441,7 @@ export function ImageContentArea({
       toast.info('正在上传合成图片...');
 
       // 为每张图片生成文件名并上传到腾讯云
-      const updatePromises = selectedImages.slice(0, regionCount).map(async (img, index) => {
+      const updatePromises = sortedSelectedImages.slice(0, regionCount).map(async (img: GeneratedImage, index: number) => {
         // 创建File对象
         const fileName = `template-replaced-${Date.now()}-${index}.jpg`;
         const file = new File([blob], fileName, { type: 'image/jpeg' });
@@ -1083,15 +1112,46 @@ export function ImageContentArea({
       {/* 模板替换对话框 */}
       {showTemplateDialog && (
         <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-          <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogContent className="!max-w-[85vw] !w-[85vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>选择图片模板</DialogTitle>
+              <DialogTitle>替换图片模板</DialogTitle>
               <DialogDescription>
-                已选择 {selectedImageIds.size} 张图片，请选择要替换的模板
+                拖拽调整图片顺序，顺序决定了图片在模板中的替换位置
               </DialogDescription>
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto space-y-6 py-4">
+              {/* 图片排序区域 */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <GripVertical className="w-4 h-4" />
+                  选中的图片（共 {sortedSelectedImages.length} 张，可拖拽调整顺序）
+                </h3>
+                <div className="grid grid-cols-6 gap-3">
+                  {sortedSelectedImages.map((img, index) => (
+                    <div
+                      key={img.id}
+                      draggable
+                      onDragStart={(e) => handleImageDragStart(e, index)}
+                      onDragOver={handleImageDragOver}
+                      onDrop={(e) => handleImageDrop(e, index)}
+                      className="relative group cursor-move border-2 border-gray-300 rounded-lg overflow-hidden hover:border-blue-500 transition-all bg-white"
+                    >
+                      <div className="absolute top-1 left-1 bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10">
+                        {index + 1}
+                      </div>
+                      <img
+                        src={img.imageUrl}
+                        alt={`图片 ${index + 1}`}
+                        className="w-full h-24 object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-600 mt-3">
+                  💡 提示：按住图片拖动可以调整顺序，图片将按照从左到右、从上到下的顺序填充模板区域
+                </p>
+              </div>
               {/* 选择模板项目 */}
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -1132,7 +1192,7 @@ export function ImageContentArea({
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
                     {templateProjects.map((project) => (
                       <div
                         key={project.projectId}
@@ -1187,28 +1247,23 @@ export function ImageContentArea({
                       该项目还没有模板
                     </div>
                   ) : (
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-6 gap-3">
                       {projectTemplates.map((template) => (
                         <div
                           key={template.templateId}
                           className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
                             selectedTemplateId === template.templateId
-                              ? 'border-blue-500 bg-blue-50 shadow-md'
-                              : 'border-gray-300 hover:border-blue-300 hover:shadow'
+                              ? 'border-blue-500 bg-white shadow-md ring-2 ring-blue-200'
+                              : 'border-gray-300 hover:border-blue-300 hover:shadow bg-white'
                           }`}
                           onClick={() => setSelectedTemplateId(template.templateId)}
                         >
-                          <div className="relative">
+                          <div className="relative bg-gray-100 rounded flex items-center justify-center" style={{height: '120px'}}>
                             <img
                               src={template.imageUrl}
                               alt="模板预览"
-                              className="w-full h-40 object-cover rounded"
+                              className="max-w-full max-h-full object-contain rounded"
                             />
-                            {selectedTemplateId === template.templateId && (
-                              <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
-                                <CheckSquare className="w-4 h-4" />
-                              </div>
-                            )}
                           </div>
                           <p className="text-xs text-gray-600 mt-2 text-center font-medium">
                             {template.regionCount} 个替换区域

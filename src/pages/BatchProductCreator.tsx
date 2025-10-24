@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { TEMU_SHOPS, PRODUCT_SPECS } from '@/types/shop';
+import { TEMU_SHOPS, PRODUCT_SPECS, PRODUCT_CATEGORIES } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 interface ProductFormData {
   shopAccount: string;        // 店铺账号
   productSpec: string;        // 商品规格ID
+  productCategory: string;    // 商品分类ID
   titleChinese: string;      // 产品标题（中文）
   titleEnglish: string;      // 英文标题
   origin: string;            // 产地
@@ -53,6 +54,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     shopAccount: '',
     productSpec: '',
+    productCategory: '',
     titleChinese: '',
     titleEnglish: '',
     origin: '中国-湖北省',
@@ -327,8 +329,9 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                       type="button"
                       onClick={() => {
                         updateFormData('shopAccount', shop.id);
-                        // 切换店铺时清空规格选择
+                        // 切换店铺时清空规格和分类选择
                         updateFormData('productSpec', '');
+                        updateFormData('productCategory', '');
                       }}
                       className={`
                         relative p-4 rounded-md border-2 text-left transition-colors
@@ -384,6 +387,58 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 </div>
               </div>
             )}
+
+            {/* 商品分类选择（选中店铺后显示） */}
+            {formData.shopAccount && (() => {
+              // 根据选中的店铺ID找到对应的分类
+              const selectedShop = TEMU_SHOPS.find(shop => shop.account === formData.shopAccount);
+              if (!selectedShop) return null;
+
+              // 店铺ID和分类ID的映射关系
+              const shopCategoryMap: Record<string, string> = {
+                'paper-petals': 'paper-petals-category',
+                'present-perfect-papers': 'present-perfect-papers-category',
+                'paper-palette-gifts': 'paper-palette-gifts-category',
+                'wrap-wonder-paper-co': 'wrap-wonder-paper-co-category',
+                'kaleidowrap-designs': 'kaleidowrap-designs-category',
+                'merry-measure-paper-co': 'merry-measure-paper-co-category'
+              };
+
+              const categoryId = shopCategoryMap[selectedShop.id];
+              const category = PRODUCT_CATEGORIES.find(cat => cat.id === categoryId);
+
+              if (!category) return null;
+
+              return (
+                <div className="space-y-3 pt-4 border-t">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    商品分类 *
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => updateFormData('productCategory', category.id)}
+                    className={`
+                      w-full p-4 rounded-md border-2 text-left transition-colors
+                      ${formData.productCategory === category.id
+                        ? 'border-primary bg-background'
+                        : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                      }
+                    `}
+                  >
+                    <div className="space-y-2">
+                      <div className="font-medium text-sm">{category.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {category.categoryName}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        分类ID: {category.categoryId}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* 2. 商品图选择卡片 */}
