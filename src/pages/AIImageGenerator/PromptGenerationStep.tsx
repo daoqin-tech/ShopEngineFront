@@ -147,7 +147,7 @@ export function PromptGenerationStep({
               <HelpCircle className="w-5 h-5" />
             </button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto scrollbar-hide">
             <DialogHeader>
               <DialogTitle>AI提示词生成器使用说明</DialogTitle>
             </DialogHeader>
@@ -252,7 +252,7 @@ export function PromptGenerationStep({
       </div>
 
       {/* 对话历史区域 - 占据剩余空间，无边框 */}
-      <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
+      <div className="flex-1 overflow-y-auto scrollbar-hide" ref={scrollContainerRef}>
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="space-y-6">
             {session.messages.map((message) => (
@@ -479,7 +479,7 @@ export function PromptGenerationStep({
                     onChatSubmit();
                   }
                 }}
-                className="w-full px-5 py-3 pr-12 text-base text-gray-900 placeholder-gray-500 bg-transparent border-0 rounded-3xl focus:outline-none focus:ring-0 resize-none min-h-[48px] max-h-[200px] overflow-y-auto scrollbar-hide"
+                className="w-full px-5 py-3 pr-12 text-base text-gray-900 placeholder-gray-500 bg-transparent border-0 rounded-3xl focus:outline-none focus:ring-0 resize-none min-h-[48px] max-h-[200px] overflow-y-auto scrollbar-hide [&::-webkit-scrollbar]:hidden"
                 style={{
                   height: '48px',
                   minHeight: '48px',

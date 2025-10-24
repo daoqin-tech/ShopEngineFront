@@ -1,11 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Download, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Replace } from 'lucide-react';
 import { PromptStatus, GeneratedImage, Prompt } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
+import { imageTemplateService, ImageTemplateProjectListItem, ImageTemplateListItem, ImageTemplate } from '@/services/imageTemplateService';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -59,7 +61,6 @@ export function ImageContentArea({
 
   // 批量导出相关状态
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
-  const [isExporting, setIsExporting] = useState(false);
 
   // 批量重试相关状态
   const [isRetrying, setIsRetrying] = useState(false);
@@ -82,6 +83,16 @@ export function ImageContentArea({
   // 文件上传相关状态
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 图片模板替换相关状态
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [projectTemplates, setProjectTemplates] = useState<ImageTemplateListItem[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [isReplacing, setIsReplacing] = useState(false);
 
   // 获取可导出的图片
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
@@ -121,62 +132,6 @@ export function ImageContentArea({
         selectableIds.forEach(id => newSet.add(id));
         return newSet;
       });
-    }
-  };
-
-  // 批量导出压缩包
-  const handleBatchExport = async () => {
-    if (selectedImageIds.size === 0) {
-      alert('请选择要导出的图片');
-      return;
-    }
-
-    setIsExporting(true);
-
-    try {
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
-
-      const downloadPromises = selectedImages.map(async (image, index) => {
-        if (!image.imageUrl) return;
-
-        try {
-          const response = await fetch(image.imageUrl, {
-            mode: 'cors',
-            headers: { 'Accept': 'image/*' }
-          });
-
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-          const blob = await response.blob();
-          const filename = `image-${index + 1}-${image.id}.jpg`;
-          zip.file(filename, blob);
-        } catch (error) {
-          console.warn(`跳过图片 ${image.id}，CORS限制或网络错误:`, error);
-        }
-      });
-
-      await Promise.all(downloadPromises);
-
-      const content = await zip.generateAsync({ type: 'blob' });
-      const filename = projectName ? `${projectName}.zip` : `generated-images-${Date.now()}.zip`;
-
-      const url = window.URL.createObjectURL(content);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      setSelectedImageIds(new Set());
-    } catch (error) {
-      console.error('批量导出失败:', error);
-      alert('导出失败，请重试');
-    } finally {
-      setIsExporting(false);
     }
   };
 
@@ -285,6 +240,213 @@ export function ImageContentArea({
       toast.error('删除失败，请稍后再试');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // 加载图片模板项目列表
+  const loadTemplateProjects = async () => {
+    setIsLoadingProjects(true);
+    try {
+      const projects = await imageTemplateService.getProjects();
+      setTemplateProjects(projects);
+    } catch (error) {
+      console.error('加载模板项目失败:', error);
+      toast.error('加载模板项目失败');
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  // 当选择项目时，加载该项目下的模板列表
+  useEffect(() => {
+    if (selectedProjectId) {
+      loadProjectTemplates();
+    } else {
+      setProjectTemplates([]);
+      setSelectedTemplateId('');
+    }
+  }, [selectedProjectId]);
+
+  const loadProjectTemplates = async () => {
+    if (!selectedProjectId) return;
+
+    setIsLoadingTemplates(true);
+    try {
+      const templates = await imageTemplateService.getTemplates(selectedProjectId);
+      setProjectTemplates(templates);
+    } catch (error) {
+      console.error('加载模板列表失败:', error);
+      toast.error('加载模板列表失败');
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  // 打开模板替换对话框
+  const handleOpenTemplateDialog = () => {
+    if (selectedImageIds.size === 0) {
+      toast.error('请先选择要替换的图片');
+      return;
+    }
+
+    setShowTemplateDialog(true);
+    loadTemplateProjects();
+  };
+
+  // 加载图片到Image对象
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
+
+  // 合成图片：将多张图片按顺序放置到模板的指定区域
+  const compositeImages = async (
+    templateImageUrl: string,
+    regions: Array<{ x: number; y: number; width: number; height: number; order: number }>,
+    replacementImages: string[]
+  ): Promise<{ blob: Blob; width: number; height: number }> => {
+    // 加载模板图片
+    const templateImg = await loadImage(templateImageUrl);
+
+    // 创建canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = templateImg.width;
+    canvas.height = templateImg.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('无法创建canvas上下文');
+    }
+
+    // 绘制模板图片作为底图
+    ctx.drawImage(templateImg, 0, 0);
+
+    // 按顺序替换区域
+    const sortedRegions = [...regions].sort((a, b) => a.order - b.order);
+
+    for (let i = 0; i < sortedRegions.length && i < replacementImages.length; i++) {
+      const region = sortedRegions[i];
+      const imageUrl = replacementImages[i];
+
+      try {
+        // 加载替换图片
+        const replaceImg = await loadImage(imageUrl);
+
+        // 将替换图片绘制到指定区域（覆盖模式）
+        ctx.drawImage(
+          replaceImg,
+          region.x,
+          region.y,
+          region.width,
+          region.height
+        );
+      } catch (error) {
+        console.error(`绘制替换图片 ${i + 1} 失败:`, error);
+        throw error;
+      }
+    }
+
+    // 转换为blob
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve({
+              blob,
+              width: canvas.width,
+              height: canvas.height,
+            });
+          } else {
+            reject(new Error('图片转换失败'));
+          }
+        },
+        'image/jpeg',
+        0.92
+      );
+    });
+  };
+
+  // 执行图片替换
+  const handleReplaceTemplate = async () => {
+    if (!selectedProjectId || !selectedTemplateId) {
+      toast.error('请选择模板项目和模板');
+      return;
+    }
+
+    const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
+    if (selectedImages.length === 0) {
+      toast.error('没有可用的图片');
+      return;
+    }
+
+    setIsReplacing(true);
+
+    try {
+      // 获取模板详情
+      const templateDetail = await imageTemplateService.getTemplate(selectedProjectId, selectedTemplateId);
+
+      // 检查替换区域数量是否匹配
+      const regionCount = templateDetail.regions.length;
+      if (selectedImages.length < regionCount) {
+        toast.error(`模板需要 ${regionCount} 张图片，但只选择了 ${selectedImages.length} 张`);
+        setIsReplacing(false);
+        return;
+      }
+
+      toast.info(`正在合成 ${selectedImages.length} 张图片...`);
+
+      // 准备替换图片的URL列表（取前regionCount张）
+      const replacementImageUrls = selectedImages.slice(0, regionCount).map(img => img.imageUrl);
+
+      // 合成图片
+      const { blob, width, height } = await compositeImages(
+        templateDetail.imageUrl,
+        templateDetail.regions,
+        replacementImageUrls
+      );
+
+      toast.info('正在上传合成图片...');
+
+      // 为每张图片生成文件名并上传到腾讯云
+      const updatePromises = selectedImages.slice(0, regionCount).map(async (img, index) => {
+        // 创建File对象
+        const fileName = `template-replaced-${Date.now()}-${index}.jpg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+        // 上传到腾讯云
+        const uploadedUrl = await FileUploadAPI.uploadFile(file);
+
+        return {
+          imageId: img.id,
+          imageUrl: uploadedUrl,
+          width,
+          height,
+        };
+      });
+
+      const updatedImages = await Promise.all(updatePromises);
+
+      // 调用后端API批量更新图片信息
+      await AIImageSessionsAPI.batchUpdateImages(updatedImages);
+
+      toast.success(`成功替换 ${updatedImages.length} 张图片`);
+
+      // 刷新图片列表
+      onRefreshImages();
+
+      setShowTemplateDialog(false);
+      setSelectedProjectId('');
+      setSelectedTemplateId('');
+      setSelectedImageIds(new Set());
+    } catch (error) {
+      console.error('替换模板失败:', error);
+      toast.error('替换模板失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsReplacing(false);
     }
   };
 
@@ -581,19 +743,10 @@ export function ImageContentArea({
                   )}
                 </Button>
 
-                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
-                  onClick={handleBatchExport} disabled={selectedImageIds.size === 0 || isExporting}>
-                  {isExporting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      导出中...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      导出压缩包
-                    </>
-                  )}
+                <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:text-blue-900 hover:border-blue-400"
+                  onClick={handleOpenTemplateDialog} disabled={selectedImageIds.size === 0}>
+                  <Replace className="w-4 h-4 mr-2" />
+                  替换模板
                 </Button>
 
                 <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
@@ -925,6 +1078,170 @@ export function ImageContentArea({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 模板替换对话框 */}
+      {showTemplateDialog && (
+        <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+          <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>选择图片模板</DialogTitle>
+              <DialogDescription>
+                已选择 {selectedImageIds.size} 张图片，请选择要替换的模板
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto space-y-6 py-4">
+              {/* 选择模板项目 */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium">选择模板项目</label>
+                  {templateProjects.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (selectedProjectId) {
+                          setSelectedProjectId('');
+                        } else if (templateProjects.length > 0) {
+                          setSelectedProjectId(templateProjects[0].projectId);
+                        }
+                      }}
+                    >
+                      {selectedProjectId ? '取消选择' : '选择第一个'}
+                    </Button>
+                  )}
+                </div>
+                {isLoadingProjects ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-2 text-gray-600">加载中...</span>
+                  </div>
+                ) : templateProjects.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>还没有模板项目</p>
+                    <Button
+                      variant="link"
+                      className="text-blue-600 mt-2"
+                      onClick={() => {
+                        setShowTemplateDialog(false);
+                        navigate('/workspace/image-templates');
+                      }}
+                    >
+                      去创建模板项目
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4">
+                    {templateProjects.map((project) => (
+                      <div
+                        key={project.projectId}
+                        className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                          selectedProjectId === project.projectId
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-300 hover:border-blue-300'
+                        }`}
+                        onClick={() => setSelectedProjectId(project.projectId)}
+                      >
+                        <h3 className="font-medium text-gray-900">{project.name}</h3>
+                        {project.description && (
+                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{project.description}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          {project.templateCount} 个模板
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 选择具体模板 */}
+              {selectedProjectId && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium">选择模板</label>
+                    {projectTemplates.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedTemplateId) {
+                            setSelectedTemplateId('');
+                          } else if (projectTemplates.length > 0) {
+                            setSelectedTemplateId(projectTemplates[0].templateId);
+                          }
+                        }}
+                      >
+                        {selectedTemplateId ? '取消选择' : '选择第一个'}
+                      </Button>
+                    )}
+                  </div>
+                  {isLoadingTemplates ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="ml-2 text-gray-600">加载中...</span>
+                    </div>
+                  ) : projectTemplates.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      该项目还没有模板
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-4">
+                      {projectTemplates.map((template) => (
+                        <div
+                          key={template.templateId}
+                          className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
+                            selectedTemplateId === template.templateId
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : 'border-gray-300 hover:border-blue-300 hover:shadow'
+                          }`}
+                          onClick={() => setSelectedTemplateId(template.templateId)}
+                        >
+                          <div className="relative">
+                            <img
+                              src={template.imageUrl}
+                              alt="模板预览"
+                              className="w-full h-40 object-cover rounded"
+                            />
+                            {selectedTemplateId === template.templateId && (
+                              <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                                <CheckSquare className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-2 text-center font-medium">
+                            {template.regionCount} 个替换区域
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>
+                取消
+              </Button>
+              <Button
+                onClick={handleReplaceTemplate}
+                disabled={!selectedProjectId || !selectedTemplateId || isReplacing}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isReplacing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    处理中...
+                  </>
+                ) : (
+                  '确认替换'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

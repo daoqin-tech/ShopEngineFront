@@ -119,19 +119,30 @@ export function GenerationParamsPanel({
         {/* 比例选择 */}
         <div className="mb-6">
           <label className="text-sm font-medium text-gray-700 mb-3 block">选择比例</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             {ASPECT_RATIOS.map((ratio) => (
               <button
                 key={ratio.name}
                 onClick={() => handleAspectRatioChange(ratio)}
-                className={`p-3 text-left border rounded-lg transition-all duration-200 ${
+                className={`w-full p-3 text-left border rounded-lg transition-all duration-200 ${
                   selectedAspectRatio.name === ratio.name
                     ? 'border-gray-900 bg-gray-900 text-white'
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
-                <div className="text-sm font-medium mb-1">{ratio.description}</div>
-                <div className="text-xs opacity-75">{ratio.label} ({ratio.width}×{ratio.height})</div>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium mb-1">{ratio.description}</div>
+                    <div className="text-xs opacity-75">{ratio.label} ({ratio.width}×{ratio.height})</div>
+                  </div>
+                  {selectedAspectRatio.name === ratio.name && (
+                    <div className="ml-2">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>

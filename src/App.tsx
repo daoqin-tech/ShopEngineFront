@@ -7,11 +7,15 @@ import { Login } from "@/pages/Login"
 import { WechatCallback } from "@/pages/WechatCallback"
 import { NotFound } from "@/pages/NotFound"
 import { AIImageProjects } from "@/pages/AIImageProjects"
-import { AIImageGenerator } from "@/pages/AIImageGenerator"
+import { PromptGeneration } from "@/pages/PromptGeneration"
+import { ImageGeneration } from "@/pages/ImageGeneration"
+import { HotProductCopy } from "@/pages/HotProductCopy"
 import { ImageEditor } from "@/pages/ImageEdit"
 import { ImageEditProjects } from "@/pages/ImageEditProjects"
 import { OcrEditor } from "@/pages/Ocr"
 import { TemplateManagement } from "@/pages/TemplateManagement"
+import ImageTemplates from "@/pages/ImageTemplates"
+import ImageTemplateEditor from "@/pages/ImageTemplateEditor"
 import { CoverGeneration } from "@/pages/CoverGeneration"
 import { CoverTaskCreator } from "@/pages/CoverTaskCreator"
 import { TemplateEditor } from "@/pages/TemplateEditor"
@@ -50,9 +54,21 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/workspace/project/:projectId/edit" element={
+          <Route path="/workspace/project/:projectId/prompt-generation" element={
             <ProtectedRoute>
-              <AIImageGenerator />
+              <PromptGeneration />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/project/:projectId/image-generation" element={
+            <ProtectedRoute>
+              <ImageGeneration />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/project/:projectId/hot-product-copy" element={
+            <ProtectedRoute>
+              <HotProductCopy />
             </ProtectedRoute>
           } />
 
@@ -85,7 +101,21 @@ function App() {
               </WorkspaceLayout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/workspace/image-templates" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <ImageTemplates />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/image-templates/:projectId/edit" element={
+            <ProtectedRoute>
+              <ImageTemplateEditor />
+            </ProtectedRoute>
+          } />
+
           <Route path="/workspace/cover-generation" element={
             <ProtectedRoute>
               <WorkspaceLayout>

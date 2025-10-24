@@ -137,4 +137,17 @@ export class AIImageSessionsAPI {
       promptIds
     });
   }
+
+  // 批量更新图片信息（替换模板后更新）
+  static async batchUpdateImages(images: Array<{
+    imageId: string;
+    imageUrl: string;
+    width: number;
+    height: number;
+  }>): Promise<{ updated_count: number }> {
+    const response = await apiClient.post('/images/batch-update', {
+      images
+    });
+    return response.data;
+  }
 }

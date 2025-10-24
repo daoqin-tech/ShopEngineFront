@@ -75,8 +75,12 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         isActive: false,
         items: [
           {
-            title: "模板管理",
+            title: "套图模板",
             url: "/workspace/template-management",
+          },
+          {
+            title: "图片模板",
+            url: "/workspace/image-templates",
           },
         ],
       },

@@ -117,7 +117,7 @@ export function AIImageProjects() {
       const newProject = await AIImageProjectsAPI.createAIImageProject({
         name: '新建项目',
       });
-      navigate(`/workspace/project/${newProject.id}/edit`);
+      navigate(`/workspace/project/${newProject.id}/prompt-generation`);
     } catch (err) {
       toast.error('创建项目失败', {
         description: '请稍后再试'
@@ -152,7 +152,7 @@ export function AIImageProjects() {
 
 
   const handleOpenProject = (projectId: string) => {
-    navigate(`/workspace/project/${projectId}/edit`);
+    navigate(`/workspace/project/${projectId}/prompt-generation`);
   };
 
   const handleStartEditName = (project: AIImageProject) => {
