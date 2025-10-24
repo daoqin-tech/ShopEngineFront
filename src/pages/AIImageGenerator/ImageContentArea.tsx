@@ -89,7 +89,7 @@ export function ImageContentArea({
   const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [projectTemplates, setProjectTemplates] = useState<ImageTemplateListItem[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
@@ -264,7 +264,7 @@ export function ImageContentArea({
       loadProjectTemplates();
     } else {
       setProjectTemplates([]);
-      setSelectedTemplateId('');
+      setSelectedTemplateIds(new Set());
     }
   }, [selectedProjectId]);
 
@@ -401,7 +401,7 @@ export function ImageContentArea({
 
   // 执行图片替换
   const handleReplaceTemplate = async () => {
-    if (!selectedProjectId || !selectedTemplateId) {
+    if (!selectedProjectId || selectedTemplateIds.size === 0) {
       toast.error('请选择模板项目和模板');
       return;
     }
@@ -412,50 +412,51 @@ export function ImageContentArea({
       return;
     }
 
+    // 检查图片数量和模板数量是否匹配
+    if (sortedSelectedImages.length !== selectedTemplateIds.size) {
+      toast.error(`请选择 ${selectedTemplateIds.size} 张图片来匹配 ${selectedTemplateIds.size} 个模板`);
+      return;
+    }
+
     setIsReplacing(true);
 
     try {
-      // 获取模板详情
-      const templateDetail = await imageTemplateService.getTemplate(selectedProjectId, selectedTemplateId);
+      const selectedTemplateIdArray = Array.from(selectedTemplateIds);
+      const updatePromises: Promise<{imageId: string; imageUrl: string; width: number; height: number}>[] = [];
 
-      // 检查替换区域数量是否匹配
-      const regionCount = templateDetail.regions.length;
-      if (sortedSelectedImages.length < regionCount) {
-        toast.error(`模板需要 ${regionCount} 张图片，但只选择了 ${sortedSelectedImages.length} 张`);
-        setIsReplacing(false);
-        return;
-      }
+      toast.info(`正在处理 ${selectedTemplateIdArray.length} 个模板...`);
 
-      toast.info(`正在合成 ${sortedSelectedImages.length} 张图片...`);
+      // 一对一替换：第i张图片替换第i个模板
+      for (let i = 0; i < selectedTemplateIdArray.length; i++) {
+        const templateId = selectedTemplateIdArray[i];
+        const image = sortedSelectedImages[i];
 
-      // 准备替换图片的URL列表（使用排序后的顺序，取前regionCount张）
-      const replacementImageUrls = sortedSelectedImages.slice(0, regionCount).map(img => img.imageUrl);
+        // 获取模板详情
+        const templateDetail = await imageTemplateService.getTemplate(selectedProjectId, templateId);
 
-      // 合成图片
-      const { blob, width, height } = await compositeImages(
-        templateDetail.imageUrl,
-        templateDetail.regions,
-        replacementImageUrls
-      );
+        // 合成图片（每个模板只有一个region）
+        const { blob, width, height } = await compositeImages(
+          templateDetail.imageUrl,
+          templateDetail.regions,
+          [image.imageUrl] // 一张图片对应一个模板的一个region
+        );
 
-      toast.info('正在上传合成图片...');
-
-      // 为每张图片生成文件名并上传到腾讯云
-      const updatePromises = sortedSelectedImages.slice(0, regionCount).map(async (img: GeneratedImage, index: number) => {
-        // 创建File对象
-        const fileName = `template-replaced-${Date.now()}-${index}.jpg`;
+        // 创建File对象并上传
+        const fileName = `template-replaced-${Date.now()}-${i}.jpg`;
         const file = new File([blob], fileName, { type: 'image/jpeg' });
 
         // 上传到腾讯云
         const uploadedUrl = await FileUploadAPI.uploadFile(file);
 
-        return {
-          imageId: img.id,
+        updatePromises.push(Promise.resolve({
+          imageId: image.id,
           imageUrl: uploadedUrl,
           width,
           height,
-        };
-      });
+        }));
+      }
+
+      toast.info('正在保存替换结果...');
 
       const updatedImages = await Promise.all(updatePromises);
 
@@ -469,7 +470,7 @@ export function ImageContentArea({
 
       setShowTemplateDialog(false);
       setSelectedProjectId('');
-      setSelectedTemplateId('');
+      setSelectedTemplateIds(new Set());
       setSelectedImageIds(new Set());
     } catch (error) {
       console.error('替换模板失败:', error);
@@ -1148,9 +1149,19 @@ export function ImageContentArea({
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-600 mt-3">
-                  💡 提示：按住图片拖动可以调整顺序，图片将按照从左到右、从上到下的顺序填充模板区域
-                </p>
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-gray-600">
+                    💡 提示：按住图片拖动可以调整顺序
+                  </p>
+                  {selectedTemplateIds.size > 0 && (
+                    <p className={`text-xs font-medium ${sortedSelectedImages.length === selectedTemplateIds.size ? 'text-green-600' : 'text-orange-600'}`}>
+                      {sortedSelectedImages.length === selectedTemplateIds.size
+                        ? `✓ 已选择 ${sortedSelectedImages.length} 张图片，将一对一替换 ${selectedTemplateIds.size} 个模板`
+                        : `⚠️ 需要选择 ${selectedTemplateIds.size} 张图片来匹配 ${selectedTemplateIds.size} 个模板（当前 ${sortedSelectedImages.length} 张）`
+                      }
+                    </p>
+                  )}
+                </div>
               </div>
               {/* 选择模板项目 */}
               <div>
@@ -1220,20 +1231,20 @@ export function ImageContentArea({
               {selectedProjectId && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-medium">选择模板</label>
+                    <label className="text-sm font-medium">选择模板（可多选，已选 {selectedTemplateIds.size} 个）</label>
                     {projectTemplates.length > 0 && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          if (selectedTemplateId) {
-                            setSelectedTemplateId('');
-                          } else if (projectTemplates.length > 0) {
-                            setSelectedTemplateId(projectTemplates[0].templateId);
+                          if (selectedTemplateIds.size > 0) {
+                            setSelectedTemplateIds(new Set());
+                          } else {
+                            setSelectedTemplateIds(new Set(projectTemplates.map(t => t.templateId)));
                           }
                         }}
                       >
-                        {selectedTemplateId ? '取消选择' : '选择第一个'}
+                        {selectedTemplateIds.size > 0 ? '取消全选' : '全选'}
                       </Button>
                     )}
                   </div>
@@ -1248,28 +1259,44 @@ export function ImageContentArea({
                     </div>
                   ) : (
                     <div className="grid grid-cols-6 gap-3">
-                      {projectTemplates.map((template) => (
-                        <div
-                          key={template.templateId}
-                          className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
-                            selectedTemplateId === template.templateId
-                              ? 'border-blue-500 bg-white shadow-md ring-2 ring-blue-200'
-                              : 'border-gray-300 hover:border-blue-300 hover:shadow bg-white'
-                          }`}
-                          onClick={() => setSelectedTemplateId(template.templateId)}
-                        >
-                          <div className="relative bg-gray-100 rounded flex items-center justify-center" style={{height: '120px'}}>
-                            <img
-                              src={template.imageUrl}
-                              alt="模板预览"
-                              className="max-w-full max-h-full object-contain rounded"
-                            />
+                      {projectTemplates.map((template) => {
+                        const isSelected = selectedTemplateIds.has(template.templateId);
+                        return (
+                          <div
+                            key={template.templateId}
+                            className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${
+                              isSelected
+                                ? 'border-blue-500 bg-white shadow-md ring-2 ring-blue-200'
+                                : 'border-gray-300 hover:border-blue-300 hover:shadow bg-white'
+                            }`}
+                            onClick={() => {
+                              const newSet = new Set(selectedTemplateIds);
+                              if (isSelected) {
+                                newSet.delete(template.templateId);
+                              } else {
+                                newSet.add(template.templateId);
+                              }
+                              setSelectedTemplateIds(newSet);
+                            }}
+                          >
+                            <div className="relative bg-gray-100 rounded flex items-center justify-center" style={{height: '120px'}}>
+                              {isSelected && (
+                                <div className="absolute top-1 left-1 bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10">
+                                  ✓
+                                </div>
+                              )}
+                              <img
+                                src={template.imageUrl}
+                                alt="模板预览"
+                                className="max-w-full max-h-full object-contain rounded"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-600 mt-2 text-center font-medium">
+                              {template.regionCount} 个替换区域
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-600 mt-2 text-center font-medium">
-                            {template.regionCount} 个替换区域
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1282,7 +1309,7 @@ export function ImageContentArea({
               </Button>
               <Button
                 onClick={handleReplaceTemplate}
-                disabled={!selectedProjectId || !selectedTemplateId || isReplacing}
+                disabled={!selectedProjectId || selectedTemplateIds.size === 0 || isReplacing || sortedSelectedImages.length !== selectedTemplateIds.size}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isReplacing ? (
@@ -1291,7 +1318,7 @@ export function ImageContentArea({
                     处理中...
                   </>
                 ) : (
-                  '确认替换'
+                  `确认替换 (${sortedSelectedImages.length} 张图片 → ${selectedTemplateIds.size} 个模板)`
                 )}
               </Button>
             </DialogFooter>
