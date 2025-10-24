@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Plus, Trash2, Save, ArrowLeft, X, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadCroppedImageToTencentCloud } from '@/lib/tencentCloud';
-import { imageTemplateService, ImageTemplate } from '@/services/imageTemplateService';
+import { imageTemplateService } from '@/services/imageTemplateService';
 import { useNavigate, useParams } from 'react-router-dom';
 
 interface ReplaceRegion {
@@ -277,7 +277,7 @@ export default function ImageTemplateEditor() {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     // 绘制已有的替换区域
-    currentTemplate.regions.forEach((region, index) => {
+    currentTemplate.regions.forEach((region) => {
       const x = region.x * newScale;
       const y = region.y * newScale;
       const w = region.width * newScale;
