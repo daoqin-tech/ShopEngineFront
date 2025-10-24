@@ -21,11 +21,31 @@ export function PromptGeneration() {
 
   // 前端UI状态管理
   const [promptsMap, setPromptsMap] = useState<Map<string, Prompt>>(new Map());
-  const [selectedPromptIds, setSelectedPromptIds] = useState<Set<string>>(new Set());
+  const [selectedPromptIds, setSelectedPromptIds] = useState<Set<string>>(() => {
+    // 从 localStorage 恢复选中状态
+    if (projectId) {
+      const saved = localStorage.getItem(`selectedPrompts_${projectId}`);
+      if (saved) {
+        try {
+          return new Set(JSON.parse(saved));
+        } catch (e) {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [currentChatInput, setCurrentChatInput] = useState('');
   const [selectedPromptsForOptimization, setSelectedPromptsForOptimization] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 持久化选中状态到 localStorage
+  useEffect(() => {
+    if (projectId) {
+      localStorage.setItem(`selectedPrompts_${projectId}`, JSON.stringify(Array.from(selectedPromptIds)));
+    }
+  }, [selectedPromptIds, projectId]);
 
   useEffect(() => {
     if (projectId) {

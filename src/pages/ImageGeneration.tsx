@@ -20,13 +20,33 @@ export function ImageGeneration() {
   });
 
   const [promptsMap, setPromptsMap] = useState<Map<string, Prompt>>(new Map());
-  const [selectedPromptIds, setSelectedPromptIds] = useState<Set<string>>(new Set());
+  const [selectedPromptIds, setSelectedPromptIds] = useState<Set<string>>(() => {
+    // 从 localStorage 恢复选中状态
+    if (projectId) {
+      const saved = localStorage.getItem(`selectedPrompts_${projectId}`);
+      if (saved) {
+        try {
+          return new Set(JSON.parse(saved));
+        } catch (e) {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
 
   // 轮询管理状态
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // 持久化选中状态到 localStorage
+  useEffect(() => {
+    if (projectId) {
+      localStorage.setItem(`selectedPrompts_${projectId}`, JSON.stringify(Array.from(selectedPromptIds)));
+    }
+  }, [selectedPromptIds, projectId]);
 
   useEffect(() => {
     if (projectId) {
@@ -73,11 +93,14 @@ export function ImageGeneration() {
       }
       setPromptsMap(extractedPromptsMap);
 
-      // 自动选中所有PENDING状态的prompts
-      const pendingPromptIds = Array.from(extractedPromptsMap.values())
-        .filter(p => p.status === PromptStatus.PENDING)
-        .map(p => p.id);
-      setSelectedPromptIds(new Set(pendingPromptIds));
+      // 只有在没有保存的选中状态时，才自动选中所有PENDING状态的prompts
+      const savedSelection = localStorage.getItem(`selectedPrompts_${id}`);
+      if (!savedSelection) {
+        const pendingPromptIds = Array.from(extractedPromptsMap.values())
+          .filter(p => p.status === PromptStatus.PENDING)
+          .map(p => p.id);
+        setSelectedPromptIds(new Set(pendingPromptIds));
+      }
     } catch (err) {
       console.error('Error loading session:', err);
     }
