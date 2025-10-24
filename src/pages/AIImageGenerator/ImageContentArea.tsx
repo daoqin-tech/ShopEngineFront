@@ -342,7 +342,7 @@ export function ImageContentArea({
     // 加载模板图片
     const templateImg = await loadImage(templateImageUrl);
 
-    // 创建canvas
+    // 创建原始尺寸的canvas
     const canvas = document.createElement('canvas');
     canvas.width = templateImg.width;
     canvas.height = templateImg.height;
@@ -379,15 +379,31 @@ export function ImageContentArea({
       }
     }
 
+    // 压缩图片到目标尺寸 1024×1440
+    const targetWidth = 1024;
+    const targetHeight = 1440;
+
+    // 创建压缩后的canvas
+    const compressedCanvas = document.createElement('canvas');
+    compressedCanvas.width = targetWidth;
+    compressedCanvas.height = targetHeight;
+    const compressedCtx = compressedCanvas.getContext('2d');
+    if (!compressedCtx) {
+      throw new Error('无法创建压缩canvas上下文');
+    }
+
+    // 将原始图片缩放到目标尺寸
+    compressedCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+
     // 转换为blob
     return new Promise((resolve, reject) => {
-      canvas.toBlob(
+      compressedCanvas.toBlob(
         (blob) => {
           if (blob) {
             resolve({
               blob,
-              width: canvas.width,
-              height: canvas.height,
+              width: targetWidth,
+              height: targetHeight,
             });
           } else {
             reject(new Error('图片转换失败'));
