@@ -61,10 +61,10 @@ export interface ShopInfo {
   operatingSite?: string;       // 经营站点
 }
 
-// 商品规格数据
-export const PRODUCT_SPECS: ProductSpec[] = [
+// 手账纸商品规格数据
+export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
   {
-    id: '40-sheets-15.2x15.2',
+    id: 'journal-40-sheets-15.2x15.2',
     name: '40张 15.2cm×15.2cm',
     sheets: 40,
     size: '15.2cm×15.2cm',
@@ -83,7 +83,7 @@ export const PRODUCT_SPECS: ProductSpec[] = [
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   },
   {
-    id: '20-sheets-30x30',
+    id: 'journal-20-sheets-30x30',
     name: '20张 30cm×30cm',
     sheets: 20,
     size: '30cm×30cm',
@@ -102,6 +102,32 @@ export const PRODUCT_SPECS: ProductSpec[] = [
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   }
 ];
+
+// 日历商品规格数据 (Mock数据)
+export const CALENDAR_SPECS: ProductSpec[] = [
+  {
+    id: 'calendar-single-20x30',
+    name: '2026年日历',
+    sheets: 13,
+    size: '21cm×29.7cm',
+    length: 29.7,
+    width: 21.0,
+    height: 1.0,
+    weight: 90,
+    declaredPrice: 150,
+    suggestedRetailPrice: 18,
+    variantName: '纸',
+    variantAttributeName1: '材质',
+    variantAttributeValue1: '纸',
+    stock: 99999,
+    shippingTime: 9,
+    productSpec: '2026年日历',
+    productUsage: '适用于墙面装饰、日程规划、日期提醒、节日记录、时间管理等用途'
+  },
+];
+
+// 兼容性：保留原有的 PRODUCT_SPECS 导出，默认为手账纸规格
+export const PRODUCT_SPECS = JOURNAL_PAPER_SPECS;
 
 // Temu店铺数据
 export const TEMU_SHOPS: ShopInfo[] = [
@@ -296,8 +322,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
   // }
 ];
 
-// 商品分类数据 - 对应6个启用的店铺
-export const PRODUCT_CATEGORIES: ProductCategory[] = [
+// 手账纸商品分类数据
+export const JOURNAL_PAPER_CATEGORIES: ProductCategory[] = [
   {
     id: 'paper-petals-category',
     name: '卡片',
@@ -341,3 +367,31 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
     productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]'
   }
 ];
+
+// 日历商品分类数据
+export const CALENDAR_CATEGORIES: ProductCategory[] = [
+  {
+    id: 'calendar-wall-category',
+    name: '挂历',
+    categoryName: '办公用品>日常办公用品>日历及个人规划用品>挂历',
+    categoryId: '985',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1562398,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"是否印刷日期","refPid":7424,"pid":2287,"templatePid":1483032,"numberInputValue":"","valueUnit":"","vid":"246628","propValue":"dated"},{"propName":"起始年份","refPid":7465,"pid":2294,"templatePid":1485843,"numberInputValue":"","valueUnit":"","vid":"278025","propValue":"2026"},{"propName":"起始月份","refPid":7475,"pid":2299,"templatePid":1488062,"numberInputValue":"","valueUnit":"","vid":"280351","propValue":"1月"},{"propName":"结束年份","refPid":7503,"pid":2309,"templatePid":1492273,"numberInputValue":"","valueUnit":"","vid":"326009","propValue":"2026"},{"propName":"结束月份","refPid":7527,"pid":2325,"templatePid":1495470,"numberInputValue":"","valueUnit":"","vid":"327909","propValue":"12月"},{"propName":"文字语言","refPid":4086,"pid":1735,"templatePid":999019,"numberInputValue":"","valueUnit":"","vid":"62905","propValue":"英语"}]'
+  },
+  {
+    id: 'calendar-desk-category',
+    name: '台历',
+    categoryName: '办公用品>日常办公用品>日历及个人规划用品>台历>台历',
+    categoryId: '989',
+    productAttributes: '[{"propName":"是否印刷日期","refPid":7424,"pid":2287,"templatePid":1483033,"numberInputValue":"","valueUnit":"","vid":"246628","propValue":"dated"},{"propName":"起始年份","refPid":7465,"pid":2294,"templatePid":1485846,"numberInputValue":"","valueUnit":"","vid":"278025","propValue":"2026"},{"propName":"起始月份","refPid":7475,"pid":2299,"templatePid":1488061,"numberInputValue":"","valueUnit":"","vid":"280351","propValue":"1月"},{"propName":"结束年份","refPid":7503,"pid":2309,"templatePid":1492274,"numberInputValue":"","valueUnit":"","vid":"326008","propValue":"2026"},{"propName":"结束月份","refPid":7527,"pid":2325,"templatePid":1495472,"numberInputValue":"","valueUnit":"","vid":"327909","propValue":"12月"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1140713,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"文字语言","refPid":4086,"pid":1735,"templatePid":999025,"numberInputValue":"","valueUnit":"","vid":"62905","propValue":"英语"},{"propName":"看法","refPid":704,"pid":813,"templatePid":370014,"numberInputValue":"","valueUnit":"","vid":"22127","propValue":"每周"}]'
+  },
+  {
+    id: 'calendar-wall-planner-category',
+    name: '墙挂式规划表',
+    categoryName: '办公用品>日常办公用品>日历及个人规划用品>墙挂式规划表',
+    categoryId: '993',
+    productAttributes: '[{"propName":"是否印刷日期","refPid":7424,"pid":2287,"templatePid":1483866,"numberInputValue":"","valueUnit":"","vid":"246628","propValue":"dated"},{"propName":"起始年份","refPid":7465,"pid":2294,"templatePid":1485844,"numberInputValue":"","valueUnit":"","vid":"278025","propValue":"2026"},{"propName":"起始月份","refPid":7475,"pid":2299,"templatePid":1488063,"numberInputValue":"","valueUnit":"","vid":"280351","propValue":"1月"},{"propName":"结束年份","refPid":7503,"pid":2309,"templatePid":1491196,"numberInputValue":"","valueUnit":"","vid":"326008","propValue":"2026"},{"propName":"结束月份","refPid":7527,"pid":2325,"templatePid":1495471,"numberInputValue":"","valueUnit":"","vid":"327909","propValue":"12月"},{"propName":"计划本类型","refPid":7423,"pid":2286,"templatePid":1483031,"numberInputValue":"","valueUnit":"","vid":"246619","propValue":"日计划"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":962558,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"目标听众","refPid":434,"pid":437,"templatePid":369743,"numberInputValue":"","valueUnit":"","vid":"17047","propValue":"成人"}]'
+  }
+];
+
+// 兼容性：保留原有的 PRODUCT_CATEGORIES 导出，默认为手账纸分类
+export const PRODUCT_CATEGORIES = JOURNAL_PAPER_CATEGORIES;

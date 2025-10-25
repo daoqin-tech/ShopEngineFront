@@ -9,9 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { TEMU_SHOPS, PRODUCT_SPECS, PRODUCT_CATEGORIES } from '@/types/shop';
+import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { toast } from 'sonner';
@@ -51,6 +52,14 @@ interface BatchProductCreatorProps {}
 
 export function BatchProductCreator({}: BatchProductCreatorProps) {
   const navigate = useNavigate();
+
+  // 产品类型：手账纸 或 日历
+  const [productType, setProductType] = useState<'journal' | 'calendar'>('journal');
+
+  // 根据产品类型获取对应的规格和分类
+  const currentSpecs = productType === 'journal' ? JOURNAL_PAPER_SPECS : CALENDAR_SPECS;
+  const currentCategories = productType === 'journal' ? JOURNAL_PAPER_CATEGORIES : CALENDAR_CATEGORIES;
+
   const [formData, setFormData] = useState<ProductFormData>({
     shopAccount: '',
     productSpec: '',
@@ -235,9 +244,15 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
-                  const selectedSpec = PRODUCT_SPECS.find(spec => spec.id === formData.productSpec);
+                  const selectedSpec = currentSpecs.find(spec => spec.id === formData.productSpec);
                   if (!selectedSpec) {
                     toast.error('请选择商品规格');
+                    return;
+                  }
+
+                  const selectedCategory = currentCategories.find(cat => cat.id === formData.productCategory);
+                  if (!selectedCategory) {
+                    toast.error('请选择商品分类');
                     return;
                   }
 
@@ -247,8 +262,9 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
-                    categoryId: selectedShop.categoryId,
-                    categoryName: selectedShop.categoryName,
+                    categoryId: selectedCategory.categoryId,
+                    categoryName: selectedCategory.categoryName,
+                    productAttributes: selectedCategory.productAttributes,
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
                     freightTemplateName: selectedShop.freightTemplateName,
@@ -291,7 +307,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     setCreating(false);
                   }
                 }}
-                disabled={creating || !formData.shopAccount || !formData.productSpec || selectedProducts.length === 0}
+                disabled={creating || !formData.shopAccount || !formData.productSpec || !formData.productCategory || selectedProducts.length === 0}
                 className="min-w-24"
               >
                 {creating ? '提交中...' : `提交任务 (${selectedProducts.length})`}
@@ -317,8 +333,9 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 <span className="font-medium">商品标题将由AI自动生成</span>
               </div>
             </div>
+
             {/* 店铺选择 - 卡片式 */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3">
               <Label className="text-sm font-medium">店铺账号 *</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {TEMU_SHOPS
@@ -354,6 +371,28 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
               </div>
             </div>
 
+            {/* 产品类型 Tab 切换（选中店铺后显示） */}
+            {formData.shopAccount && (
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-sm font-medium">产品类型 *</Label>
+                <Tabs
+                  value={productType}
+                  onValueChange={(value) => {
+                    setProductType(value as 'journal' | 'calendar');
+                    // 切换产品类型时清空规格和分类选择
+                    updateFormData('productSpec', '');
+                    updateFormData('productCategory', '');
+                  }}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2 max-w-md">
+                    <TabsTrigger value="journal">手账纸</TabsTrigger>
+                    <TabsTrigger value="calendar">日历</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
+
             {/* 商品规格选择（选中店铺后显示） */}
             {formData.shopAccount && (
               <div className="space-y-3 pt-4 border-t">
@@ -362,7 +401,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   商品规格 *
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {PRODUCT_SPECS.map((spec) => (
+                  {currentSpecs.map((spec) => (
                     <button
                       key={spec.id}
                       type="button"
@@ -389,56 +428,40 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             )}
 
             {/* 商品分类选择（选中店铺后显示） */}
-            {formData.shopAccount && (() => {
-              // 根据选中的店铺ID找到对应的分类
-              const selectedShop = TEMU_SHOPS.find(shop => shop.account === formData.shopAccount);
-              if (!selectedShop) return null;
-
-              // 店铺ID和分类ID的映射关系
-              const shopCategoryMap: Record<string, string> = {
-                'paper-petals': 'paper-petals-category',
-                'present-perfect-papers': 'present-perfect-papers-category',
-                'paper-palette-gifts': 'paper-palette-gifts-category',
-                'wrap-wonder-paper-co': 'wrap-wonder-paper-co-category',
-                'kaleidowrap-designs': 'kaleidowrap-designs-category',
-                'merry-measure-paper-co': 'merry-measure-paper-co-category'
-              };
-
-              const categoryId = shopCategoryMap[selectedShop.id];
-              const category = PRODUCT_CATEGORIES.find(cat => cat.id === categoryId);
-
-              if (!category) return null;
-
-              return (
-                <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    商品分类 *
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => updateFormData('productCategory', category.id)}
-                    className={`
-                      w-full p-4 rounded-md border-2 text-left transition-colors
-                      ${formData.productCategory === category.id
-                        ? 'border-primary bg-background'
-                        : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                      }
-                    `}
-                  >
-                    <div className="space-y-2">
-                      <div className="font-medium text-sm">{category.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {category.categoryName}
+            {formData.shopAccount && (
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  商品分类 *
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {currentCategories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => updateFormData('productCategory', category.id)}
+                      className={`
+                        p-4 rounded-md border-2 text-left transition-colors
+                        ${formData.productCategory === category.id
+                          ? 'border-primary bg-background'
+                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                        }
+                      `}
+                    >
+                      <div className="space-y-2">
+                        <div className="font-medium text-sm">{category.name}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {category.categoryName}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          分类ID: {category.categoryId}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-2">
-                        分类ID: {category.categoryId}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                  ))}
                 </div>
-              );
-            })()}
+              </div>
+            )}
           </div>
 
           {/* 2. 商品图选择卡片 */}
