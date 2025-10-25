@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
-import { TEMU_SHOPS } from '@/types/shop';
+import { TEMU_SHOPS, JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES } from '@/types/shop';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
@@ -645,8 +645,9 @@ export function ProductListing() {
 
     // 准备导出数据 - 按照模板格式（59列）
     const exportData = selectedProducts.map(product => {
-      // 查找店铺配置
-      const shopConfig = TEMU_SHOPS.find(s => s.shopId === product.shopId);
+      // 查找分类配置（先在手账纸分类中查找，如果找不到则在日历分类中查找）
+      const allCategories = [...JOURNAL_PAPER_CATEGORIES, ...CALENDAR_CATEGORIES];
+      const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
 
       return {
         '产品标题': product.nameZh || '',
@@ -677,7 +678,7 @@ export function ProductListing() {
         '库存': product.stock || '',
         '发货时效': product.shippingTime || '',
         '分类id': product.categoryId || '',
-        '产品属性': shopConfig?.productAttributes || '',
+        '产品属性': categoryConfig?.productAttributes || '',
         'SPU属性': '',
         'SKC属性': '',
         'SKU属性': '',

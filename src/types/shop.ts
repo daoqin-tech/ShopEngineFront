@@ -49,9 +49,6 @@ export interface ShopInfo {
   type: ShopType;               // 店铺类型：全托/半托
   businessCode: string;         // 货号前缀/业务编号
   account: string;              // 所属账号
-  categoryName: string;         // 分类名称
-  categoryId: string;           // 分类ID
-  productAttributes: string;    // 产品属性JSON字符串
 
   // 运费模板
   freightTemplateId?: string;   // 运费模板ID
@@ -139,9 +136,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '5270A',
     account: '18071105270',
-    categoryName: '艺术品、工艺品和缝纫用品 > 工艺工具和用品 > 纸艺 > 工艺纸张 > 装饰纸',
-    categoryId: '39715',
-    productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":931632,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"}]',
     freightTemplateId: 'HFT-16191232475259000806',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
@@ -181,9 +175,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '5270B',
     account: '18071105270',
-    categoryName: '办公用品/日常办公用品/办公用纸张/卡片/卡片',
-    categoryId: '1107',
-    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495436,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]',
     freightTemplateId: 'HFT-16191270999941411888',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
@@ -233,9 +224,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '8060A',
     account: '13318288060',
-    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/纸',
-    categoryId: '39489',
-    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]',
     freightTemplateId: 'HFT-16191228050268220413',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
@@ -247,9 +235,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '8060B',
     account: '13318288060',
-    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工彩纸',
-    categoryId: '39714',
-    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":958166,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]',
     freightTemplateId: 'HFT-16191332236779530083',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
@@ -290,9 +275,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '3395A',
     account: '18986183395',
-    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/卡片纸',
-    categoryId: '39721',
-    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":952989,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]',
     freightTemplateId: 'HFT-16191226267689110996',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
@@ -304,9 +286,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     type: '半托',
     businessCode: '3395B',
     account: '18986183395',
-    categoryName: '艺术品、工艺品和缝纫用品 > 剪贴、压印 > 纸张和卡片 > 纸',
-    categoryId: '39489',
-    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]',
     freightTemplateId: 'HFT-16191333641871510968',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
