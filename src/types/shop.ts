@@ -74,7 +74,7 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     variantName: '纸',
     variantAttributeName1: '材质',
     variantAttributeValue1: '纸',
-    stock: 99999,
+    stock: 6666,
     shippingTime: 9,
     productSpec: '40张15.2cmx15.2cm',
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
@@ -93,7 +93,7 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     variantName: '纸',
     variantAttributeName1: '材质',
     variantAttributeValue1: '纸',
-    stock: 99999,
+    stock: 6666,
     shippingTime: 9,
     productSpec: '20张30cmx30cm',
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
@@ -116,7 +116,7 @@ export const CALENDAR_SPECS: ProductSpec[] = [
     variantName: '纸',
     variantAttributeName1: '材质',
     variantAttributeValue1: '纸',
-    stock: 99999,
+    stock: 6666,
     shippingTime: 9,
     productSpec: '2026年日历',
     productUsage: '适用于墙面装饰、日程规划、日期提醒、节日记录、时间管理等用途'
