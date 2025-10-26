@@ -114,6 +114,7 @@ export interface ImageGenerationParams {
   width: number;
   height: number;
   aspectRatio: string;
+  model?: string;
 }
 
 // 图片生成API请求参数
@@ -122,6 +123,7 @@ export interface ImageGenerationRequest {
   promptIds: string[];
   width: number;
   height: number;
+  model?: string;
 }
 
 // 图片生成API响应

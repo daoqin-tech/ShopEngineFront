@@ -189,7 +189,8 @@ export function ImageGeneration() {
         projectId: projectId,
         promptIds: Array.from(selectedPromptIds),
         width: params.width,
-        height: params.height
+        height: params.height,
+        ...(params.model && { model: params.model })
       };
 
       await AIImageSessionsAPI.startImageGeneration(request);

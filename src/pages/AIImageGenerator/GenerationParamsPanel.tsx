@@ -43,6 +43,12 @@ interface GenerationParamsPanelProps {
   onGenerateImages: (params: ImageGenerationParams) => void;
 }
 
+// 可用的模型选项
+const MODEL_OPTIONS = [
+  { value: 'flux-dev', label: 'Flux Dev', description: '开发版模型（默认）' },
+  { value: 'flux-pro-1.1', label: 'Flux Pro 1.1', description: '专业版 1.1' }
+];
+
 export function GenerationParamsPanel({
   selectedPromptsCount,
   isGeneratingImages,
@@ -53,6 +59,7 @@ export function GenerationParamsPanel({
   const [customWidth, setCustomWidth] = useState<number>(1024);
   const [customHeight, setCustomHeight] = useState<number>(1024);
   const [useCustomSize, setUseCustomSize] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('flux-dev'); // 默认模型
 
   // 输入验证反馈状态
   const [widthAdjusted, setWidthAdjusted] = useState(false);
@@ -116,28 +123,57 @@ export function GenerationParamsPanel({
       <div className="p-6">
         <h3 className="text-base font-semibold text-gray-900 mb-6">生成参数</h3>
 
+        {/* 模型选择 */}
+        <div className="mb-6">
+          <label className="text-sm font-medium text-gray-700 mb-3 block">选择模型</label>
+          <div className="grid grid-cols-2 gap-2">
+            {MODEL_OPTIONS.map((model) => (
+              <button
+                key={model.value}
+                onClick={() => setSelectedModel(model.value)}
+                className={`p-3 text-left border rounded-lg transition-all duration-200 ${
+                  selectedModel === model.value
+                    ? 'border-blue-600 bg-blue-50 text-blue-900'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex flex-col">
+                  <div className="text-sm font-medium mb-1">{model.label}</div>
+                  <div className="text-xs opacity-75">{model.description}</div>
+                  {selectedModel === model.value && (
+                    <div className="mt-2">
+                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 比例选择 */}
         <div className="mb-6">
           <label className="text-sm font-medium text-gray-700 mb-3 block">选择比例</label>
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             {ASPECT_RATIOS.map((ratio) => (
               <button
                 key={ratio.name}
                 onClick={() => handleAspectRatioChange(ratio)}
-                className={`w-full p-3 text-left border rounded-lg transition-all duration-200 ${
+                className={`p-3 text-left border rounded-lg transition-all duration-200 ${
                   selectedAspectRatio.name === ratio.name
                     ? 'border-gray-900 bg-gray-900 text-white'
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-sm font-medium mb-1">{ratio.description}</div>
-                    <div className="text-xs opacity-75">{ratio.label} ({ratio.width}×{ratio.height})</div>
-                  </div>
+                <div className="flex flex-col">
+                  <div className="text-sm font-medium mb-1">{ratio.description}</div>
+                  <div className="text-xs opacity-75">{ratio.label}</div>
+                  <div className="text-xs opacity-75">({ratio.width}×{ratio.height})</div>
                   {selectedAspectRatio.name === ratio.name && (
-                    <div className="ml-2">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="mt-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
@@ -246,7 +282,8 @@ export function GenerationParamsPanel({
             onClick={() => onGenerateImages({
               width: useCustomSize ? customWidth : selectedAspectRatio.width,
               height: useCustomSize ? customHeight : selectedAspectRatio.height,
-              aspectRatio: selectedAspectRatio.name
+              aspectRatio: selectedAspectRatio.name,
+              model: selectedModel
             })}
             disabled={selectedPromptsCount === 0 || isGeneratingImages}
             className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
