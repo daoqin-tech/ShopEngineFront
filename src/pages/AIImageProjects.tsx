@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Scissors } from 'lucide-react';
+import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Scissors, Copy } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { toast } from 'sonner';
 import {
@@ -40,6 +40,11 @@ export function AIImageProjects() {
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [splitCount, setSplitCount] = useState<number>(2);
   const [splitting, setSplitting] = useState(false);
+
+  // 动态复制对话框状态
+  const [dynamicCopyDialogOpen, setDynamicCopyDialogOpen] = useState(false);
+  const [copyCount, setCopyCount] = useState<number>(1);
+  const [dynamicCopying, setDynamicCopying] = useState(false);
 
   // 多选状态
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
@@ -270,6 +275,47 @@ export function AIImageProjects() {
     }
   };
 
+  // 打开动态复制对话框
+  const handleOpenDynamicCopyDialog = () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要复制的项目');
+      return;
+    }
+    setCopyCount(1);
+    setDynamicCopyDialogOpen(true);
+  };
+
+  // 确认动态复制项目
+  const handleConfirmDynamicCopy = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要复制的项目');
+      return;
+    }
+
+    if (copyCount < 1 || copyCount > 10) {
+      toast.error('请输入有效的复制数量（1-10）');
+      return;
+    }
+
+    try {
+      setDynamicCopying(true);
+      const projectIdsArray = Array.from(selectedProjectIds);
+      await AIImageProjectsAPI.dynamicCopyProjects(projectIdsArray, copyCount);
+      toast.success(`已成功动态复制 ${selectedProjectIds.size} 个项目，正在后台生成图片`);
+      setDynamicCopyDialogOpen(false);
+      setSelectedProjectIds(new Set());
+      setCopyCount(1);
+      fetchProjects(currentPage); // 刷新列表
+    } catch (err: any) {
+      toast.error('项目复制失败', {
+        description: err.response?.data?.message || '请稍后再试'
+      });
+      console.error('Error dynamic copying projects:', err);
+    } finally {
+      setDynamicCopying(false);
+    }
+  };
+
 
   return (
     <div className="h-full flex flex-col">
@@ -299,6 +345,15 @@ export function AIImageProjects() {
           >
             <Scissors className="w-4 h-4" />
             拆分项目
+          </Button>
+          <Button
+            onClick={handleOpenDynamicCopyDialog}
+            disabled={selectedProjectIds.size === 0}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Copy className="w-4 h-4" />
+            动态复制
           </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -775,6 +830,68 @@ export function AIImageProjects() {
               className="bg-purple-600 hover:bg-purple-700"
             >
               {splitting ? '拆分中...' : '确认拆分'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 动态复制项目对话框 */}
+      <Dialog open={dynamicCopyDialogOpen} onOpenChange={setDynamicCopyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="w-5 h-5 text-blue-600" />
+              动态复制项目
+            </DialogTitle>
+            <DialogDescription>
+              基于AI生成相似提示词，动态复制项目并立即开始生成新图片
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="copyCount">每个项目复制数量</Label>
+              <Input
+                id="copyCount"
+                type="number"
+                min={1}
+                max={10}
+                value={copyCount}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value)) {
+                    setCopyCount(value);
+                  } else if (e.target.value === '') {
+                    setCopyCount(1);
+                  }
+                }}
+                placeholder="输入复制数量（1-10）"
+                className="w-full"
+              />
+              <p className="text-sm text-gray-500">
+                已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
+              </p>
+              <p className="text-sm text-blue-600">
+                新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDynamicCopyDialogOpen(false);
+                setCopyCount(1);
+              }}
+              disabled={dynamicCopying}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmDynamicCopy}
+              disabled={dynamicCopying || copyCount < 1 || copyCount > 10}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {dynamicCopying ? '复制中...' : '确认复制'}
             </Button>
           </DialogFooter>
         </DialogContent>

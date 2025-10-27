@@ -93,4 +93,13 @@ export class AIImageProjectsAPI {
     });
     return response.data;
   }
+
+  // 动态复制项目（基于AI生成相似提示词）
+  static async dynamicCopyProjects(projectIds: string[], count: number): Promise<null> {
+    const response = await apiClient.post('/projects/dynamic-copy', {
+      projectIds,
+      count
+    });
+    return response.data;
+  }
 }
