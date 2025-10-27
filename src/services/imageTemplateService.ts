@@ -2,10 +2,13 @@ import { apiClient } from '@/lib/api';
 
 // ========== 图片模板项目相关类型 ==========
 
+export type TemplateProjectType = 'calendar_landscape' | 'calendar_portrait';
+
 export interface ImageTemplateProject {
   id?: string;
   name: string;
   description?: string;
+  type: TemplateProjectType;  // 模板项目类型
   createdAt?: string;
   updatedAt?: string;
 }
@@ -14,6 +17,7 @@ export interface ImageTemplateProjectListItem {
   projectId: string;
   name: string;
   description?: string;
+  type: TemplateProjectType;  // 模板项目类型
   templateCount: number;  // 该项目下的模板数量
   createdAt: string;
   updatedAt: string;
