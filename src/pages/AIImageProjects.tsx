@@ -54,8 +54,6 @@ export function AIImageProjects() {
   const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
-  const [matchResult, setMatchResult] = useState<any>(null);
-  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
   const [replacementProgress, setReplacementProgress] = useState<{ current: number; total: number } | null>(null);
 
   // 多选状态
