@@ -76,7 +76,7 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '40张15.2cmx15.2cm',
+    productSpec: '40张15.2cmx15.2cm 拼贴纸',
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   },
   {
@@ -95,7 +95,7 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '20张30cmx30cm',
+    productSpec: '20张30cmx30cm 手账纸',
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   }
 ];
