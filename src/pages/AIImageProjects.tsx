@@ -6,6 +6,9 @@ import { DateTimePicker } from '@/components/ui/date-picker';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Scissors, Copy } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
+import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
+import { FileUploadAPI } from '@/services/fileUpload';
+import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -45,6 +48,15 @@ export function AIImageProjects() {
   const [dynamicCopyDialogOpen, setDynamicCopyDialogOpen] = useState(false);
   const [copyCount, setCopyCount] = useState<number>(1);
   const [dynamicCopying, setDynamicCopying] = useState(false);
+
+  // 模板替换对话框状态
+  const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
+  const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
+  const [matchResult, setMatchResult] = useState<any>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
+  const [replacementProgress, setReplacementProgress] = useState<{ current: number; total: number } | null>(null);
 
   // 多选状态
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
@@ -316,6 +328,287 @@ export function AIImageProjects() {
     }
   };
 
+  // 打开模板替换对话框
+  const handleOpenApplyTemplateDialog = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要替换的项目');
+      return;
+    }
+    try {
+      const projects = await imageTemplateService.getProjects();
+      setTemplateProjects(projects);
+      setSelectedTemplateProjectId('');
+      setApplyTemplateDialogOpen(true);
+    } catch (err) {
+      toast.error('加载模板项目失败');
+      console.error('Error loading template projects:', err);
+    }
+  };
+
+  // 加载图片到Image对象
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+
+      // 设置跨域属性和回调
+      img.onload = () => {
+        console.log('图片加载成功:', url);
+        resolve(img);
+      };
+
+      img.onerror = () => {
+        console.error('图片加载失败:', url);
+        // 尝试不使用crossOrigin重新加载
+        const img2 = document.createElement('img');
+        img2.onload = () => {
+          console.log('不使用crossOrigin加载成功:', url);
+          resolve(img2);
+        };
+        img2.onerror = () => {
+          reject(new Error(`图片加载失败: ${url}`));
+        };
+        img2.src = url;
+      };
+
+      // 对于腾讯云COS的图片设置crossOrigin
+      if (url.includes('.myqcloud.com')) {
+        img.crossOrigin = 'anonymous';
+      }
+
+      img.src = url;
+    });
+  };
+
+  // 合成图片：将图片放置到模板的指定区域
+  const compositeImages = async (
+    templateImageUrl: string,
+    regions: Array<{ x: number; y: number; width: number; height: number; order: number }>,
+    replacementImageUrl: string,
+    targetWidth: number,
+    targetHeight: number
+  ): Promise<{ blob: Blob; width: number; height: number }> => {
+    console.log('开始合成图片...');
+    console.log('模板URL:', templateImageUrl);
+    console.log('替换图片URL:', replacementImageUrl);
+    console.log('目标尺寸:', targetWidth, 'x', targetHeight);
+    console.log('区域信息:', regions);
+
+    // 加载模板图片
+    const templateImg = await loadImage(templateImageUrl);
+    console.log('模板图片加载完成:', templateImg.width, 'x', templateImg.height);
+
+    // 创建原始尺寸的canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = templateImg.width;
+    canvas.height = templateImg.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('无法创建canvas上下文');
+    }
+
+    // 绘制模板图片作为底图
+    ctx.drawImage(templateImg, 0, 0);
+    console.log('模板底图绘制完成');
+
+    // 加载替换图片
+    const replaceImg = await loadImage(replacementImageUrl);
+    console.log('替换图片加载完成:', replaceImg.width, 'x', replaceImg.height);
+
+    // 按顺序替换区域
+    const sortedRegions = [...regions].sort((a, b) => a.order - b.order);
+
+    for (let i = 0; i < sortedRegions.length; i++) {
+      const region = sortedRegions[i];
+      console.log(`绘制区域 ${i + 1}:`, region);
+
+      // 将替换图片绘制到指定区域（覆盖模式）
+      ctx.drawImage(
+        replaceImg,
+        region.x,
+        region.y,
+        region.width,
+        region.height
+      );
+    }
+    console.log('所有区域替换完成');
+
+    // 创建压缩后的canvas
+    const compressedCanvas = document.createElement('canvas');
+    compressedCanvas.width = targetWidth;
+    compressedCanvas.height = targetHeight;
+    const compressedCtx = compressedCanvas.getContext('2d');
+    if (!compressedCtx) {
+      throw new Error('无法创建压缩canvas上下文');
+    }
+
+    // 将原始图片缩放到目标尺寸
+    compressedCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+    console.log('图片压缩完成');
+
+    // 转换为blob
+    return new Promise((resolve, reject) => {
+      compressedCanvas.toBlob(
+        (blob) => {
+          if (blob) {
+            console.log('Blob生成成功，大小:', blob.size);
+            resolve({
+              blob,
+              width: targetWidth,
+              height: targetHeight,
+            });
+          } else {
+            reject(new Error('图片转换失败'));
+          }
+        },
+        'image/jpeg',
+        0.92
+      );
+    });
+  };
+
+  // 确认模板替换
+  const handleConfirmApplyTemplate = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要替换的项目');
+      return;
+    }
+
+    if (!selectedTemplateProjectId) {
+      toast.error('请选择模板项目');
+      return;
+    }
+
+    try {
+      setApplyingTemplate(true);
+      const projectIdsArray = Array.from(selectedProjectIds);
+
+      // 1. 获取模板信息和图片信息
+      const result = await AIImageProjectsAPI.getTemplateMatchInfo(projectIdsArray, selectedTemplateProjectId);
+
+      if (!result.totalImages || result.totalImages === 0) {
+        toast.error('没有找到符合尺寸的图片');
+        return;
+      }
+
+      console.log('后端返回结果:', result);
+      toast.info(`找到 ${result.totalImages} 张图片，${result.templates.length} 个模板，开始处理...`);
+
+      // 2. 获取模板项目信息以确定输出尺寸
+      const templateProject = result.templateProject;
+      let targetWidth: number, targetHeight: number;
+
+      switch (templateProject.type) {
+        case 'calendar_landscape':
+          targetWidth = 1440;
+          targetHeight = 1120;
+          break;
+        case 'calendar_portrait':
+          targetWidth = 1024;
+          targetHeight = 1440;
+          break;
+        default:
+          targetWidth = 1024;
+          targetHeight = 1440;
+      }
+
+      const templates = result.templates;
+      if (templates.length === 0) {
+        toast.error('模板项目中没有模板');
+        return;
+      }
+
+      // 3. 关闭对话框，在后台处理，不阻塞用户操作
+      setApplyTemplateDialogOpen(false);
+      setApplyingTemplate(false);
+
+      const updatePromises: Promise<void>[] = [];
+      let processedCount = 0;
+      let failedCount = 0;
+      const total = result.totalImages;
+      let templateIndex = 0;
+
+      // 初始化进度
+      setReplacementProgress({ current: 0, total });
+
+      // 遍历所有项目的图片，每张图片循环使用一个模板
+      for (const projectResult of result.projectResults) {
+        for (const image of projectResult.images) {
+          // 使用当前索引的模板，循环使用
+          const template = templates[templateIndex % templates.length];
+          templateIndex++;
+
+          const promise = (async () => {
+            try {
+              console.log(`处理图片 ${image.id}，使用模板 ${template.id} (索引: ${templateIndex - 1})`);
+
+              // 获取模板详情
+              const templateDetail = await imageTemplateService.getTemplate(selectedTemplateProjectId, template.id);
+              console.log('模板详情:', templateDetail);
+
+              // 合成图片
+              const { blob, width, height } = await compositeImages(
+                templateDetail.imageUrl,
+                templateDetail.regions,
+                image.imageUrl,
+                targetWidth,
+                targetHeight
+              );
+              console.log(`合成完成: ${width}x${height}`);
+
+              // 上传图片
+              const fileName = `template-replaced-${Date.now()}-${image.id}-${template.id}.jpg`;
+              const file = new File([blob], fileName, { type: 'image/jpeg' });
+              const uploadedUrl = await FileUploadAPI.uploadFile(file);
+              console.log('上传完成:', uploadedUrl);
+
+              // 更新图片信息
+              await AIImageSessionsAPI.batchUpdateImages([{
+                imageId: image.id,
+                imageUrl: uploadedUrl,
+                width,
+                height,
+              }]);
+              console.log('更新完成');
+
+              processedCount++;
+              // 更新进度
+              setReplacementProgress({ current: processedCount, total });
+            } catch (error) {
+              failedCount++;
+              console.error(`处理图片 ${image.id} 失败:`, error);
+              toast.error(`处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            }
+          })();
+
+          updatePromises.push(promise);
+        }
+      }
+
+      await Promise.all(updatePromises);
+
+      // 清除进度，显示最终结果
+      setReplacementProgress(null);
+
+      if (failedCount === 0) {
+        toast.success(`成功替换 ${processedCount} 张图片`);
+      } else {
+        toast.warning(`完成处理：成功 ${processedCount} 张，失败 ${failedCount} 张`);
+      }
+
+      setSelectedProjectIds(new Set());
+      setSelectedTemplateProjectId('');
+      fetchProjects(currentPage);
+    } catch (err: any) {
+      setApplyTemplateDialogOpen(false);
+      setApplyingTemplate(false);
+      setReplacementProgress(null);
+      toast.error('模板替换失败', {
+        description: err.response?.data?.message || err.message || '请稍后再试'
+      });
+      console.error('Error applying template:', err);
+    }
+  };
+
 
   return (
     <div className="h-full flex flex-col">
@@ -354,6 +647,15 @@ export function AIImageProjects() {
           >
             <Copy className="w-4 h-4" />
             动态复制
+          </Button>
+          <Button
+            onClick={handleOpenApplyTemplateDialog}
+            disabled={selectedProjectIds.size === 0 || replacementProgress !== null}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Image className="w-4 h-4" />
+            {replacementProgress ? `替换中 ${replacementProgress.current}/${replacementProgress.total}` : '模板替换'}
           </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -892,6 +1194,66 @@ export function AIImageProjects() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {dynamicCopying ? '复制中...' : '确认复制'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 模板替换对话框 */}
+      <Dialog open={applyTemplateDialogOpen} onOpenChange={setApplyTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>批量模板替换</DialogTitle>
+            <DialogDescription>
+              选择一个模板项目批量替换已选项目中的图片
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="templateProject">模板项目</Label>
+              <select
+                id="templateProject"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={selectedTemplateProjectId}
+                onChange={(e) => setSelectedTemplateProjectId(e.target.value)}
+              >
+                <option value="">请选择模板项目</option>
+                {templateProjects.map((project) => (
+                  <option key={project.projectId} value={project.projectId}>
+                    {project.name} ({project.type === 'calendar_landscape' ? '横版' : '竖版'}) - {project.templateCount} 个模板
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedTemplateProjectId && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-1">
+                <p className="text-sm text-gray-700">
+                  已选择 {selectedProjectIds.size} 个项目进行模板替换
+                </p>
+                <p className="text-sm text-blue-600">
+                  横版模板匹配 928×1440 图片，竖版模板匹配 1408×992 图片
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setApplyTemplateDialogOpen(false);
+                setSelectedTemplateProjectId('');
+              }}
+              disabled={applyingTemplate}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmApplyTemplate}
+              disabled={applyingTemplate || !selectedTemplateProjectId}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {applyingTemplate ? '处理中...' : '确认替换'}
             </Button>
           </DialogFooter>
         </DialogContent>
