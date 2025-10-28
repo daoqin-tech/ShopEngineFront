@@ -90,16 +90,6 @@ export function ProductListing() {
     setPageSize(100);
   };
 
-  // pageSize 变化时重新查询
-  useEffect(() => {
-    if (currentPage === 1) {
-      fetchProducts(1);
-    } else {
-      setCurrentPage(1);
-      fetchProducts(1);
-    }
-  }, [pageSize]);
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -1176,9 +1166,14 @@ export function ProductListing() {
                           setPageSize(200);
                         }
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          fetchProducts(1); // 回车时重置到第一页并查询
+                        }
+                      }}
                       className="w-16 h-8 text-sm text-center"
                     />
-                    <span className="text-sm text-gray-600">条</span>
+                    <span className="text-sm text-gray-600">条（按回车查询）</span>
                   </div>
 
                   {/* 分隔线 */}
