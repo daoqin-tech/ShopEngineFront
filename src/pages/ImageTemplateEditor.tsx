@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Plus, Trash2, Save, ArrowLeft, X, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadCroppedImageToTencentCloud } from '@/lib/tencentCloud';
-import { imageTemplateService } from '@/services/imageTemplateService';
+import { imageTemplateService, TemplateProjectType } from '@/services/imageTemplateService';
 import { useNavigate, useParams } from 'react-router-dom';
 
 interface ReplaceRegion {
@@ -40,12 +40,14 @@ export default function ImageTemplateEditor() {
   const [scale, setScale] = useState(1);
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
+  const [projectType, setProjectType] = useState<TemplateProjectType>('calendar_portrait');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [editingDescription, setEditingDescription] = useState('');
+  const [editingType, setEditingType] = useState<TemplateProjectType>('calendar_portrait');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -69,6 +71,7 @@ export default function ImageTemplateEditor() {
       const project = await imageTemplateService.getProject(projectId);
       setProjectName(project.name);
       setProjectDescription(project.description || '');
+      setProjectType(project.type);
 
       // 加载项目下的所有模板
       const templateList = await imageTemplateService.getTemplates(projectId);
@@ -505,6 +508,7 @@ export default function ImageTemplateEditor() {
   const handleOpenEditDialog = () => {
     setEditingName(projectName);
     setEditingDescription(projectDescription);
+    setEditingType(projectType);
     setShowEditDialog(true);
   };
 
@@ -525,10 +529,12 @@ export default function ImageTemplateEditor() {
       await imageTemplateService.updateProject(projectId, {
         name: editingName.trim(),
         description: editingDescription.trim(),
+        type: editingType,
       });
 
       setProjectName(editingName.trim());
       setProjectDescription(editingDescription.trim());
+      setProjectType(editingType);
       setShowEditDialog(false);
       toast.success('项目信息更新成功');
     } catch (error) {
@@ -918,6 +924,20 @@ export default function ImageTemplateEditor() {
                 value={editingDescription}
                 onChange={(e) => setEditingDescription(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-project-type">模板类型 *</Label>
+              <select
+                id="edit-project-type"
+                value={editingType}
+                onChange={(e) => setEditingType(e.target.value as TemplateProjectType)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="calendar_portrait">竖版日历 (1024 × 1440)</option>
+                <option value="calendar_landscape">横版日历 (1440 × 1120)</option>
+              </select>
+              <p className="text-xs text-gray-500">修改类型将影响后续生成图片的输出尺寸</p>
             </div>
           </div>
 

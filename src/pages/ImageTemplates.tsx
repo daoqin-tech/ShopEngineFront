@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Plus, FolderOpen, Trash2, Edit, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { imageTemplateService, ImageTemplateProjectListItem } from '@/services/imageTemplateService';
+import { imageTemplateService, ImageTemplateProjectListItem, TemplateProjectType } from '@/services/imageTemplateService';
 import { useNavigate } from 'react-router-dom';
 
 export default function ImageTemplates() {
@@ -17,6 +17,7 @@ export default function ImageTemplates() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [newProjectType, setNewProjectType] = useState<TemplateProjectType>('calendar_portrait');
   const [isCreating, setIsCreating] = useState(false);
 
   // 加载图片模板项目列表
@@ -55,6 +56,7 @@ export default function ImageTemplates() {
   const handleCreateNew = () => {
     setNewProjectName('');
     setNewProjectDescription('');
+    setNewProjectType('calendar_portrait');
     setShowCreateDialog(true);
   };
 
@@ -70,6 +72,7 @@ export default function ImageTemplates() {
       const project = await imageTemplateService.createProject({
         name: newProjectName.trim(),
         description: newProjectDescription.trim(),
+        type: newProjectType,
       });
 
       toast.success('图片模板项目创建成功');
@@ -170,6 +173,12 @@ export default function ImageTemplates() {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm text-gray-600">
+                      <span>模板类型</span>
+                      <span className="font-medium text-blue-600">
+                        {project.type === 'calendar_landscape' ? '横版日历 (1440×1120)' : '竖版日历 (1024×1440)'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-gray-600">
                       <span>模板数量</span>
                       <span className="font-medium">{project.templateCount} 个</span>
                     </div>
@@ -250,6 +259,20 @@ export default function ImageTemplates() {
                 value={newProjectDescription}
                 onChange={(e) => setNewProjectDescription(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="project-type">模板类型 *</Label>
+              <select
+                id="project-type"
+                value={newProjectType}
+                onChange={(e) => setNewProjectType(e.target.value as TemplateProjectType)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="calendar_portrait">竖版日历 (1024 × 1440)</option>
+                <option value="calendar_landscape">横版日历 (1440 × 1120)</option>
+              </select>
+              <p className="text-xs text-gray-500">选择模板类型将决定生成图片的输出尺寸</p>
             </div>
           </div>
 
