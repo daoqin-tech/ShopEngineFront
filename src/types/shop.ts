@@ -78,9 +78,13 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     shippingTime: 9,
     productSpec: '40张15.2cmx15.2cm 拼贴纸',
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
-  },
+  }
+];
+
+// 装饰纸商品规格数据
+export const DECORATIVE_PAPER_SPECS: ProductSpec[] = [
   {
-    id: 'journal-20-sheets-30x30',
+    id: 'decorative-20-sheets-30x30',
     name: '20张 30cm×30cm',
     sheets: 20,
     size: '30cm×30cm',
@@ -95,7 +99,7 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '20张30cmx30cm 手账纸',
+    productSpec: '20张30cmx30cm 装饰纸',
     productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
   }
 ];
@@ -299,6 +303,52 @@ export const TEMU_SHOPS: ShopInfo[] = [
   //   categoryName: '',
   //   categoryId: ''
   // }
+];
+
+// 装饰纸商品分类数据
+export const DECORATIVE_PAPER_CATEGORIES: ProductCategory[] = [
+  {
+    id: 'paper-petals-category',
+    name: '卡片',
+    categoryName: '办公用品/日常办公用品/办公用纸张/卡片/卡片',
+    categoryId: '1107',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495436,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]'
+  },
+  {
+    id: 'present-perfect-papers-category',
+    name: '卡片',
+    categoryName: '办公用品/日常办公用品/办公用纸张/卡片/卡片',
+    categoryId: '1107',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495436,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]'
+  },
+  {
+    id: 'paper-palette-gifts-category',
+    name: '纸',
+    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/纸',
+    categoryId: '39489',
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]'
+  },
+  {
+    id: 'wrap-wonder-paper-co-category',
+    name: '手工彩纸',
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/手工彩纸',
+    categoryId: '39714',
+    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":958166,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]'
+  },
+  {
+    id: 'kaleidowrap-designs-category',
+    name: '卡片纸',
+    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/卡片纸',
+    categoryId: '39721',
+    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":952989,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]'
+  },
+  {
+    id: 'merry-measure-paper-co-category',
+    name: '纸',
+    categoryName: '艺术品、工艺品和缝纫用品 > 剪贴、压印 > 纸张和卡片 > 纸',
+    categoryId: '39489',
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447425,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447426,"numberInputValue":"","valueUnit":"","vid":"2906","propValue":"圣诞节"}]'
+  }
 ];
 
 // 手账纸商品分类数据

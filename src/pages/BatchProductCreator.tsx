@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES } from '@/types/shop';
+import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, DECORATIVE_PAPER_SPECS, DECORATIVE_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { toast } from 'sonner';
@@ -53,12 +53,16 @@ interface BatchProductCreatorProps {}
 export function BatchProductCreator({}: BatchProductCreatorProps) {
   const navigate = useNavigate();
 
-  // 产品类型：手账纸 或 日历
-  const [productType, setProductType] = useState<'journal' | 'calendar'>('journal');
+  // 产品类型：手账纸、装饰纸 或 日历
+  const [productType, setProductType] = useState<'journal' | 'decorative' | 'calendar'>('journal');
 
   // 根据产品类型获取对应的规格和分类
-  const currentSpecs = productType === 'journal' ? JOURNAL_PAPER_SPECS : CALENDAR_SPECS;
-  const currentCategories = productType === 'journal' ? JOURNAL_PAPER_CATEGORIES : CALENDAR_CATEGORIES;
+  const currentSpecs = productType === 'journal' ? JOURNAL_PAPER_SPECS :
+                       productType === 'decorative' ? DECORATIVE_PAPER_SPECS :
+                       CALENDAR_SPECS;
+  const currentCategories = productType === 'journal' ? JOURNAL_PAPER_CATEGORIES :
+                           productType === 'decorative' ? DECORATIVE_PAPER_CATEGORIES :
+                           CALENDAR_CATEGORIES;
 
   const [formData, setFormData] = useState<ProductFormData>({
     shopAccount: '',
@@ -385,8 +389,9 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   }}
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-2 max-w-md">
+                  <TabsList className="grid w-full grid-cols-3 max-w-lg">
                     <TabsTrigger value="journal">手账纸</TabsTrigger>
+                    <TabsTrigger value="decorative">装饰纸</TabsTrigger>
                     <TabsTrigger value="calendar">日历</TabsTrigger>
                   </TabsList>
                 </Tabs>
