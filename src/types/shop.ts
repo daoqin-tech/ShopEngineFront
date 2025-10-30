@@ -308,42 +308,14 @@ export const TEMU_SHOPS: ShopInfo[] = [
 // 装饰纸商品分类数据
 export const DECORATIVE_PAPER_CATEGORIES: ProductCategory[] = [
   {
-    id: 'paper-petals-category',
+    id: 'gift-wrapping-paper',
     name: '礼品包装纸',
     categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装纸',
     categoryId: '39883',
     productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"2491","propValue":"纸"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"3906","propValue":"聚丙烯pp"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"26419","propValue":"混合色"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447653,"numberInputValue":"","valueUnit":"","vid":"31034","propValue":"无"},{"propName":"语言类型","refPid":3673,"pid":1735,"templatePid":1492022,"numberInputValue":"","valueUnit":"","vid":"62905","propValue":"英语"},{"propName":"是否有克重>29g/㎡的sku","refPid":7393,"pid":2260,"templatePid":1451180,"numberInputValue":"","valueUnit":"","vid":"241820","propValue":"否"},{"propName":"是否涂有蜡、石蜡或聚合物","refPid":7394,"pid":2261,"templatePid":1451209,"numberInputValue":"","valueUnit":"","vid":"241824","propValue":"否"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447654,"numberInputValue":"","valueUnit":"","vid":"3369","propValue":"雪花"},{"propName":"动物主题","refPid":441,"pid":128,"templatePid":447651,"numberInputValue":"","valueUnit":"","vid":"12602","propValue":"驯鹿"}]'
   },
   {
-    id: 'present-perfect-papers-category',
-    name: '礼品包装纸',
-    categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装纸',
-    categoryId: '39883',
-    productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"2491","propValue":"纸"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"3906","propValue":"聚丙烯pp"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"26419","propValue":"混合色"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447653,"numberInputValue":"","valueUnit":"","vid":"31034","propValue":"无"},{"propName":"语言类型","refPid":3673,"pid":1735,"templatePid":1492022,"numberInputValue":"","valueUnit":"","vid":"62905","propValue":"英语"},{"propName":"是否有克重>29g/㎡的sku","refPid":7393,"pid":2260,"templatePid":1451180,"numberInputValue":"","valueUnit":"","vid":"241820","propValue":"否"},{"propName":"是否涂有蜡、石蜡或聚合物","refPid":7394,"pid":2261,"templatePid":1451209,"numberInputValue":"","valueUnit":"","vid":"241824","propValue":"否"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447654,"numberInputValue":"","valueUnit":"","vid":"3369","propValue":"雪花"},{"propName":"动物主题","refPid":441,"pid":128,"templatePid":447651,"numberInputValue":"","valueUnit":"","vid":"12602","propValue":"驯鹿"}]'
-  },
-  {
-    id: 'paper-palette-gifts-category',
-    name: '礼品包装袋',
-    categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装袋',
-    categoryId: '39879',
-    productAttributes: '[{"propName":"是否有提手","refPid":7228,"pid":2197,"templatePid":1410540,"numberInputValue":"","valueUnit":"","vid":"210451","propValue":"否"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909806,"numberInputValue":"","valueUnit":"","vid":"2491","propValue":"纸"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909806,"numberInputValue":"","valueUnit":"","vid":"11783","propValue":"无铅水晶"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447663,"numberInputValue":"","valueUnit":"","vid":"31034","propValue":"无"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447662,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447662,"numberInputValue":"","valueUnit":"","vid":"530","propValue":"褐色"}]'
-  },
-  {
-    id: 'wrap-wonder-paper-co-category',
-    name: '礼品包装纸',
-    categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装纸',
-    categoryId: '39883',
-    productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"2491","propValue":"纸"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"3906","propValue":"聚丙烯pp"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"26419","propValue":"混合色"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447653,"numberInputValue":"","valueUnit":"","vid":"31034","propValue":"无"},{"propName":"语言类型","refPid":3673,"pid":1735,"templatePid":1492022,"numberInputValue":"","valueUnit":"","vid":"62905","propValue":"英语"},{"propName":"是否有克重>29g/㎡的sku","refPid":7393,"pid":2260,"templatePid":1451180,"numberInputValue":"","valueUnit":"","vid":"241820","propValue":"否"},{"propName":"是否涂有蜡、石蜡或聚合物","refPid":7394,"pid":2261,"templatePid":1451209,"numberInputValue":"","valueUnit":"","vid":"241824","propValue":"否"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447654,"numberInputValue":"","valueUnit":"","vid":"3369","propValue":"雪花"},{"propName":"动物主题","refPid":441,"pid":128,"templatePid":447651,"numberInputValue":"","valueUnit":"","vid":"12602","propValue":"驯鹿"}]'
-  },
-  {
-    id: 'kaleidowrap-designs-category',
-    name: '礼品包装纸',
-    categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装纸',
-    categoryId: '39883',
-    productAttributes: '[{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"2491","propValue":"纸"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909872,"numberInputValue":"","valueUnit":"","vid":"3906","propValue":"聚丙烯pp"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447652,"numberInputValue":"","valueUnit":"","vid":"26419","propValue":"混合色"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447653,"numberInputValue":"","valueUnit":"","vid":"31034","propValue":"无"},{"propName":"语言类型","refPid":3673,"pid":1735,"templatePid":1492022,"numberInputValue":"","valueUnit":"","vid":"62905","propValue":"英语"},{"propName":"是否有克重>29g/㎡的sku","refPid":7393,"pid":2260,"templatePid":1451180,"numberInputValue":"","valueUnit":"","vid":"241820","propValue":"否"},{"propName":"是否涂有蜡、石蜡或聚合物","refPid":7394,"pid":2261,"templatePid":1451209,"numberInputValue":"","valueUnit":"","vid":"241824","propValue":"否"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447654,"numberInputValue":"","valueUnit":"","vid":"3369","propValue":"雪花"},{"propName":"动物主题","refPid":441,"pid":128,"templatePid":447651,"numberInputValue":"","valueUnit":"","vid":"12602","propValue":"驯鹿"}]'
-  },
-  {
-    id: 'merry-measure-paper-co-category',
+    id: 'gift-wrapping-bag',
     name: '礼品包装袋',
     categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装袋',
     categoryId: '39879',
