@@ -312,7 +312,7 @@ export function ImageGeneration() {
       const response = await AIImageSessionsAPI.generateImageFromImages({
         projectId,
         imageUrls,
-        prompt: 'Generate high-quality product images based on the reference. Enhance clarity and details with better lighting. The subject must fill the entire frame regardless of aspect ratio. Correct any tilt to show the product upright.',
+        prompt: `Generate ${countPerImage} high-quality product images based on the reference. Enhance clarity and details with better lighting. The subject must fill the entire frame regardless of aspect ratio. Correct any tilt to show the product upright.`,
         width: params.width,
         height: params.height,
         count: countPerImage // 每张参考图生成 countPerImage 张图片
