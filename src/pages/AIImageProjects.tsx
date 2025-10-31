@@ -49,7 +49,7 @@ export function AIImageProjects() {
   const [dynamicCopyDialogOpen, setDynamicCopyDialogOpen] = useState(false);
   const [copyCount, setCopyCount] = useState<number>(1);
   const [dynamicCopying, setDynamicCopying] = useState(false);
-  const [businessType, setBusinessType] = useState<'calendar' | 'notebook' | 'wrapping'>('calendar'); // 业务类型：日历、手账纸、包装纸
+  const [copyMode, setCopyMode] = useState<'dynamic' | 'static'>('dynamic'); // 复制模式：动态复制、静态复制
 
   // 模板替换对话框状态
   const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
@@ -1151,23 +1151,14 @@ export function AIImageProjects() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* 业务类型选择 Tabs - 日历和包装纸在左边，手账纸在右边 */}
-          <Tabs value={businessType} onValueChange={(value) => setBusinessType(value as 'calendar' | 'notebook' | 'wrapping')} className="w-full">
-            <div className="flex gap-2">
-              <div className="flex-1 grid grid-cols-2 gap-2">
-                <TabsList className="w-full">
-                  <TabsTrigger value="calendar" className="w-full">日历</TabsTrigger>
-                </TabsList>
-                <TabsList className="w-full">
-                  <TabsTrigger value="wrapping" className="w-full">包装纸</TabsTrigger>
-                </TabsList>
-              </div>
-              <TabsList className="w-48">
-                <TabsTrigger value="notebook" className="w-full">手账纸</TabsTrigger>
-              </TabsList>
-            </div>
+          {/* 复制模式选择 Tabs */}
+          <Tabs value={copyMode} onValueChange={(value) => setCopyMode(value as 'dynamic' | 'static')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dynamic">动态复制</TabsTrigger>
+              <TabsTrigger value="static">静态复制</TabsTrigger>
+            </TabsList>
 
-            <TabsContent value="calendar" className="space-y-4 py-4">
+            <TabsContent value="dynamic" className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="copyCount">每个项目复制数量</Label>
                 <Input
@@ -1190,16 +1181,21 @@ export function AIImageProjects() {
                 <p className="text-sm text-gray-500">
                   已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
                 </p>
-                <p className="text-sm text-blue-600">
-                  【日历业务】新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
-                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                  <p className="text-sm text-blue-800">
+                    <strong>动态复制：</strong>基于AI生成相似但不同的提示词，每个副本都会有独特的内容
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
+                  </p>
+                </div>
                 <p className="text-sm text-amber-600">
                   具体实现逻辑待开发
                 </p>
               </div>
             </TabsContent>
 
-            <TabsContent value="notebook" className="space-y-4 py-4">
+            <TabsContent value="static" className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="copyCount">每个项目复制数量</Label>
                 <Input
@@ -1222,41 +1218,14 @@ export function AIImageProjects() {
                 <p className="text-sm text-gray-500">
                   已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
                 </p>
-                <p className="text-sm text-blue-600">
-                  【手账纸业务】新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
-                </p>
-                <p className="text-sm text-amber-600">
-                  具体实现逻辑待开发
-                </p>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="wrapping" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="copyCount">每个项目复制数量</Label>
-                <Input
-                  id="copyCount"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={copyCount}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value)) {
-                      setCopyCount(value);
-                    } else if (e.target.value === '') {
-                      setCopyCount(1);
-                    }
-                  }}
-                  placeholder="输入复制数量（1-10）"
-                  className="w-full"
-                />
-                <p className="text-sm text-gray-500">
-                  已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
-                </p>
-                <p className="text-sm text-blue-600">
-                  【包装纸业务】新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
-                </p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                  <p className="text-sm text-green-800">
+                    <strong>静态复制：</strong>直接复制相同的提示词和设置，每个副本内容完全一致
+                  </p>
+                  <p className="text-xs text-green-700">
+                    新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，使用相同的提示词开始制图
+                  </p>
+                </div>
                 <p className="text-sm text-amber-600">
                   具体实现逻辑待开发
                 </p>
