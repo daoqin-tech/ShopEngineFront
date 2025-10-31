@@ -45,7 +45,7 @@ export function AIImageProjects() {
   // const [splitCount, setSplitCount] = useState<number>(2);
   // const [splitting, setSplitting] = useState(false);
 
-  // 动态复制对话框状态
+  // 复制项目对话框状态
   const [dynamicCopyDialogOpen, setDynamicCopyDialogOpen] = useState(false);
   const [copyCount, setCopyCount] = useState<number>(1);
   const [dynamicCopying, setDynamicCopying] = useState(false);
@@ -287,7 +287,7 @@ export function AIImageProjects() {
   //   }
   // };
 
-  // 打开动态复制对话框
+  // 打开复制项目对话框
   const handleOpenDynamicCopyDialog = () => {
     if (selectedProjectIds.size === 0) {
       toast.error('请选择要复制的项目');
@@ -297,7 +297,7 @@ export function AIImageProjects() {
     setDynamicCopyDialogOpen(true);
   };
 
-  // 确认动态复制项目
+  // 确认复制项目
   const handleConfirmDynamicCopy = async () => {
     if (selectedProjectIds.size === 0) {
       toast.error('请选择要复制的项目');
@@ -313,7 +313,7 @@ export function AIImageProjects() {
       setDynamicCopying(true);
       const projectIdsArray = Array.from(selectedProjectIds);
       await AIImageProjectsAPI.dynamicCopyProjects(projectIdsArray, copyCount);
-      toast.success(`已成功动态复制 ${selectedProjectIds.size} 个项目，正在后台生成图片`);
+      toast.success(`已成功复制 ${selectedProjectIds.size} 个项目，正在后台生成图片`);
       setDynamicCopyDialogOpen(false);
       setSelectedProjectIds(new Set());
       setCopyCount(1);
@@ -647,7 +647,7 @@ export function AIImageProjects() {
             className="flex items-center gap-2"
           >
             <Copy className="w-4 h-4" />
-            动态复制
+            复制项目
           </Button>
           <Button
             onClick={handleOpenApplyTemplateDialog}
@@ -1138,16 +1138,16 @@ export function AIImageProjects() {
         </DialogContent>
       </Dialog> */}
 
-      {/* 动态复制项目对话框 */}
+      {/* 复制项目对话框 */}
       <Dialog open={dynamicCopyDialogOpen} onOpenChange={setDynamicCopyDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Copy className="w-5 h-5 text-blue-600" />
-              动态复制项目
+              复制项目
             </DialogTitle>
             <DialogDescription>
-              基于AI生成相似提示词，动态复制项目并立即开始生成新图片
+              选择复制模式，复制项目并立即开始生成新图片
             </DialogDescription>
           </DialogHeader>
 
