@@ -160,6 +160,23 @@ export function GenerationParamsPanel({
             ))}
           </div>
 
+          {/* 业务场景说明 */}
+          {selectedModel === 'flux-dev' && (
+            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-600">
+                💡 适合包装纸、日历业务
+              </p>
+            </div>
+          )}
+
+          {selectedModel === 'doubao-seedream-4-0-250828' && (
+            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-600">
+                💡 适合手账纸业务
+              </p>
+            </div>
+          )}
+
           {/* 生成数量选择 - 仅在选择豆包模型且为以图生图模式时显示 */}
           {selectedModel === 'doubao-seedream-4-0-250828' && isImageToImageMode && (
             <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
