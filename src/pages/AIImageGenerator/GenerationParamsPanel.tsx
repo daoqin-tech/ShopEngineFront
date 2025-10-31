@@ -48,9 +48,9 @@ interface GenerationParamsPanelProps {
 
 // 可用的模型选项
 const MODEL_OPTIONS = [
-  { value: 'flux-dev', label: 'Flux Dev', description: '开发版模型（默认）' },
+  { value: 'flux-dev', label: 'Flux Dev', description: '提示词生图' },
   // { value: 'flux-pro-1.1', label: 'Flux Pro 1.1', description: '专业版 1.1' },
-  { value: 'doubao-seedream-4-0-250828', label: 'Doubao Seedream 4.0', description: '火山引擎' }
+  { value: 'doubao-seedream-4-0-250828', label: 'Doubao Seedream 4.0', description: '以图生图' }
 ];
 
 export function GenerationParamsPanel({
