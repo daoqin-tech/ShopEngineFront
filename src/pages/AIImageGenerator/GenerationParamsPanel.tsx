@@ -2,40 +2,30 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AspectRatio, ASPECT_RATIOS, ImageGenerationParams } from './types';
 
-// 验证尺寸是否符合新模型API要求
-const validateDimension = (value: number): number => {
-  // 限制在256-1440范围内
-  const clamped = Math.max(256, Math.min(1440, value));
-  // 确保是32的倍数
-  return Math.round(clamped / 32) * 32;
-};
+// 这些验证函数暂时保留供将来自定义尺寸功能使用
+// const validateDimension = (value: number): number => {
+//   const clamped = Math.max(256, Math.min(1440, value));
+//   return Math.round(clamped / 32) * 32;
+// };
 
-// 智能验证并调整尺寸组合以符合所有约束
-const validateDimensions = (width: number, height: number): { width: number; height: number } => {
-  // 首先验证单个尺寸范围并调整为32的倍数
-  let validWidth = validateDimension(width);
-  let validHeight = validateDimension(height);
+// const validateDimensions = (width: number, height: number): { width: number; height: number } => {
+//   let validWidth = validateDimension(width);
+//   let validHeight = validateDimension(height);
+//   return { width: validWidth, height: validHeight };
+// };
 
-  return { width: validWidth, height: validHeight };
-};
-
-// 检查尺寸是否满足所有约束（不调整，仅检查）
-const checkDimensionsValid = (width: number, height: number): { valid: boolean; reason?: string } => {
-  // 检查基本范围（单个维度）
-  if (width < 256 || width > 1440) {
-    return { valid: false, reason: '宽度必须在256-1440范围内' };
-  }
-  if (height < 256 || height > 1440) {
-    return { valid: false, reason: '高度必须在256-1440范围内' };
-  }
-
-  // 检查32的倍数
-  if (width % 32 !== 0 || height % 32 !== 0) {
-    return { valid: false, reason: '尺寸必须是32的倍数' };
-  }
-
-  return { valid: true };
-};
+// const checkDimensionsValid = (width: number, height: number): { valid: boolean; reason?: string } => {
+//   if (width < 256 || width > 1440) {
+//     return { valid: false, reason: '宽度必须在256-1440范围内' };
+//   }
+//   if (height < 256 || height > 1440) {
+//     return { valid: false, reason: '高度必须在256-1440范围内' };
+//   }
+//   if (width % 32 !== 0 || height % 32 !== 0) {
+//     return { valid: false, reason: '尺寸必须是32的倍数' };
+//   }
+//   return { valid: true };
+// };
 
 interface GenerationParamsPanelProps {
   selectedPromptsCount: number;

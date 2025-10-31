@@ -253,9 +253,9 @@ export function ImageGeneration() {
       // 触发历史图片数据重新加载
       setHistoryRefreshTrigger(prev => prev + 1);
 
-      // 开始轮询状态（使用返回的taskIds，过滤掉空字符串）
-      if (response.taskIds && response.taskIds.length > 0) {
-        const validTaskIds = response.taskIds.filter(id => id && id.trim() !== '');
+      // 开始轮询状态（使用返回的taskIDs，过滤掉空字符串）
+      if (response.taskIDs && response.taskIDs.length > 0) {
+        const validTaskIds = response.taskIDs.filter((id: string) => id && id.trim() !== '');
         if (validTaskIds.length > 0) {
           startPolling(validTaskIds);
         }
@@ -339,7 +339,7 @@ export function ImageGeneration() {
 
       // 开始轮询状态（使用返回的taskIds，过滤掉空字符串）
       if (response.taskIds && response.taskIds.length > 0) {
-        const validTaskIds = response.taskIds.filter(id => id && id.trim() !== '');
+        const validTaskIds = response.taskIds.filter((id: string) => id && id.trim() !== '');
         if (validTaskIds.length > 0) {
           startPolling(validTaskIds);
         }

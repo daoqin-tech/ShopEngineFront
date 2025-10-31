@@ -54,7 +54,7 @@ export function ImageContentArea({
   isLoadingHistoricalData,
   projectName,
   onRefreshImages,
-  onToggleReferenceImageSelection
+  onToggleReferenceImageSelection: _onToggleReferenceImageSelection
 }: ImageContentAreaProps) {
   const navigate = useNavigate();
 
@@ -286,7 +286,8 @@ export function ImageContentArea({
             createdAt: new Date().toISOString(),
             status: PromptStatus.COMPLETED,
             width,
-            height
+            height,
+            taskId: null
           };
         })
       );

@@ -52,7 +52,7 @@ export function ImageGenerationStep({
               // 获取这些图片对应的taskId，过滤掉null/undefined
               const taskIdsToMonitor = processingImages
                 .map(img => img.taskId)
-                .filter(taskId => taskId && taskId.trim() !== '');
+                .filter((taskId): taskId is string => taskId !== null && taskId.trim() !== '');
               // 去重
               const uniqueTaskIds = Array.from(new Set(taskIdsToMonitor));
 

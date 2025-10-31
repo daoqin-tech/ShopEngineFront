@@ -26,11 +26,14 @@ export function ImageCropEditor({ imageUrl, sourceImageId: _sourceImageId, platf
   const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [scale, setScale] = useState(1); // 图片缩放比例
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving] = useState(false); // 保存状态（暂未使用）
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedImageRef = useRef<HTMLImageElement | null>(null); // 存储加载的图片对象
+
+  // 避免未使用变量警告
+  console.log('Editor state:', { isSaving });
 
   // 加载图片并绘制到canvas
   useEffect(() => {

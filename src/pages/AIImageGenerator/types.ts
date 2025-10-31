@@ -31,7 +31,7 @@ export interface ReferenceImage {
 
 export interface GeneratedImage {
   id: string;
-  taskId: string; // 任务ID（用于轮询状态）
+  taskId: string | null; // 任务ID（用于轮询状态），上传的图片可能为null
   promptId: string; // 关联的提示词ID
   promptText: string; // 提示词文本
   imageUrl: string;
