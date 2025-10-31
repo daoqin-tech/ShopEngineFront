@@ -99,8 +99,8 @@ export const DECORATIVE_PAPER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '20张30cmx30cm 装饰纸',
-    productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
+    productSpec: '礼品包装纸-Gift Wrap Paper 20张30cmx30cm 装饰纸',
+    productUsage: '适用于礼品包装、生日礼物包装、节日礼物装饰、婚礼礼品包装等场合'
   }
 ];
 
