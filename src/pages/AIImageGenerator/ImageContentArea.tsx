@@ -553,7 +553,8 @@ export function ImageContentArea({
                   </Button>
                 )}
 
-                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                {/* 批量操作按钮已隐藏 - 该功能已移至 /product-images 页面 */}
+                {/* <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                   onClick={() => setShowCopyDialog(true)} disabled={selectedImageIds.size === 0 || isCopying}>
                   {isCopying ? (
                     <>
@@ -566,7 +567,7 @@ export function ImageContentArea({
                       批量操作
                     </>
                   )}
-                </Button>
+                </Button> */}
 
                 <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                   onClick={() => {

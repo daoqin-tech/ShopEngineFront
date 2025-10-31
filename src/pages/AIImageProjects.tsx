@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 
 export function AIImageProjects() {
@@ -48,6 +49,7 @@ export function AIImageProjects() {
   const [dynamicCopyDialogOpen, setDynamicCopyDialogOpen] = useState(false);
   const [copyCount, setCopyCount] = useState<number>(1);
   const [dynamicCopying, setDynamicCopying] = useState(false);
+  const [businessType, setBusinessType] = useState<'calendar' | 'notebook' | 'wrapping'>('calendar'); // 业务类型：日历、手账纸、包装纸
 
   // 模板替换对话框状态
   const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
@@ -1138,7 +1140,7 @@ export function AIImageProjects() {
 
       {/* 动态复制项目对话框 */}
       <Dialog open={dynamicCopyDialogOpen} onOpenChange={setDynamicCopyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Copy className="w-5 h-5 text-blue-600" />
@@ -1148,34 +1150,111 @@ export function AIImageProjects() {
               基于AI生成相似提示词，动态复制项目并立即开始生成新图片
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="copyCount">每个项目复制数量</Label>
-              <Input
-                id="copyCount"
-                type="number"
-                min={1}
-                max={10}
-                value={copyCount}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  if (!isNaN(value)) {
-                    setCopyCount(value);
-                  } else if (e.target.value === '') {
-                    setCopyCount(1);
-                  }
-                }}
-                placeholder="输入复制数量（1-10）"
-                className="w-full"
-              />
-              <p className="text-sm text-gray-500">
-                已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
-              </p>
-              <p className="text-sm text-blue-600">
-                新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
-              </p>
-            </div>
-          </div>
+
+          {/* 业务类型选择 Tabs */}
+          <Tabs value={businessType} onValueChange={(value) => setBusinessType(value as 'calendar' | 'notebook' | 'wrapping')} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="calendar">日历</TabsTrigger>
+              <TabsTrigger value="notebook">手账纸</TabsTrigger>
+              <TabsTrigger value="wrapping">包装纸</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="calendar" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="copyCount">每个项目复制数量</Label>
+                <Input
+                  id="copyCount"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={copyCount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (!isNaN(value)) {
+                      setCopyCount(value);
+                    } else if (e.target.value === '') {
+                      setCopyCount(1);
+                    }
+                  }}
+                  placeholder="输入复制数量（1-10）"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500">
+                  已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
+                </p>
+                <p className="text-sm text-blue-600">
+                  【日历业务】新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
+                </p>
+                <p className="text-sm text-amber-600">
+                  具体实现逻辑待开发
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="notebook" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="copyCount">每个项目复制数量</Label>
+                <Input
+                  id="copyCount"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={copyCount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (!isNaN(value)) {
+                      setCopyCount(value);
+                    } else if (e.target.value === '') {
+                      setCopyCount(1);
+                    }
+                  }}
+                  placeholder="输入复制数量（1-10）"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500">
+                  已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
+                </p>
+                <p className="text-sm text-blue-600">
+                  【手账纸业务】新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
+                </p>
+                <p className="text-sm text-amber-600">
+                  具体实现逻辑待开发
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="wrapping" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="copyCount">每个项目复制数量</Label>
+                <Input
+                  id="copyCount"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={copyCount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (!isNaN(value)) {
+                      setCopyCount(value);
+                    } else if (e.target.value === '') {
+                      setCopyCount(1);
+                    }
+                  }}
+                  placeholder="输入复制数量（1-10）"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500">
+                  已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
+                </p>
+                <p className="text-sm text-blue-600">
+                  【包装纸业务】新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
+                </p>
+                <p className="text-sm text-amber-600">
+                  具体实现逻辑待开发
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button
               variant="outline"
