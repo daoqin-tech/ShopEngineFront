@@ -119,13 +119,22 @@ export function HotProductCopy() {
     }
   };
 
-  // 展开/折叠某一天的图片
+  // 展开某一天的图片（只展开点击的日期，关闭其他日期）
   const toggleDateExpansion = (date: string) => {
     setImagesByDate((prev) =>
-      prev.map((group) =>
-        group.date === date ? { ...group, expanded: !group.expanded } : group
-      )
+      prev.map((group) => ({
+        ...group,
+        expanded: group.date === date, // 只展开点击的日期，其他都关闭
+      }))
     );
+
+    // 滚动到对应日期的内容区域
+    setTimeout(() => {
+      const element = document.getElementById(`date-group-${date}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   // 刷新列表
@@ -251,7 +260,7 @@ export function HotProductCopy() {
                       <div className="flex-1">
                         {imagesByDate.map((dateGroup) => (
                           dateGroup.expanded && (
-                            <div key={dateGroup.date} className="rounded-lg border bg-card p-6">
+                            <div key={dateGroup.date} id={`date-group-${dateGroup.date}`} className="rounded-lg border bg-card p-6">
                               <div className="mb-6">
                                 <h3 className="text-xl font-semibold">
                                   {dateGroup.displayDate}

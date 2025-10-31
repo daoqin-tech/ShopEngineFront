@@ -1181,12 +1181,9 @@ export function AIImageProjects() {
                 <p className="text-sm text-gray-500">
                   已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
                 </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    <strong>动态复制：</strong>基于AI生成相似但不同的提示词，每个副本都会有独特的内容
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，并自动使用AI生成相似提示词开始制图
+                    <strong>动态复制：</strong>生成的图片都不同
                   </p>
                 </div>
                 <p className="text-sm text-amber-600">
@@ -1218,12 +1215,9 @@ export function AIImageProjects() {
                 <p className="text-sm text-gray-500">
                   已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
                 </p>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <p className="text-sm text-green-800">
-                    <strong>静态复制：</strong>直接复制相同的提示词和设置，每个副本内容完全一致
-                  </p>
-                  <p className="text-xs text-green-700">
-                    新项目将命名为 "原项目名-副本1"、"原项目名-副本2" 等，使用相同的提示词开始制图
+                    <strong>静态复制：</strong>生成的图片都相同
                   </p>
                 </div>
                 <p className="text-sm text-amber-600">
