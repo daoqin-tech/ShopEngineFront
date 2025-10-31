@@ -1151,13 +1151,21 @@ export function AIImageProjects() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* 业务类型选择 Tabs */}
+          {/* 业务类型选择 Tabs - 日历和包装纸在左边，手账纸在右边 */}
           <Tabs value={businessType} onValueChange={(value) => setBusinessType(value as 'calendar' | 'notebook' | 'wrapping')} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="calendar">日历</TabsTrigger>
-              <TabsTrigger value="notebook">手账纸</TabsTrigger>
-              <TabsTrigger value="wrapping">包装纸</TabsTrigger>
-            </TabsList>
+            <div className="flex gap-2">
+              <div className="flex-1 grid grid-cols-2 gap-2">
+                <TabsList className="w-full">
+                  <TabsTrigger value="calendar" className="w-full">日历</TabsTrigger>
+                </TabsList>
+                <TabsList className="w-full">
+                  <TabsTrigger value="wrapping" className="w-full">包装纸</TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsList className="w-48">
+                <TabsTrigger value="notebook" className="w-full">手账纸</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="calendar" className="space-y-4 py-4">
               <div className="space-y-2">
