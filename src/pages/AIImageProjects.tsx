@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Scissors, Copy } from 'lucide-react';
+import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -39,10 +39,10 @@ export function AIImageProjects() {
   const [editingName, setEditingName] = useState('');
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
-  // 拆分对话框状态
-  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
-  const [splitCount, setSplitCount] = useState<number>(2);
-  const [splitting, setSplitting] = useState(false);
+  // 拆分对话框状态 - 已禁用
+  // const [splitDialogOpen, setSplitDialogOpen] = useState(false);
+  // const [splitCount, setSplitCount] = useState<number>(2);
+  // const [splitting, setSplitting] = useState(false);
 
   // 动态复制对话框状态
   const [dynamicCopyDialogOpen, setDynamicCopyDialogOpen] = useState(false);
@@ -132,7 +132,7 @@ export function AIImageProjects() {
       const newProject = await AIImageProjectsAPI.createAIImageProject({
         name: '新建项目',
       });
-      navigate(`/workspace/project/${newProject.id}/prompt-generation`);
+      navigate(`/workspace/project/${newProject.id}/image-generation`);
     } catch (err) {
       toast.error('创建项目失败', {
         description: '请稍后再试'
@@ -167,7 +167,7 @@ export function AIImageProjects() {
 
 
   const handleOpenProject = (projectId: string) => {
-    navigate(`/workspace/project/${projectId}/prompt-generation`);
+    navigate(`/workspace/project/${projectId}/image-generation`);
   };
 
   const handleStartEditName = (project: AIImageProject) => {
@@ -244,46 +244,46 @@ export function AIImageProjects() {
     }
   };
 
-  // 打开批量拆分对话框
-  const handleOpenSplitDialog = () => {
-    if (selectedProjectIds.size === 0) {
-      toast.error('请选择要拆分的项目');
-      return;
-    }
-    setSplitCount(2);
-    setSplitDialogOpen(true);
-  };
+  // 打开批量拆分对话框 - 已禁用
+  // const handleOpenSplitDialog = () => {
+  //   if (selectedProjectIds.size === 0) {
+  //     toast.error('请选择要拆分的项目');
+  //     return;
+  //   }
+  //   setSplitCount(2);
+  //   setSplitDialogOpen(true);
+  // };
 
-  // 确认批量拆分项目
-  const handleConfirmSplit = async () => {
-    if (selectedProjectIds.size === 0) {
-      toast.error('请选择要拆分的项目');
-      return;
-    }
+  // 确认批量拆分项目 - 已禁用
+  // const handleConfirmSplit = async () => {
+  //   if (selectedProjectIds.size === 0) {
+  //     toast.error('请选择要拆分的项目');
+  //     return;
+  //   }
 
-    if (splitCount < 2) {
-      toast.error('请输入有效的拆分数量（最小为2）');
-      return;
-    }
+  //   if (splitCount < 2) {
+  //     toast.error('请输入有效的拆分数量（最小为2）');
+  //     return;
+  //   }
 
-    try {
-      setSplitting(true);
-      const projectIdsArray = Array.from(selectedProjectIds);
-      await AIImageProjectsAPI.splitProjects(projectIdsArray, splitCount);
-      toast.success(`已成功拆分 ${selectedProjectIds.size} 个项目`);
-      setSplitDialogOpen(false);
-      setSelectedProjectIds(new Set());
-      setSplitCount(2);
-      fetchProjects(currentPage); // 刷新列表
-    } catch (err: any) {
-      toast.error('项目拆分失败', {
-        description: err.response?.data?.message || '请稍后再试'
-      });
-      console.error('Error splitting projects:', err);
-    } finally {
-      setSplitting(false);
-    }
-  };
+  //   try {
+  //     setSplitting(true);
+  //     const projectIdsArray = Array.from(selectedProjectIds);
+  //     await AIImageProjectsAPI.splitProjects(projectIdsArray, splitCount);
+  //     toast.success(`已成功拆分 ${selectedProjectIds.size} 个项目`);
+  //     setSplitDialogOpen(false);
+  //     setSelectedProjectIds(new Set());
+  //     setSplitCount(2);
+  //     fetchProjects(currentPage); // 刷新列表
+  //   } catch (err: any) {
+  //     toast.error('项目拆分失败', {
+  //       description: err.response?.data?.message || '请稍后再试'
+  //     });
+  //     console.error('Error splitting projects:', err);
+  //   } finally {
+  //     setSplitting(false);
+  //   }
+  // };
 
   // 打开动态复制对话框
   const handleOpenDynamicCopyDialog = () => {
@@ -628,7 +628,8 @@ export function AIImageProjects() {
             <Check className="w-4 h-4" />
             重新生成
           </Button>
-          <Button
+          {/* 拆分项目按钮 - 已禁用 */}
+          {/* <Button
             onClick={handleOpenSplitDialog}
             disabled={selectedProjectIds.size === 0}
             variant="outline"
@@ -636,7 +637,7 @@ export function AIImageProjects() {
           >
             <Scissors className="w-4 h-4" />
             拆分项目
-          </Button>
+          </Button> */}
           <Button
             onClick={handleOpenDynamicCopyDialog}
             disabled={selectedProjectIds.size === 0}
@@ -726,7 +727,7 @@ export function AIImageProjects() {
             <div className="flex-1 overflow-auto">
               <div className="bg-white border-l border-r border-t">
                 {/* 表头 */}
-                <div className="grid grid-cols-[auto_auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
+                <div className="grid grid-cols-[auto_auto_1fr_2fr_2fr_1fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -738,8 +739,8 @@ export function AIImageProjects() {
                   <div className="text-center">序号</div>
                   <div className="text-center">缩略图</div>
                   <div>项目名称</div>
-                  <div>总任务数</div>
-                  <div>状态</div>
+                  <div>任务状态</div>
+                  <div>生成图片数</div>
                   <div>创建时间</div>
                   <div>操作</div>
                 </div>
@@ -748,7 +749,7 @@ export function AIImageProjects() {
                 {projects.map((project, index) => (
                   <div
                     key={project.id}
-                    className="grid grid-cols-[auto_auto_1fr_2fr_1fr_2fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
+                    className="grid grid-cols-[auto_auto_1fr_2fr_2fr_1fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
                   >
                     {/* 复选框 */}
                     <div className="flex items-center justify-center">
@@ -828,14 +829,7 @@ export function AIImageProjects() {
                       )}
                     </div>
 
-                    {/* 总任务数 */}
-                    <div className="flex items-center">
-                      <Badge variant="outline" className="text-gray-600">
-                        {project.totalTasks}
-                      </Badge>
-                    </div>
-
-                    {/* 状态（合并所有状态） */}
+                    {/* 任务状态 */}
                     <div className="flex items-center gap-1 flex-wrap">
                       {project.pendingTasks > 0 && (
                         <Badge variant="outline" className="text-yellow-600 text-xs">
@@ -860,6 +854,13 @@ export function AIImageProjects() {
                           失败:{project.failedTasks}
                         </Badge>
                       )}
+                    </div>
+
+                    {/* 生成图片数 */}
+                    <div className="flex items-center">
+                      <Badge variant="outline" className="text-blue-600">
+                        {project.totalImages}
+                      </Badge>
                     </div>
 
                     {/* 创建时间 */}
@@ -1079,8 +1080,8 @@ export function AIImageProjects() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 拆分项目对话框 */}
-      <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
+      {/* 拆分项目对话框 - 已禁用 */}
+      {/* <Dialog open={splitDialogOpen} onOpenChange={setSplitDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1133,7 +1134,7 @@ export function AIImageProjects() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* 动态复制项目对话框 */}
       <Dialog open={dynamicCopyDialogOpen} onOpenChange={setDynamicCopyDialogOpen}>

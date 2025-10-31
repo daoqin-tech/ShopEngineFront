@@ -2,8 +2,8 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2 } from 'lucide-react';
-import { PromptStatus, GeneratedImage, Prompt } from './types';
+import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Image as ImageIcon } from 'lucide-react';
+import { PromptStatus, GeneratedImage, Prompt, ReferenceImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
 import { toast } from 'sonner';
@@ -39,18 +39,22 @@ const getImageDimensions = (file: File): Promise<{width: number, height: number}
 
 interface ImageContentAreaProps {
   selectedPrompts: Prompt[];
+  selectedReferenceImages?: ReferenceImage[];
   historicalImages: GeneratedImage[];
   isLoadingHistoricalData: boolean;
   projectName?: string;
   onRefreshImages: () => void;
+  onToggleReferenceImageSelection?: (id: string) => void;
 }
 
 export function ImageContentArea({
   selectedPrompts,
+  selectedReferenceImages,
   historicalImages,
   isLoadingHistoricalData,
   projectName,
-  onRefreshImages
+  onRefreshImages,
+  onToggleReferenceImageSelection
 }: ImageContentAreaProps) {
   const navigate = useNavigate();
 
@@ -215,11 +219,10 @@ export function ImageContentArea({
     setIsDeleting(true);
 
     try {
-      const selectedImages = historicalImages.filter(img => selectedImageIds.has(img.id));
-      const promptIds = selectedImages.map(img => img.promptId);
+      const imageIds = Array.from(selectedImageIds);
 
-      await AIImageSessionsAPI.deleteImages(promptIds);
-      toast.success(`已删除 ${promptIds.length} 张图片`);
+      await AIImageSessionsAPI.deleteImages(imageIds);
+      toast.success(`已删除 ${imageIds.length} 张图片`);
 
       setSelectedImageIds(new Set());
       onRefreshImages();
@@ -409,7 +412,7 @@ export function ImageContentArea({
           <div>
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                待生成图片 ({selectedPrompts.length}个)
+                待生成图片 ({selectedPrompts.length}个提示词)
               </h3>
               <p className="text-sm text-gray-500 mt-1">
                 选中的提示词将生成对应的图片，点击左侧生成按钮开始生成
@@ -443,6 +446,45 @@ export function ImageContentArea({
                         <span className="text-xs text-gray-400">准备中</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 参考图片区域 (以图生图模式) */}
+        {selectedReferenceImages && selectedReferenceImages.length > 0 && (
+          <div>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                参考图片 ({selectedReferenceImages.length}张)
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                选中的参考图片将用于生成相似的图片，点击左侧生成按钮开始生成
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
+              {selectedReferenceImages.map((refImage) => (
+                <div key={refImage.id} className="group relative border border-gray-300 rounded-lg bg-white hover:shadow-md transition-all duration-200">
+                  <div className="aspect-square relative overflow-hidden rounded-t-lg">
+                    <img
+                      src={refImage.imageUrl}
+                      alt="参考图片"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center">
+                        <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-gray-700 font-medium">
+                          <ImageIcon className="w-3 h-3 inline-block mr-1" />
+                          参考图
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3 text-center">
+                    <span className="text-xs text-gray-500">等待生成</span>
                   </div>
                 </div>
               ))}

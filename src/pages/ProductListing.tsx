@@ -5,11 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
-import { TEMU_SHOPS, JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES } from '@/types/shop';
+import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
+import {
+  exportCarouselImages as exportCarouselImagesUtil,
+  exportProductImages as exportProductImagesUtil,
+  exportToExcel as exportToExcelUtil
+} from '@/utils/productExportUtils';
 
 export function ProductListing() {
   const navigate = useNavigate();
@@ -26,6 +30,7 @@ export function ProductListing() {
 
   // 筛选条件
   const [productCodes, setProductCodes] = useState(''); // 货号，包含逗号时精确查询，否则模糊查询
+  const [title, setTitle] = useState(''); // 标题模糊搜索
   const [shopId, setShopId] = useState(''); // 店铺ID
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
@@ -56,6 +61,7 @@ export function ProductListing() {
         page,
         limit: validPageSize,
         productCodes: productCodes.trim() || undefined,
+        title: title.trim() || undefined,
         shopId: shopId || undefined,
         startTime: startTimestamp,
         endTime: endTimestamp
@@ -84,6 +90,7 @@ export function ProductListing() {
   // 重置筛选
   const handleResetFilters = () => {
     setProductCodes('');
+    setTitle('');
     setShopId('');
     setStartTime('');
     setEndTime('');
@@ -520,49 +527,15 @@ export function ProductListing() {
     }
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-    const productsWithImages = selectedProducts.filter(p => p.carouselImages && p.carouselImages.length > 0);
-
-    if (productsWithImages.length === 0) {
-      toast.error('所选商品没有商品图');
-      return;
-    }
-
     setIsExportingCarouselImages(true);
+
     try {
-      const zip = new JSZip();
-
-      for (const product of productsWithImages) {
-        const productCode = product.productCode || product.id;
-        const folder = zip.folder(productCode);
-
-        if (folder) {
-          for (let i = 0; i < product.carouselImages.length; i++) {
-            const imageUrl = product.carouselImages[i];
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
-            folder.file(`商品图_${i + 1}.${ext}`, blob);
-          }
-        }
-      }
-
-      const zipContent = await zip.generateAsync({ type: 'blob' });
-      const url = window.URL.createObjectURL(zipContent);
-      const link = document.createElement('a');
-      link.href = url;
-      const now = new Date();
-      const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-      link.download = `商品图_${dateTimeStr}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success(`成功导出 ${productsWithImages.length} 个商品的商品图`);
+      await exportCarouselImagesUtil(selectedProducts);
+      toast.success(`成功导出商品图`);
       setSelectedProductIds(new Set());
     } catch (error) {
       console.error('导出商品图失败:', error);
-      toast.error('导出商品图失败');
+      toast.error(error instanceof Error ? error.message : '导出商品图失败');
     } finally {
       setIsExportingCarouselImages(false);
     }
@@ -576,49 +549,14 @@ export function ProductListing() {
     }
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-    const productsWithImages = selectedProducts.filter(p => p.productImages && p.productImages.length > 0);
-
-    if (productsWithImages.length === 0) {
-      toast.error('所选商品没有产品图');
-      return;
-    }
-
     setIsExportingProductImages(true);
     try {
-      const zip = new JSZip();
-
-      for (const product of productsWithImages) {
-        const productCode = product.productCode || product.id;
-        const folder = zip.folder(productCode);
-
-        if (folder) {
-          for (let i = 0; i < product.productImages.length; i++) {
-            const imageUrl = product.productImages[i];
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
-            folder.file(`产品图_${i + 1}.${ext}`, blob);
-          }
-        }
-      }
-
-      const zipContent = await zip.generateAsync({ type: 'blob' });
-      const url = window.URL.createObjectURL(zipContent);
-      const link = document.createElement('a');
-      link.href = url;
-      const now = new Date();
-      const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-      link.download = `产品图_${dateTimeStr}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success(`成功导出 ${productsWithImages.length} 个商品的产品图`);
+      await exportProductImagesUtil(selectedProducts);
+      toast.success(`成功导出产品图`);
       setSelectedProductIds(new Set());
     } catch (error) {
       console.error('导出产品图失败:', error);
-      toast.error('导出产品图失败');
+      toast.error(error instanceof Error ? error.message : '导出产品图失败');
     } finally {
       setIsExportingProductImages(false);
     }
@@ -626,235 +564,20 @@ export function ProductListing() {
 
   // 导出Excel功能
   const handleExport = () => {
-    if (selectedProductIds.size === 0) {
-      toast.error('请至少选择一个商品');
-      return;
-    }
-
-    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-
-    // 准备导出数据 - 按照模板格式（59列）
-    const exportData = selectedProducts.map(product => {
-      // 查找分类配置（先在手账纸分类中查找，如果找不到则在日历分类中查找）
-      const allCategories = [...JOURNAL_PAPER_CATEGORIES, ...CALENDAR_CATEGORIES];
-      const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
-
-      return {
-        '产品标题': product.nameZh || '',
-        '英文标题': product.nameEn || '',
-        '产品描述': '',
-        '产品货号': product.productCode || '',
-        '变种名称': product.variantName || '',
-        '变种属性名称一': product.variantAttributeName1 || '',
-        '变种属性值一': product.variantAttributeValue1 || '',
-        '变种属性名称二': '',
-        '变种属性值二': '',
-        '预览图': product.previewImage || '',
-        '申报价格': product.declaredPrice || '',
-        'SKU货号': product.productCode || '',
-        '长': product.length || '',
-        '宽': product.width || '',
-        '高': product.height || '',
-        '重量': product.weight || '',
-        '识别码类型': '',
-        '识别码': '',
-        '站外产品链接': '',
-        '轮播图': product.carouselImages?.join('\r\n') || '',
-        '产品素材图': product.materialImage || '',
-        '外包装形状': '',
-        '外包装类型': '',
-        '外包装图片': '',
-        '建议零售价(建议零售价币种)': product.suggestedRetailPrice || '',
-        '库存': product.stock || '',
-        '发货时效': product.shippingTime || '',
-        '分类id': product.categoryId || '',
-        '产品属性': categoryConfig?.productAttributes || '',
-        'SPU属性': '',
-        'SKC属性': '',
-        'SKU属性': '',
-        '站点价格': '',
-        '来源url': '',
-        '产地': product.origin || '',
-        '敏感属性': '',
-        '备注': '',
-        'SKU分类': '',
-        'SKU分类数量': '',
-        'SKU分类单位': '',
-        '独立包装': '',
-        '净含量数值': '',
-        '净含量单位': '',
-        '总净含量': '',
-        '总净含量单位': '',
-        '混合套装类型': '',
-        'SKU分类总数量': '',
-        'SKU分类总数量单位': '',
-        '包装清单': '',
-        '生命周期': '',
-        '视频Url': '',
-        '运费模板（模板id）': product.freightTemplateId || '',
-        '经营站点': product.operatingSite || '',
-        '所属店铺': getShopName(product.shopId),
-        'SPUID': '',
-        'SKCID': '',
-        'SKUID': '',
-        '创建时间': new Date(product.createdAt).toLocaleString('zh-CN'),
-        '更新时间': new Date(product.updatedAt).toLocaleString('zh-CN')
-      };
-    });
-
-    // 创建工作簿
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // 设置列宽 - 按照模板格式59列
-    if (!ws['!cols']) ws['!cols'] = [];
-    const colWidths = [
-      { wch: 35 },  // 1. 产品标题
-      { wch: 35 },  // 2. 英文标题
-      { wch: 30 },  // 3. 产品描述
-      { wch: 15 },  // 4. 产品货号
-      { wch: 12 },  // 5. 变种名称
-      { wch: 18 },  // 6. 变种属性名称一
-      { wch: 12 },  // 7. 变种属性值一
-      { wch: 18 },  // 8. 变种属性名称二
-      { wch: 12 },  // 9. 变种属性值二
-      { wch: 60 },  // 10. 预览图
-      { wch: 12 },  // 11. 申报价格
-      { wch: 15 },  // 12. SKU货号
-      { wch: 8 },   // 13. 长
-      { wch: 8 },   // 14. 宽
-      { wch: 8 },   // 15. 高
-      { wch: 10 },  // 16. 重量
-      { wch: 12 },  // 17. 识别码类型
-      { wch: 20 },  // 18. 识别码
-      { wch: 40 },  // 19. 站外产品链接
-      { wch: 70 },  // 20. 轮播图
-      { wch: 60 },  // 21. 产品素材图
-      { wch: 12 },  // 22. 外包装形状
-      { wch: 12 },  // 23. 外包装类型
-      { wch: 60 },  // 24. 外包装图片
-      { wch: 15 },  // 25. 建议零售价(建议零售价币种)
-      { wch: 10 },  // 26. 库存
-      { wch: 10 },  // 27. 发货时效
-      { wch: 12 },  // 28. 分类id
-      { wch: 40 },  // 29. 产品属性
-      { wch: 30 },  // 30. SPU属性
-      { wch: 40 },  // 31. SKC属性
-      { wch: 40 },  // 32. SKU属性
-      { wch: 15 },  // 33. 站点价格
-      { wch: 40 },  // 34. 来源url
-      { wch: 20 },  // 35. 产地
-      { wch: 12 },  // 36. 敏感属性
-      { wch: 20 },  // 37. 备注
-      { wch: 12 },  // 38. SKU分类
-      { wch: 12 },  // 39. SKU分类数量
-      { wch: 12 },  // 40. SKU分类单位
-      { wch: 12 },  // 41. 独立包装
-      { wch: 12 },  // 42. 净含量数值
-      { wch: 12 },  // 43. 净含量单位
-      { wch: 12 },  // 44. 总净含量
-      { wch: 12 },  // 45. 总净含量单位
-      { wch: 15 },  // 46. 混合套装类型
-      { wch: 15 },  // 47. SKU分类总数量
-      { wch: 15 },  // 48. SKU分类总数量单位
-      { wch: 30 },  // 49. 包装清单
-      { wch: 12 },  // 50. 生命周期
-      { wch: 60 },  // 51. 视频Url
-      { wch: 30 },  // 52. 运费模板（模板id）
-      { wch: 12 },  // 53. 经营站点
-      { wch: 25 },  // 54. 所属店铺
-      { wch: 15 },  // 55. SPUID
-      { wch: 15 },  // 56. SKCID
-      { wch: 15 },  // 57. SKUID
-      { wch: 20 },  // 58. 创建时间
-      { wch: 20 }   // 59. 更新时间
-    ];
-    ws['!cols'] = colWidths;
-
-    // 初始化行高数组
-    if (!ws['!rows']) ws['!rows'] = [];
-
-    // 为所有单元格设置样式和行高
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    const carouselImageColIndex = 11; // 轮播图列
-
-    for (let row = range.s.r; row <= range.e.r; row++) {
-      let maxLines = 1;
-
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-        if (ws[cellAddress]) {
-          const cellValue = ws[cellAddress].v || '';
-          const lines = cellValue.toString().split(/\r?\n/).length;
-          maxLines = Math.max(maxLines, lines);
-
-          // 表头样式
-          if (row === 0) {
-            ws[cellAddress].s = {
-              alignment: {
-                vertical: 'center',
-                horizontal: 'center',
-                wrapText: true
-              },
-              font: {
-                bold: true,
-                sz: 11,
-                name: 'Calibri'
-              },
-              fill: {
-                fgColor: { rgb: "F0F0F0" }
-              }
-            };
-          } else {
-            // 数据行样式 - 现在使用支持样式的 xlsx-js-style，vertical center 会生效
-            ws[cellAddress].s = {
-              alignment: {
-                vertical: 'center',
-                horizontal: col === carouselImageColIndex || col === 5 || col === 12 ? 'left' : 'center',
-                wrapText: true
-              },
-              font: {
-                sz: 10,
-                name: 'Calibri'
-              }
-            };
-          }
-        }
+    try {
+      if (selectedProductIds.size === 0) {
+        toast.error('请至少选择一个商品');
+        return;
       }
 
-      // 设置行高 - 根据内容行数计算合适的高度
-      if (!ws['!rows'][row]) ws['!rows'][row] = {};
-      if (row === 0) {
-        ws['!rows'][row].hpt = 30; // 表头固定行高
-      } else {
-        // 数据行：每行文字约15pt，加上上下边距
-        const lineHeight = 15;
-        const padding = 10;
-        const calculatedHeight = maxLines * lineHeight + padding;
-        ws['!rows'][row].hpt = Math.max(25, calculatedHeight); // 最小25pt，自动扩展
-      }
+      const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+      exportToExcelUtil(selectedProducts, getShopName);
+      toast.success(`成功导出 ${selectedProductIds.size} 个商品`);
+      setSelectedProductIds(new Set());
+    } catch (error) {
+      console.error('导出Excel失败:', error);
+      toast.error(error instanceof Error ? error.message : '导出Excel失败');
     }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '商品列表');
-
-    // 生成文件名：店铺名称_年月日时分
-    const now = new Date();
-    const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-
-    // 获取唯一店铺列表
-    const uniqueShopIds = Array.from(new Set(selectedProducts.map(p => p.shopId)));
-    let shopNamePrefix = '多店铺';
-
-    if (uniqueShopIds.length === 1) {
-      // 只有一个店铺，使用店铺名称
-      shopNamePrefix = getShopName(uniqueShopIds[0]) || '商品列表';
-    }
-
-    const fileName = `${shopNamePrefix}_${dateTimeStr}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-
-    toast.success(`成功导出 ${selectedProductIds.size} 个商品`);
-    setSelectedProductIds(new Set());
   };
 
   return (
@@ -953,6 +676,22 @@ export function ProductListing() {
                 }
               }}
               className="w-64"
+            />
+          </div>
+
+          {/* 标题搜索 */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">标题:</label>
+            <Input
+              placeholder="模糊搜索标题"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleApplyFilters();
+                }
+              }}
+              className="w-48"
             />
           </div>
 

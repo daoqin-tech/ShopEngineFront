@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { X, Plus, Trash2, Check, Loader2, ImageIcon, MessageSquarePlus } from 'lucide-react';
-import type { CropArea, CropAreaWithUrl, CroppedImageRecord } from '@/types/cropImage';
+import { X, Plus, Trash2, Check, Loader2, ImageIcon } from 'lucide-react';
+import type { CropArea, CropAreaWithUrl } from '@/types/cropImage';
 import type { Platform } from '@/types/capturedImage';
 import { v4 as uuidv4 } from 'uuid';
 import { cropImageFromUrl, blobToFile } from '@/utils/imageCrop';
 import { uploadCroppedImageToTencentCloud } from '@/lib/tencentCloud';
-import { aiPromptService } from '@/services/aiPromptService';
 import { toast } from 'sonner';
 
 interface ImageCropEditorProps {
@@ -19,56 +18,19 @@ interface ImageCropEditorProps {
   onComplete?: () => void;
 }
 
-export function ImageCropEditor({ imageUrl, sourceImageId, platform: _platform, projectId, onClose }: ImageCropEditorProps) {
+export function ImageCropEditor({ imageUrl, sourceImageId: _sourceImageId, platform: _platform, projectId, onClose }: ImageCropEditorProps) {
+  const navigate = useNavigate();
   const [cropAreas, setCropAreas] = useState<CropAreaWithUrl[]>([]);
-  const [historicalCrops, setHistoricalCrops] = useState<CroppedImageRecord[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentCrop, setCurrentCrop] = useState<CropArea | null>(null);
   const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [scale, setScale] = useState(1); // 图片缩放比例
-  const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
-  const [selectedHistoricalIds, setSelectedHistoricalIds] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const loadedImageRef = useRef<HTMLImageElement | null>(null); // 存储加载的图片对象
-
-  // 加载历史截图数据（带轮询）
-  useEffect(() => {
-    const loadHistoricalCrops = async () => {
-      // 第一次加载时显示loading
-      if (historicalCrops.length === 0) {
-        setIsLoadingHistory(true);
-      }
-
-      try {
-        const response = await aiPromptService.getCroppedImages(sourceImageId);
-        if (response.items) {
-          setHistoricalCrops(response.items);
-        }
-      } catch (error) {
-        console.error('加载历史截图失败:', error);
-        // 不显示错误提示，静默失败
-      } finally {
-        setIsLoadingHistory(false);
-      }
-    };
-
-    // 立即加载一次
-    loadHistoricalCrops();
-
-    // 设置定时器，每10秒轮询一次
-    const intervalId = setInterval(() => {
-      loadHistoricalCrops();
-    }, 10000); // 10秒
-
-    // 清理定时器
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [sourceImageId]);
 
   // 加载图片并绘制到canvas
   useEffect(() => {
@@ -314,57 +276,8 @@ export function ImageCropEditor({ imageUrl, sourceImageId, platform: _platform, 
     }
   };
 
-  // 切换历史截图选择
-  const toggleHistoricalSelection = (id: string) => {
-    const newSelected = new Set(selectedHistoricalIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedHistoricalIds(newSelected);
-  };
-
-  // 全选/取消全选历史截图
-  const toggleSelectAll = () => {
-    // 只选择已完成的截图
-    const completedCrops = historicalCrops.filter(crop => crop.status === 'completed' && crop.prompt);
-
-    if (selectedHistoricalIds.size === completedCrops.length) {
-      // 已全选，则取消全选
-      setSelectedHistoricalIds(new Set());
-    } else {
-      // 全选所有已完成的
-      setSelectedHistoricalIds(new Set(completedCrops.map(crop => crop.id)));
-    }
-  };
-
-  // 加入到对话
-  const handleAddToConversation = async () => {
-    const selectedCrops = historicalCrops.filter(crop => selectedHistoricalIds.has(crop.id));
-
-    if (selectedCrops.length === 0) {
-      toast.warning('请先选择要加入对话的截图');
-      return;
-    }
-
-    try {
-      await aiPromptService.addToConversation({
-        projectId,
-        ids: Array.from(selectedHistoricalIds),
-      });
-
-      toast.success(`已将 ${selectedCrops.length} 个提示词加入对话，可以在对话中查看`, { duration: 5000 });
-      // 清空选择
-      setSelectedHistoricalIds(new Set());
-    } catch (error) {
-      console.error('加入对话失败:', error);
-      toast.error('加入对话失败，请重试');
-    }
-  };
-
-  // 生成提示词
-  const handleGeneratePrompts = async () => {
+  // 完成截图 - 带着参考图跳转到图片生成页面
+  const handleGenerateImages = () => {
     // 检查是否有已上传的截图
     const uploadedCrops = cropAreas.filter(crop => crop.croppedImageUrl && !crop.uploading);
 
@@ -373,39 +286,21 @@ export function ImageCropEditor({ imageUrl, sourceImageId, platform: _platform, 
       return;
     }
 
-    setIsGeneratingPrompts(true);
+    // 获取所有截图的URL
+    const imageUrls = uploadedCrops.map(crop => crop.croppedImageUrl!);
 
-    try {
-      const images = uploadedCrops.map(crop => ({
-        imageUrl: crop.croppedImageUrl!,
-      }));
+    toast.success(`已选择 ${imageUrls.length} 张参考图`);
 
-      const response = await aiPromptService.batchGeneratePrompts({
-        sourceImageId,
-        images,
-      });
+    // 清空当前截图列表
+    setCropAreas([]);
 
-      const { summary } = response;
+    // 关闭弹窗
+    onClose();
 
-      // 任务已创建，正在异步处理
-      toast.success(`已创建 ${summary.total} 个提示词生成任务`);
-
-      // 将新创建的任务添加到历史列表中（这样可以立即看到pending状态）
-      if (response.items && response.items.length > 0) {
-        setHistoricalCrops(prev => [...response.items, ...prev]);
-      }
-
-      // 清空当前截图列表
-      setCropAreas([]);
-
-      // 提示用户等待异步处理
-      toast.info('提示词正在后台生成中，请稍候查看结果', { duration: 5000 });
-    } catch (error) {
-      console.error('提示词生成失败:', error);
-      toast.error('提示词生成失败，请重试');
-    } finally {
-      setIsGeneratingPrompts(false);
-    }
+    // 跳转到图片生成页面,通过 state 传递参考图URL
+    navigate(`/workspace/project/${projectId}/image-generation`, {
+      state: { referenceImageUrls: imageUrls }
+    });
   };
 
   return (
@@ -544,162 +439,31 @@ export function ImageCropEditor({ imageUrl, sourceImageId, platform: _platform, 
                 )}
               </div>
 
-              {/* 生成提示词按钮 - 放在当前截图和历史截图之间 */}
+              {/* 生成图片按钮 - 以图生图 */}
               <div className="px-4 py-3 border-y bg-gray-50">
                 <Button
                   className="w-full"
-                  disabled={cropAreas.length === 0 || cropAreas.some(c => c.uploading) || isGeneratingPrompts}
-                  onClick={handleGeneratePrompts}
+                  disabled={cropAreas.length === 0 || cropAreas.some(c => c.uploading) || isSaving}
+                  onClick={handleGenerateImages}
                 >
-                  {isGeneratingPrompts ? (
+                  {isSaving ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      生成提示词中...
+                      保存中...
                     </>
                   ) : (
                     <>
                       <Check className="w-4 h-4 mr-2" />
-                      完成截图并生成提示词 ({cropAreas.filter(c => c.croppedImageUrl).length})
+                      完成 ({cropAreas.filter(c => c.croppedImageUrl).length})
                     </>
                   )}
                 </Button>
               </div>
 
-              {/* 历史截图区域 */}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                    历史截图 ({historicalCrops.length})
-                  </h4>
-                  {historicalCrops.filter(c => c.status === 'completed' && c.prompt).length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={toggleSelectAll}
-                    >
-                      {selectedHistoricalIds.size === historicalCrops.filter(c => c.status === 'completed' && c.prompt).length
-                        ? '取消全选'
-                        : '全选'}
-                    </Button>
-                  )}
-                </div>
-
-                {isLoadingHistory ? (
-                  <div className="text-center text-gray-400 py-8">
-                    <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
-                    <p className="text-sm">加载中...</p>
-                  </div>
-                ) : historicalCrops.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
-                    <p className="text-sm">暂无历史截图</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {historicalCrops.map((crop) => {
-                      const canSelect = crop.status === 'completed' && crop.prompt;
-                      const isSelected = selectedHistoricalIds.has(crop.id);
-
-                      return (
-                        <div
-                          key={crop.id}
-                          className={`p-3 border rounded-lg transition-all ${
-                            isSelected
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex gap-3">
-                            {/* 复选框 - 只有已完成的才能选择 */}
-                            {canSelect && (
-                              <div className="flex items-start pt-1">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleHistoricalSelection(crop.id)}
-                                />
-                              </div>
-                            )}
-
-                            <div className="w-20 h-20 rounded border bg-white flex-shrink-0 overflow-hidden">
-                              <img
-                                src={crop.imageUrl}
-                                alt="历史截图"
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="text-xs text-gray-500">
-                                {new Date(crop.createdAt).toLocaleString('zh-CN', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </div>
-                              {/* 状态标签 */}
-                              {crop.status === 'processing' && (
-                                <div className="flex items-center gap-1 text-xs text-blue-600">
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                  处理中
-                                </div>
-                              )}
-                              {crop.status === 'completed' && (
-                                <div className="flex items-center gap-1 text-xs text-green-600">
-                                  <Check className="w-3 h-3" />
-                                  已完成
-                                </div>
-                              )}
-                              {crop.status === 'failed' && (
-                                <div className="text-xs text-red-600">失败</div>
-                              )}
-                              {crop.status === 'pending' && (
-                                <div className="text-xs text-gray-400">待处理</div>
-                              )}
-                            </div>
-
-                            {/* 提示词或错误信息 */}
-                            {crop.status === 'completed' && crop.prompt ? (
-                              <div className="text-sm text-gray-700 line-clamp-3">
-                                {crop.prompt}
-                              </div>
-                            ) : crop.status === 'failed' && crop.errorMessage ? (
-                              <div className="text-xs text-red-600">
-                                {crop.errorMessage}
-                              </div>
-                            ) : crop.status === 'processing' ? (
-                              <div className="text-sm text-gray-400 italic">
-                                正在生成提示词...
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-400 italic">
-                                暂无提示词
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* 加入对话按钮 - 放在历史截图下方 */}
-                {historicalCrops.filter(c => c.status === 'completed' && c.prompt).length > 0 && (
-                  <div className="mt-4">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      disabled={selectedHistoricalIds.size === 0}
-                      onClick={handleAddToConversation}
-                    >
-                      <MessageSquarePlus className="w-4 h-4 mr-2" />
-                      加入对话 ({selectedHistoricalIds.size})
-                    </Button>
-                  </div>
-                )}
-              </div>
+              {/* 历史截图区域 - 已禁用,改为参考图选择 */}
+              {/* <div className="p-4">
+                ...历史截图区域代码已移除...
+              </div> */}
             </div>
           </div>
         </div>

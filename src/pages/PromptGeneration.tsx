@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Home, Sparkles } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 import { PromptGenerationStep } from './AIImageGenerator/PromptGenerationStep';
 import { AIImageSession, Prompt, ExtendedAIImageSession } from './AIImageGenerator/types';
@@ -231,15 +231,9 @@ export function PromptGeneration() {
     navigate('/workspace/product-images');
   };
 
-  const handleNextStep = () => {
+  const handleBackToImageGeneration = () => {
     navigate(`/workspace/project/${projectId}/image-generation`);
   };
-
-  const handleCopyHotProduct = () => {
-    navigate(`/workspace/project/${projectId}/hot-product-copy`);
-  };
-
-  const hasSelectedPrompts = selectedPromptIds.size > 0;
 
   // 为子组件创建扩展的session对象
   const extendedSession: ExtendedAIImageSession = {
@@ -280,22 +274,12 @@ export function PromptGeneration() {
                 </div>
                 <div className="flex items-center gap-3 ml-4">
                   <Button
-                    onClick={handleNextStep}
+                    onClick={handleBackToImageGeneration}
                     className="bg-gray-900 hover:bg-gray-800 text-white"
                   >
-                    {hasSelectedPrompts ? `下一步 (${selectedPromptIds.size} 个提示词)` : '下一步'}
+                    返回生成图片
                   </Button>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleCopyHotProduct}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  抄爆款
-                </Button>
               </div>
             </div>
           </div>

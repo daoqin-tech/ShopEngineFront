@@ -8,13 +8,22 @@ import { ImageContentArea } from './ImageContentArea';
 export function ImageGenerationStep({
   session,
   selectedPromptIds,
+  selectedReferenceImageIds,
   onGenerateImages,
+  onGenerateFromImages,
+  onToggleReferenceImageSelection,
   refreshTrigger,
   projectName,
   isGeneratingImages,
   onStartPolling
 }: ImageGenerationStepProps) {
   const selectedPrompts = Array.from(session.prompts?.values() || []).filter(p => selectedPromptIds.has(p.id));
+  const selectedReferenceImages = Array.from(session.referenceImages?.values() || []).filter(img =>
+    selectedReferenceImageIds?.has(img.id)
+  );
+
+  // 判断当前是提示词生图还是以图生图模式
+  const isImageToImageMode = selectedReferenceImages.length > 0;
 
   // 加载状态
   const [isLoadingHistoricalData, setIsLoadingHistoricalData] = useState(false);
@@ -40,14 +49,16 @@ export function ImageGenerationStep({
             );
 
             if (processingImages.length > 0) {
-              // 获取这些图片对应的promptId
-              const promptIdsToMonitor = processingImages.map(img => img.promptId);
+              // 获取这些图片对应的taskId，过滤掉null/undefined
+              const taskIdsToMonitor = processingImages
+                .map(img => img.taskId)
+                .filter(taskId => taskId && taskId.trim() !== '');
               // 去重
-              const uniquePromptIds = Array.from(new Set(promptIdsToMonitor));
+              const uniqueTaskIds = Array.from(new Set(taskIdsToMonitor));
 
               // 调用父组件的轮询方法
-              if (onStartPolling) {
-                onStartPolling(uniquePromptIds);
+              if (onStartPolling && uniqueTaskIds.length > 0) {
+                onStartPolling(uniqueTaskIds);
               }
             }
           }
@@ -85,14 +96,16 @@ export function ImageGenerationStep({
     <div className="flex h-[calc(100vh-80px)]">
       {/* 左侧生成参数区域 */}
       <GenerationParamsPanel
-        selectedPromptsCount={selectedPrompts.length}
+        selectedPromptsCount={isImageToImageMode ? selectedReferenceImages.length : selectedPrompts.length}
         isGeneratingImages={isGeneratingImages}
-        onGenerateImages={onGenerateImages}
+        onGenerateImages={isImageToImageMode && onGenerateFromImages ? onGenerateFromImages : onGenerateImages}
+        isImageToImageMode={isImageToImageMode}
       />
 
       {/* 右侧内容区域 */}
       <ImageContentArea
         selectedPrompts={selectedPrompts}
+        selectedReferenceImages={selectedReferenceImages}
         historicalImages={historicalImages}
         isLoadingHistoricalData={isLoadingHistoricalData}
         projectName={projectName}
@@ -102,6 +115,7 @@ export function ImageGenerationStep({
             setHistoricalImages(images || []);
           }
         }}
+        onToggleReferenceImageSelection={onToggleReferenceImageSelection}
       />
     </div>
   );

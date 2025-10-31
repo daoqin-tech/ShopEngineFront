@@ -30,7 +30,7 @@ export function HotProductCopy() {
   });
 
   const handleBack = () => {
-    navigate(`/workspace/project/${projectId}/prompt-generation`);
+    navigate(`/workspace/project/${projectId}/image-generation`);
   };
 
   const handleBackToHome = () => {

@@ -21,8 +21,17 @@ export interface Prompt {
   status: PromptStatus; // 生成状态
 }
 
+// 参考图片(用于以图生图)
+export interface ReferenceImage {
+  id: string;
+  imageUrl: string; // 图片URL
+  createdAt: string;
+  status: PromptStatus; // 生成状态,与Prompt保持一致
+}
+
 export interface GeneratedImage {
   id: string;
+  taskId: string; // 任务ID（用于轮询状态）
   promptId: string; // 关联的提示词ID
   promptText: string; // 提示词文本
   imageUrl: string;
@@ -76,6 +85,7 @@ export interface StepIndicatorProps {
 export interface ExtendedAIImageSession extends AIImageSession {
   prompts: Map<string, Prompt>;
   images: Map<string, GeneratedImage>;
+  referenceImages?: Map<string, ReferenceImage>; // 参考图片集合(可选)
 }
 
 export interface PromptGenerationStepProps {
@@ -117,15 +127,26 @@ export interface ImageGenerationParams {
   height: number;
   aspectRatio: string;
   model?: string;
+  count?: number; // 每张参考图生成多少张图片（1-15），用于以图生图
 }
 
-// 图片生成API请求参数
+// 图片生成API请求参数(根据提示词生成)
 export interface ImageGenerationRequest {
   projectId: string;
   promptIds: string[];
   width: number;
   height: number;
   model?: string;
+}
+
+// 以图生图API请求参数
+export interface ImageFromImagesRequest {
+  projectId: string;
+  imageUrls: string[];
+  prompt?: string;
+  width: number;
+  height: number;
+  count: number;
 }
 
 // 图片生成API响应
@@ -145,6 +166,7 @@ export interface PromptGenerationResult {
   prompt_id: string;
   status: string;
   task_id?: string;
+  expected_image_count?: number; // 期望生成的图片数量（用于组图）
   images?: GeneratedImageInfo[];
   error?: string;
 }
@@ -171,7 +193,10 @@ export interface PromptGenerationStatus {
 export interface ImageGenerationStepProps {
   session: ExtendedAIImageSession;
   selectedPromptIds: Set<string>; // UI状态：选中的提示词ID
+  selectedReferenceImageIds?: Set<string>; // UI状态：选中的参考图片ID
   onGenerateImages: (params: ImageGenerationParams) => void;
+  onGenerateFromImages?: (params: ImageGenerationParams) => void; // 以图生图回调
+  onToggleReferenceImageSelection?: (id: string) => void; // 切换参考图片选择
   refreshTrigger?: number; // 触发历史数据重新加载
   projectName?: string; // 项目名称，用于导出文件命名
   isGeneratingImages?: boolean; // 是否正在生成图片

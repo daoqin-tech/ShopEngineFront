@@ -12,6 +12,7 @@ export interface AIImageProject {
   processingTasks: number;
   completedTasks: number;
   failedTasks: number;
+  totalImages: number;
   thumbnail?: string;
 }
 

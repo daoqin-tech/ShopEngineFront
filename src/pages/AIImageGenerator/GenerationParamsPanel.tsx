@@ -41,82 +41,86 @@ interface GenerationParamsPanelProps {
   selectedPromptsCount: number;
   isGeneratingImages?: boolean;
   onGenerateImages: (params: ImageGenerationParams) => void;
+  isImageToImageMode?: boolean; // 是否为以图生图模式
 }
 
 // 可用的模型选项
 const MODEL_OPTIONS = [
   { value: 'flux-dev', label: 'Flux Dev', description: '开发版模型（默认）' },
-  { value: 'flux-pro-1.1', label: 'Flux Pro 1.1', description: '专业版 1.1' }
+  // { value: 'flux-pro-1.1', label: 'Flux Pro 1.1', description: '专业版 1.1' },
+  { value: 'doubao-seedream-4-0-250828', label: 'Doubao Seedream 4.0', description: '火山引擎' }
 ];
 
 export function GenerationParamsPanel({
   selectedPromptsCount,
   isGeneratingImages,
-  onGenerateImages
+  onGenerateImages,
+  isImageToImageMode
 }: GenerationParamsPanelProps) {
   // 生成参数状态
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0]); // 默认选择1:1
-  const [customWidth, setCustomWidth] = useState<number>(1024);
-  const [customHeight, setCustomHeight] = useState<number>(1024);
-  const [useCustomSize, setUseCustomSize] = useState(false);
+  // const [customWidth, setCustomWidth] = useState<number>(1024);
+  // const [customHeight, setCustomHeight] = useState<number>(1024);
+  // const [useCustomSize, setUseCustomSize] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('flux-dev'); // 默认模型
+  const [imageCount, setImageCount] = useState<number>(1); // 每张参考图生成的图片数量（1-15）
 
   // 输入验证反馈状态
-  const [widthAdjusted, setWidthAdjusted] = useState(false);
-  const [heightAdjusted, setHeightAdjusted] = useState(false);
+  // const [widthAdjusted, setWidthAdjusted] = useState(false);
+  // const [heightAdjusted, setHeightAdjusted] = useState(false);
 
   // 处理比例选择变化
   const handleAspectRatioChange = (aspectRatio: AspectRatio) => {
     setSelectedAspectRatio(aspectRatio);
-    if (!useCustomSize) {
-      setCustomWidth(aspectRatio.width);
-      setCustomHeight(aspectRatio.height);
-    }
+    // if (!useCustomSize) {
+    //   setCustomWidth(aspectRatio.width);
+    //   setCustomHeight(aspectRatio.height);
+    // }
   };
 
-  // 处理自定义尺寸变化 - 允许用户输入，不立即验证
-  const handleCustomWidthChange = (value: string) => {
-    const numValue = parseInt(value) || 0;
-    setCustomWidth(numValue);
-  };
+  // // 处理自定义尺寸变化 - 允许用户输入，不立即验证
+  // const handleCustomWidthChange = (value: string) => {
+  //   const numValue = parseInt(value) || 0;
+  //   setCustomWidth(numValue);
+  // };
 
-  const handleCustomHeightChange = (value: string) => {
-    const numValue = parseInt(value) || 0;
-    setCustomHeight(numValue);
-  };
+  // const handleCustomHeightChange = (value: string) => {
+  //   const numValue = parseInt(value) || 0;
+  //   setCustomHeight(numValue);
+  // };
 
-  // 输入框失焦时验证
-  const handleWidthBlur = () => {
-    const result = validateDimensions(customWidth, customHeight);
-    if (result.width !== customWidth) {
-      setCustomWidth(result.width);
-      setWidthAdjusted(true);
-      // 3秒后清除提示
-      setTimeout(() => setWidthAdjusted(false), 3000);
-    }
-    if (result.height !== customHeight) {
-      setCustomHeight(result.height);
-      setHeightAdjusted(true);
-      // 3秒后清除提示
-      setTimeout(() => setHeightAdjusted(false), 3000);
-    }
-  };
+  // // 输入框失焦时验证
+  // const handleWidthBlur = () => {
+  //   const result = validateDimensions(customWidth, customHeight);
+  //   if (result.width !== customWidth) {
+  //     setCustomWidth(result.width);
+  //     setWidthAdjusted(true);
+  //     // 3秒后清除提示
+  //     setTimeout(() => setWidthAdjusted(false), 3000);
+  //   }
+  //   if (result.height !== customHeight) {
+  //     setCustomHeight(result.height);
+  //     setHeightAdjusted(true);
+  //     // 3秒后清除提示
+  //     setTimeout(() => setHeightAdjusted(false), 3000);
+  //   }
+  // };
 
-  const handleHeightBlur = () => {
-    const result = validateDimensions(customWidth, customHeight);
-    if (result.width !== customWidth) {
-      setCustomWidth(result.width);
-      setWidthAdjusted(true);
-      // 3秒后清除提示
-      setTimeout(() => setWidthAdjusted(false), 3000);
-    }
-    if (result.height !== customHeight) {
-      setCustomHeight(result.height);
-      setHeightAdjusted(true);
-      // 3秒后清除提示
-      setTimeout(() => setHeightAdjusted(false), 3000);
-    }
-  };
+  // const handleHeightBlur = () => {
+  //   const result = validateDimensions(customWidth, customHeight);
+  //   if (result.width !== customWidth) {
+  //     setCustomWidth(result.width);
+  //     setWidthAdjusted(true);
+  //     // 3秒后清除提示
+  //     setTimeout(() => setWidthAdjusted(false), 3000);
+  //   }
+  //   if (result.height !== customHeight) {
+  //     setCustomHeight(result.height);
+  //     setHeightAdjusted(true);
+  //     // 3秒后清除提示
+  //     setTimeout(() => setHeightAdjusted(false), 3000);
+  //   }
+  // };
 
   return (
     <div className="w-80 flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto">
@@ -151,7 +155,33 @@ export function GenerationParamsPanel({
               </button>
             ))}
           </div>
+
+          {/* 生成数量选择 - 仅在选择豆包模型且为以图生图模式时显示 */}
+          {selectedModel === 'doubao-seedream-4-0-250828' && isImageToImageMode && (
+            <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-gray-700">
+                  生成数量
+                </label>
+                <div className="flex items-center justify-center w-8 h-6 bg-gray-900 text-white rounded text-xs font-semibold">
+                  {imageCount}
+                </div>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="15"
+                value={imageCount}
+                onChange={(e) => setImageCount(parseInt(e.target.value))}
+                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
+              />
+              <div className="mt-1.5 text-xs text-gray-500">
+                共 {selectedPromptsCount * imageCount} 张
+              </div>
+            </div>
+          )}
         </div>
+
 
         {/* 比例选择 */}
         <div className="mb-6">
@@ -185,7 +215,7 @@ export function GenerationParamsPanel({
         </div>
 
         {/* 自定义尺寸选项 */}
-        <div>
+        {/* <div>
           <label className="flex items-center gap-2 mb-3">
             <input
               type="checkbox"
@@ -274,16 +304,17 @@ export function GenerationParamsPanel({
               );
             })()}
           </div>
-        </div>
+        </div> */}
 
         {/* 生成图片按钮 */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <Button
             onClick={() => onGenerateImages({
-              width: useCustomSize ? customWidth : selectedAspectRatio.width,
-              height: useCustomSize ? customHeight : selectedAspectRatio.height,
+              width: selectedAspectRatio.width,
+              height: selectedAspectRatio.height,
               aspectRatio: selectedAspectRatio.name,
-              model: selectedModel
+              model: selectedModel,
+              count: (isImageToImageMode && selectedModel === 'doubao-seedream-4-0-250828') ? imageCount : undefined
             })}
             disabled={selectedPromptsCount === 0 || isGeneratingImages}
             className="w-full disabled:opacity-50 disabled:cursor-not-allowed"

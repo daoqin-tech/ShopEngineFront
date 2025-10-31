@@ -83,9 +83,9 @@ export class AIImageSessionsAPI {
     return response.data;
   }
 
-  // 批量查询提示词生成状态
-  static async getBatchGenerationStatus(projectId: string, promptIds: string[]): Promise<BatchStatusResponse> {
-    const response = await apiClient.post(`/images/${projectId}/generation-status`, { promptIds });
+  // 批量查询任务生成状态（统一接口，支持提示词生图和以图生图）
+  static async getBatchGenerationStatus(projectId: string, taskIds: string[]): Promise<BatchStatusResponse> {
+    const response = await apiClient.post(`/images/${projectId}/generation-status`, { taskIds });
     return response.data;
   }
 
@@ -131,10 +131,10 @@ export class AIImageSessionsAPI {
     return response.data;
   }
 
-  // 批量删除图片(按提示词ID删除)
-  static async deleteImages(promptIds: string[]): Promise<void> {
+  // 批量删除图片(按图片ID删除)
+  static async deleteImages(imageIds: string[]): Promise<void> {
     await apiClient.post('/images/batch-delete', {
-      promptIds
+      imageIds
     });
   }
 
@@ -148,6 +148,19 @@ export class AIImageSessionsAPI {
     const response = await apiClient.post('/images/batch-update', {
       images
     });
+    return response.data;
+  }
+
+  // 以图生图 - 基于参考图片生成新图片
+  static async generateImageFromImages(request: {
+    projectId: string;
+    imageUrls: string[];
+    prompt?: string;
+    width: number;
+    height: number;
+    count: number;
+  }): Promise<{ taskIds: string[]; totalTasks: number }> {
+    const response = await apiClient.post('/images/generate-from-images', request);
     return response.data;
   }
 }
