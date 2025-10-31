@@ -42,6 +42,8 @@ interface GenerationParamsPanelProps {
   isGeneratingImages?: boolean;
   onGenerateImages: (params: ImageGenerationParams) => void;
   isImageToImageMode?: boolean; // 是否为以图生图模式
+  hasPrompts?: boolean; // 是否有可用的提示词
+  hasReferenceImages?: boolean; // 是否有可用的参考图
 }
 
 // 可用的模型选项
@@ -55,7 +57,9 @@ export function GenerationParamsPanel({
   selectedPromptsCount,
   isGeneratingImages,
   onGenerateImages,
-  isImageToImageMode
+  isImageToImageMode,
+  hasPrompts = false,
+  hasReferenceImages = false
 }: GenerationParamsPanelProps) {
   // 生成参数状态
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0]); // 默认选择1:1
@@ -308,38 +312,77 @@ export function GenerationParamsPanel({
 
         {/* 生成图片按钮 */}
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <Button
-            onClick={() => onGenerateImages({
-              width: selectedAspectRatio.width,
-              height: selectedAspectRatio.height,
-              aspectRatio: selectedAspectRatio.name,
-              model: selectedModel,
-              count: (isImageToImageMode && selectedModel === 'doubao-seedream-4-0-250828') ? imageCount : undefined
-            })}
-            disabled={selectedPromptsCount === 0 || isGeneratingImages}
-            className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGeneratingImages ? (
+          {/* 根据选择的模型判断是否可以生成 */}
+          {(() => {
+            const isFluxDev = selectedModel === 'flux-dev';
+            const isDoubao = selectedModel === 'doubao-seedream-4-0-250828';
+
+            // Flux Dev 只支持提示词生图
+            const fluxDevDisabled = isFluxDev && !hasPrompts;
+            // Doubao 只支持以图生图
+            const doubaoDisabled = isDoubao && !hasReferenceImages;
+
+            const isDisabled = selectedPromptsCount === 0 || isGeneratingImages || fluxDevDisabled || doubaoDisabled;
+
+            return (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                生成中...
-              </>
-            ) : (
-              <>
-                生成图片
-                {selectedPromptsCount > 0 && (
-                  <span className="ml-2 text-sm opacity-75">
-                    ({selectedPromptsCount}个)
-                  </span>
+                <Button
+                  onClick={() => onGenerateImages({
+                    width: selectedAspectRatio.width,
+                    height: selectedAspectRatio.height,
+                    aspectRatio: selectedAspectRatio.name,
+                    model: selectedModel,
+                    count: (isImageToImageMode && selectedModel === 'doubao-seedream-4-0-250828') ? imageCount : undefined
+                  })}
+                  disabled={isDisabled}
+                  className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isGeneratingImages ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      生成图片
+                      {selectedPromptsCount > 0 && (
+                        <span className="ml-2 text-sm opacity-75">
+                          ({selectedPromptsCount}个)
+                        </span>
+                      )}
+                    </>
+                  )}
+                </Button>
+
+                {/* 提示信息 */}
+                {selectedPromptsCount === 0 && (
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    {isFluxDev ? '请先选择提示词' : '请先选择参考图'}
+                  </p>
+                )}
+
+                {/* Flux Dev 模型提示 */}
+                {isFluxDev && !hasPrompts && selectedPromptsCount === 0 && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-xs text-amber-800">
+                      <span className="font-semibold">Flux Dev 模型</span>仅支持提示词生图。
+                      请前往"提示词生成"步骤生成提示词。
+                    </p>
+                  </div>
+                )}
+
+                {/* Doubao 模型提示 */}
+                {isDoubao && !hasReferenceImages && selectedPromptsCount === 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs text-blue-800">
+                      <span className="font-semibold">Doubao 模型</span>仅支持以图生图。
+                      请上传参考图或从"热销品文案"导入图片。
+                    </p>
+                  </div>
                 )}
               </>
-            )}
-          </Button>
-          {selectedPromptsCount === 0 && (
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              请先在上一步选择提示词
-            </p>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

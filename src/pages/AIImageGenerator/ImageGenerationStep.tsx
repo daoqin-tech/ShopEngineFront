@@ -92,6 +92,10 @@ export function ImageGenerationStep({
 
 
 
+  // 检查是否有可用的提示词和参考图
+  const hasPrompts = session.prompts && session.prompts.size > 0;
+  const hasReferenceImages = session.referenceImages && session.referenceImages.size > 0;
+
   return (
     <div className="flex h-[calc(100vh-80px)]">
       {/* 左侧生成参数区域 */}
@@ -100,6 +104,8 @@ export function ImageGenerationStep({
         isGeneratingImages={isGeneratingImages}
         onGenerateImages={isImageToImageMode && onGenerateFromImages ? onGenerateFromImages : onGenerateImages}
         isImageToImageMode={isImageToImageMode}
+        hasPrompts={hasPrompts}
+        hasReferenceImages={hasReferenceImages}
       />
 
       {/* 右侧内容区域 */}
