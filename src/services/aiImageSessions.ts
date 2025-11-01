@@ -163,4 +163,57 @@ export class AIImageSessionsAPI {
     const response = await apiClient.post('/images/generate-from-images', request);
     return response.data;
   }
+
+  // 批量生成截图提示词
+  static async batchGeneratePrompts(sourceImageId: string, images: Array<{ imageUrl: string }>): Promise<{
+    items: Array<{
+      id: string;
+      sourceImageId: string;
+      imageUrl: string;
+      prompt: string;
+      status: string;
+      errorMessage?: string;
+      createdAt: string;
+    }>;
+    summary: {
+      total: number;
+      pending: number;
+      processing: number;
+      completed: number;
+      failed: number;
+    };
+  }> {
+    const response = await apiClient.post('/projects/cropped-images/prompts/batch', {
+      sourceImageId,
+      images
+    });
+    return response.data;
+  }
+
+  // 获取截图提示词列表
+  static async getPromptsBySourceImage(sourceImageId: string): Promise<{
+    sourceImageId: string;
+    items: Array<{
+      id: string;
+      sourceImageId: string;
+      imageUrl: string;
+      prompt: string;
+      status: string;
+      errorMessage?: string;
+      createdAt: string;
+    }>;
+  }> {
+    const response = await apiClient.get('/projects/cropped-images/prompts', {
+      params: { sourceImageId }
+    });
+    return response.data;
+  }
+
+  // 批量添加提示词到对话
+  static async addPromptsToConversation(projectId: string, ids: string[]): Promise<void> {
+    await apiClient.post('/projects/cropped-images/prompts/add-to-conversation', {
+      projectId,
+      ids
+    });
+  }
 }

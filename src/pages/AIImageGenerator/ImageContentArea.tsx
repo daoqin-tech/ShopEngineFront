@@ -45,6 +45,7 @@ interface ImageContentAreaProps {
   projectName?: string;
   onRefreshImages: () => void;
   onToggleReferenceImageSelection?: (id: string) => void;
+  onTogglePromptSelection?: (id: string) => void;
 }
 
 export function ImageContentArea({
@@ -54,7 +55,7 @@ export function ImageContentArea({
   isLoadingHistoricalData,
   projectName,
   onRefreshImages,
-  onToggleReferenceImageSelection: _onToggleReferenceImageSelection
+  onTogglePromptSelection
 }: ImageContentAreaProps) {
   const navigate = useNavigate();
 
@@ -423,6 +424,16 @@ export function ImageContentArea({
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-4">
               {selectedPrompts.map((prompt) => (
                 <div key={prompt.id} className="group relative border border-dashed border-gray-300 rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-all duration-200">
+                  {/* 删除按钮 */}
+                  {onTogglePromptSelection && (
+                    <button
+                      onClick={() => onTogglePromptSelection(prompt.id)}
+                      className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-600"
+                      title="取消选择"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <div className="p-4">
                     <div className="space-y-3">
                       <div className="relative cursor-default">
@@ -469,6 +480,15 @@ export function ImageContentArea({
             <div className="grid grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
               {selectedReferenceImages.map((refImage) => (
                 <div key={refImage.id} className="group relative border border-gray-300 rounded-lg bg-white hover:shadow-md transition-all duration-200">
+                  {onTogglePromptSelection && (
+                    <button
+                      onClick={() => onTogglePromptSelection(refImage.id)}
+                      className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                      title="取消选择"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <div className="aspect-square relative overflow-hidden rounded-t-lg">
                     <img
                       src={refImage.imageUrl}

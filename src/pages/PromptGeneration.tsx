@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { Home, Scissors } from 'lucide-react';
 
 import { PromptGenerationStep } from './AIImageGenerator/PromptGenerationStep';
 import { AIImageSession, Prompt, ExtendedAIImageSession } from './AIImageGenerator/types';
@@ -235,6 +235,10 @@ export function PromptGeneration() {
     navigate(`/workspace/project/${projectId}/image-generation`);
   };
 
+  const handleGoToScreenshot = () => {
+    navigate(`/workspace/project/${projectId}/prompt-generation/screenshot`);
+  };
+
   // 为子组件创建扩展的session对象
   const extendedSession: ExtendedAIImageSession = {
     ...session,
@@ -272,14 +276,24 @@ export function PromptGeneration() {
                     {project?.name || '加载中...'}
                   </h1>
                 </div>
-                <div className="flex items-center gap-3 ml-4">
-                  <Button
-                    onClick={handleBackToImageGeneration}
-                    className="bg-gray-900 hover:bg-gray-800 text-white"
-                  >
-                    返回生成图片
-                  </Button>
-                </div>
+                <div className="h-5 w-px bg-gray-300"></div>
+                <Button
+                  onClick={handleBackToImageGeneration}
+                  size="sm"
+                  className="bg-gray-900 hover:bg-gray-800 text-white"
+                >
+                  生成图片
+                </Button>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleGoToScreenshot}
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-50"
+                >
+                  <Scissors className="w-4 h-4 mr-2" />
+                  抄爆款
+                </Button>
               </div>
             </div>
           </div>

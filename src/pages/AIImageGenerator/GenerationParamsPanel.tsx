@@ -34,6 +34,7 @@ interface GenerationParamsPanelProps {
   isImageToImageMode?: boolean; // 是否为以图生图模式
   hasPrompts?: boolean; // 是否有可用的提示词
   hasReferenceImages?: boolean; // 是否有可用的参考图
+  onModelChange?: (model: string) => void; // 模型改变时的回调
 }
 
 // 可用的模型选项
@@ -49,7 +50,8 @@ export function GenerationParamsPanel({
   onGenerateImages,
   isImageToImageMode,
   hasPrompts = false,
-  hasReferenceImages = false
+  hasReferenceImages = false,
+  onModelChange
 }: GenerationParamsPanelProps) {
   // 生成参数状态
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0]); // 默认选择1:1
@@ -57,7 +59,7 @@ export function GenerationParamsPanel({
   // const [customHeight, setCustomHeight] = useState<number>(1024);
   // const [useCustomSize, setUseCustomSize] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>('flux-dev'); // 默认模型
-  const [imageCount, setImageCount] = useState<number>(1); // 每张参考图生成的图片数量（1-15）
+  const [imageCount, setImageCount] = useState<number>(1); // 每张参考图生成的图片数量（1-40）
 
   // 输入验证反馈状态
   // const [widthAdjusted, setWidthAdjusted] = useState(false);
@@ -128,7 +130,10 @@ export function GenerationParamsPanel({
             {MODEL_OPTIONS.map((model) => (
               <button
                 key={model.value}
-                onClick={() => setSelectedModel(model.value)}
+                onClick={() => {
+                  setSelectedModel(model.value);
+                  onModelChange?.(model.value);
+                }}
                 className={`p-3 text-left border rounded-lg transition-all duration-200 ${
                   selectedModel === model.value
                     ? 'border-blue-600 bg-blue-50 text-blue-900'
@@ -150,30 +155,32 @@ export function GenerationParamsPanel({
             ))}
           </div>
 
-          {/* 生成数量选择 - 仅在选择豆包模型且为以图生图模式时显示 */}
-          {selectedModel === 'doubao-seedream-4-0-250828' && isImageToImageMode && (
-            <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-gray-700">
-                  期望生成数量
-                </label>
-                <div className="flex items-center justify-center w-8 h-6 bg-gray-900 text-white rounded text-xs font-semibold">
-                  {imageCount}
-                </div>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="15"
-                value={imageCount}
-                onChange={(e) => setImageCount(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
-              />
-              <div className="mt-1.5 text-xs text-gray-500">
-                共 {selectedPromptsCount} 张参考图，将生成 {selectedPromptsCount * imageCount} 张
+          {/* 生成数量选择 - 所有模式都支持 */}
+          <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-700">
+                期望生成数量
+              </label>
+              <div className="flex items-center justify-center w-8 h-6 bg-gray-900 text-white rounded text-xs font-semibold">
+                {imageCount}
               </div>
             </div>
-          )}
+            <input
+              type="range"
+              min="1"
+              max="40"
+              value={imageCount}
+              onChange={(e) => setImageCount(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
+            />
+            <div className="mt-1.5 text-xs text-gray-500">
+              {isImageToImageMode ? (
+                <>共 {selectedPromptsCount} 张参考图，将生成 {selectedPromptsCount * imageCount} 张</>
+              ) : (
+                <>共 {selectedPromptsCount} 个提示词，将生成 {selectedPromptsCount * imageCount} 张</>
+              )}
+            </div>
+          </div>
         </div>
 
 
@@ -323,7 +330,7 @@ export function GenerationParamsPanel({
                     height: selectedAspectRatio.height,
                     aspectRatio: selectedAspectRatio.name,
                     model: selectedModel,
-                    count: (isImageToImageMode && selectedModel === 'doubao-seedream-4-0-250828') ? imageCount : undefined
+                    count: imageCount
                   })}
                   disabled={isDisabled}
                   className="w-full disabled:opacity-50 disabled:cursor-not-allowed"

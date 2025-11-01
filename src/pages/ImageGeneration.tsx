@@ -321,6 +321,19 @@ export function ImageGeneration() {
     navigate(`/workspace/project/${projectId}/hot-product-copy`);
   };
 
+  // 切换提示词选择
+  const togglePromptSelection = (id: string) => {
+    setSelectedPromptIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   // 切换参考图选择
   const toggleReferenceImageSelection = (id: string) => {
     setSelectedReferenceImageIds(prev => {
@@ -465,6 +478,7 @@ export function ImageGeneration() {
             selectedReferenceImageIds={selectedReferenceImageIds}
             onGenerateImages={generateImages}
             onGenerateFromImages={generateFromImages}
+            onTogglePromptSelection={togglePromptSelection}
             onToggleReferenceImageSelection={toggleReferenceImageSelection}
             refreshTrigger={historyRefreshTrigger}
             projectName={project?.name}

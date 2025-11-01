@@ -11,6 +11,7 @@ export function ImageGenerationStep({
   selectedReferenceImageIds,
   onGenerateImages,
   onGenerateFromImages,
+  onTogglePromptSelection,
   onToggleReferenceImageSelection,
   refreshTrigger,
   projectName,
@@ -22,8 +23,11 @@ export function ImageGenerationStep({
     selectedReferenceImageIds?.has(img.id)
   );
 
-  // 判断当前是提示词生图还是以图生图模式
-  const isImageToImageMode = selectedReferenceImages.length > 0;
+  // 根据选择的模型判断是提示词生图还是以图生图模式
+  // flux-dev: 提示词生图
+  // doubao-seedream-4-0-250828: 以图生图
+  const [selectedModel, setSelectedModel] = useState<string>('flux-dev');
+  const isImageToImageMode = selectedModel === 'doubao-seedream-4-0-250828';
 
   // 加载状态
   const [isLoadingHistoricalData, setIsLoadingHistoricalData] = useState(false);
@@ -106,6 +110,7 @@ export function ImageGenerationStep({
         isImageToImageMode={isImageToImageMode}
         hasPrompts={hasPrompts}
         hasReferenceImages={hasReferenceImages}
+        onModelChange={setSelectedModel}
       />
 
       {/* 右侧内容区域 */}
@@ -121,6 +126,7 @@ export function ImageGenerationStep({
             setHistoricalImages(images || []);
           }
         }}
+        onTogglePromptSelection={onTogglePromptSelection}
         onToggleReferenceImageSelection={onToggleReferenceImageSelection}
       />
     </div>

@@ -8,6 +8,7 @@ import { WechatCallback } from "@/pages/WechatCallback"
 import { NotFound } from "@/pages/NotFound"
 import { AIImageProjects } from "@/pages/AIImageProjects"
 import { PromptGeneration } from "@/pages/PromptGeneration"
+import { PromptGenerationWithScreenshot } from "@/pages/PromptGenerationWithScreenshot"
 import { ImageGeneration } from "@/pages/ImageGeneration"
 import { HotProductCopy } from "@/pages/HotProductCopy"
 import { ImageEditor } from "@/pages/ImageEdit"
@@ -57,6 +58,12 @@ function App() {
           <Route path="/workspace/project/:projectId/prompt-generation" element={
             <ProtectedRoute>
               <PromptGeneration />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/project/:projectId/prompt-generation/screenshot" element={
+            <ProtectedRoute>
+              <PromptGenerationWithScreenshot />
             </ProtectedRoute>
           } />
 
