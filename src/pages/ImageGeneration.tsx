@@ -350,8 +350,8 @@ export function ImageGeneration() {
       // count 参数表示每张参考图生成多少张图片（1-15）
       const countPerImage = params.count && params.count >= 1 && params.count <= 15 ? params.count : 1;
 
-      // 基础提示词：强调多样性和创意变化
-      const basePrompt = 'Create a diverse variation of this image. Keep the overall style, lighting, and composition similar, but introduce creative changes to make each result unique and interesting. Vary colors, patterns, textures, or subject details while maintaining the visual theme and quality.';
+      // 基础提示词：主体可变，但主题、色系、风格必须一致
+      const basePrompt = 'Generate a similar image inspired by this reference. Keep the exact same theme, color palette, style, lighting, and overall atmosphere. The main subject can be different but should be harmonious and contextually appropriate. Maintain consistent visual aesthetics throughout.';
 
       const response = await AIImageSessionsAPI.generateImageFromImages({
         projectId,
