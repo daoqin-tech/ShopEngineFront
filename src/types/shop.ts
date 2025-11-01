@@ -174,7 +174,7 @@ export const TEMU_SHOPS: ShopInfo[] = [
 
   {
     id: 'present-perfect-papers',
-    name: 'Present Perfect Papers',
+    name: 'Emily goods',
     shopId: '634418226370400',
     type: '半托',
     businessCode: '5270B',
