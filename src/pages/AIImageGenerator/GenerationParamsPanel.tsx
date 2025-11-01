@@ -150,23 +150,6 @@ export function GenerationParamsPanel({
             ))}
           </div>
 
-          {/* 业务场景说明 */}
-          {selectedModel === 'flux-dev' && (
-            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-xs text-gray-600">
-                💡 适合包装纸、日历业务
-              </p>
-            </div>
-          )}
-
-          {selectedModel === 'doubao-seedream-4-0-250828' && (
-            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-xs text-gray-600">
-                💡 适合手账纸业务
-              </p>
-            </div>
-          )}
-
           {/* 生成数量选择 - 仅在选择豆包模型且为以图生图模式时显示 */}
           {selectedModel === 'doubao-seedream-4-0-250828' && isImageToImageMode && (
             <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
@@ -324,12 +307,13 @@ export function GenerationParamsPanel({
             const isFluxDev = selectedModel === 'flux-dev';
             const isDoubao = selectedModel === 'doubao-seedream-4-0-250828';
 
-            // Flux Dev 只支持提示词生图
-            const fluxDevDisabled = isFluxDev && !hasPrompts;
-            // Doubao 只支持以图生图
-            const doubaoDisabled = isDoubao && !hasReferenceImages;
+            // Flux Dev：需要选中提示词才能生成
+            const fluxDevDisabled = isFluxDev && selectedPromptsCount === 0;
+            // Doubao：需要选中参考图才能生成
+            const doubaoDisabled = isDoubao && selectedPromptsCount === 0;
 
-            const isDisabled = selectedPromptsCount === 0 || isGeneratingImages || fluxDevDisabled || doubaoDisabled;
+            // 按钮禁用条件：正在生成中，或者没有选中任何内容
+            const isDisabled = isGeneratingImages || fluxDevDisabled || doubaoDisabled;
 
             return (
               <>

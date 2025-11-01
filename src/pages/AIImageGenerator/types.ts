@@ -114,7 +114,8 @@ export interface AspectRatio {
 // 预设的图片比例和尺寸 (根据新模型推荐尺寸)
 export const ASPECT_RATIOS: AspectRatio[] = [
   { name: 'square', label: '1:1', width: 1024, height: 1024, description: '手账纸' },
-  { name: 'paper_bag', label: '66:35', width: 1312, height: 704, description: '手提纸袋' },
+  { name: 'wrapping_paper', label: '1:1', width: 1024, height: 1024, description: '包装纸' },
+  // { name: 'paper_bag', label: '66:35', width: 1312, height: 704, description: '手提纸袋' },
   { name: 'template_region', label: '99:70', width: 1408, height: 992, description: '竖版日历内页' },
   { name: 'calendar_cover', label: '99:140', width: 1024, height: 1440, description: '竖版日历封面' },
   { name: 'horizontal_calendar_inner', label: '1000:1544', width: 928, height: 1440, description: '横版日历内页' },
