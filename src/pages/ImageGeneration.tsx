@@ -38,8 +38,35 @@ export function ImageGeneration() {
   });
 
   // 参考图片状态
-  const [referenceImagesMap, setReferenceImagesMap] = useState<Map<string, ReferenceImage>>(new Map());
-  const [selectedReferenceImageIds, setSelectedReferenceImageIds] = useState<Set<string>>(new Set());
+  const [referenceImagesMap, setReferenceImagesMap] = useState<Map<string, ReferenceImage>>(() => {
+    // 从 localStorage 恢复参考图
+    if (projectId) {
+      const saved = localStorage.getItem(`referenceImages_${projectId}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return new Map(parsed.map((img: ReferenceImage) => [img.id, img]));
+        } catch (e) {
+          return new Map();
+        }
+      }
+    }
+    return new Map();
+  });
+  const [selectedReferenceImageIds, setSelectedReferenceImageIds] = useState<Set<string>>(() => {
+    // 从 localStorage 恢复选中状态
+    if (projectId) {
+      const saved = localStorage.getItem(`selectedReferenceImages_${projectId}`);
+      if (saved) {
+        try {
+          return new Set(JSON.parse(saved));
+        } catch (e) {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
@@ -55,27 +82,41 @@ export function ImageGeneration() {
     }
   }, [selectedPromptIds, projectId]);
 
-  // 从 location.state 接收参考图片
+  // 持久化参考图到 localStorage
+  useEffect(() => {
+    if (projectId) {
+      localStorage.setItem(`referenceImages_${projectId}`, JSON.stringify(Array.from(referenceImagesMap.values())));
+    }
+  }, [referenceImagesMap, projectId]);
+
+  // 持久化参考图选中状态到 localStorage
+  useEffect(() => {
+    if (projectId) {
+      localStorage.setItem(`selectedReferenceImages_${projectId}`, JSON.stringify(Array.from(selectedReferenceImageIds)));
+    }
+  }, [selectedReferenceImageIds, projectId]);
+
+  // 从 location.state 接收参考图片（从截图页面跳转过来）
   useEffect(() => {
     const state = location.state as { referenceImageUrls?: string[] } | null;
     if (state?.referenceImageUrls && state.referenceImageUrls.length > 0) {
-      // 将参考图URL转换为ReferenceImage对象
-      const newReferenceImages = new Map<string, ReferenceImage>();
-      const newSelectedIds = new Set<string>();
+      // 将新截图的参考图URL转换为ReferenceImage对象，并合并到已有的参考图中
+      const updatedReferenceImages = new Map(referenceImagesMap);
+      const updatedSelectedIds = new Set(selectedReferenceImageIds);
 
       state.referenceImageUrls.forEach(url => {
         const id = uuidv4();
-        newReferenceImages.set(id, {
+        updatedReferenceImages.set(id, {
           id,
           imageUrl: url,
           createdAt: new Date().toISOString(),
           status: PromptStatus.PENDING
         });
-        newSelectedIds.add(id); // 默认全选
+        updatedSelectedIds.add(id); // 新添加的默认全选
       });
 
-      setReferenceImagesMap(newReferenceImages);
-      setSelectedReferenceImageIds(newSelectedIds);
+      setReferenceImagesMap(updatedReferenceImages);
+      setSelectedReferenceImageIds(updatedSelectedIds);
 
       // 清除 state 避免刷新时重复添加
       window.history.replaceState({}, document.title);
@@ -309,30 +350,33 @@ export function ImageGeneration() {
       // count 参数表示每张参考图生成多少张图片（1-15）
       const countPerImage = params.count && params.count >= 1 && params.count <= 15 ? params.count : 1;
 
+      // 基础提示词：强调多样性和创意变化
+      const basePrompt = 'Create a diverse variation of this image. Keep the overall style, lighting, and composition similar, but introduce creative changes to make each result unique and interesting. Vary colors, patterns, textures, or subject details while maintaining the visual theme and quality.';
+
       const response = await AIImageSessionsAPI.generateImageFromImages({
         projectId,
         imageUrls,
-        prompt: `Generate ${countPerImage} high-quality product images based on the reference. Enhance clarity and details with better lighting. The subject must fill the entire frame regardless of aspect ratio. Correct any tilt to show the product upright.`,
+        prompt: basePrompt,
         width: params.width,
         height: params.height,
         count: countPerImage // 每张参考图生成 countPerImage 张图片
       });
 
-      // 提交成功后，将选中的参考图状态改为QUEUED
+      // 提交成功后，清除已提交的参考图
       const updatedReferenceImagesMap = new Map(referenceImagesMap);
       Array.from(selectedReferenceImageIds).forEach(imageId => {
-        const image = updatedReferenceImagesMap.get(imageId);
-        if (image) {
-          updatedReferenceImagesMap.set(imageId, {
-            ...image,
-            status: PromptStatus.QUEUED
-          });
-        }
+        updatedReferenceImagesMap.delete(imageId);
       });
       setReferenceImagesMap(updatedReferenceImagesMap);
 
       // 清除选中状态
       setSelectedReferenceImageIds(new Set());
+
+      // 清除 localStorage 中的参考图数据
+      if (projectId) {
+        localStorage.setItem(`referenceImages_${projectId}`, JSON.stringify(Array.from(updatedReferenceImagesMap.values())));
+        localStorage.removeItem(`selectedReferenceImages_${projectId}`);
+      }
 
       // 触发历史图片数据重新加载
       setHistoryRefreshTrigger(prev => prev + 1);

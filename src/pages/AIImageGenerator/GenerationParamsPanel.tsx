@@ -187,7 +187,7 @@ export function GenerationParamsPanel({
                 className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-900"
               />
               <div className="mt-1.5 text-xs text-gray-500">
-                期望生成 {selectedPromptsCount * imageCount} 张（实际数量可能略少）
+                共 {selectedPromptsCount} 张参考图，将生成 {selectedPromptsCount * imageCount} 张
               </div>
             </div>
           )}
