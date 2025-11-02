@@ -220,10 +220,19 @@ export function ImageContentArea({
     setIsDeleting(true);
 
     try {
-      const imageIds = Array.from(selectedImageIds);
+      // 从选中的图片ID中获取对应的taskId
+      const selectedImages = historicalImages.filter(img => selectedImageIds.has(img.id));
+      const taskIds = selectedImages
+        .map(img => img.taskId)
+        .filter((taskId): taskId is string => taskId !== null && taskId !== ''); // 过滤掉null和空字符串
 
-      await AIImageSessionsAPI.deleteImages(imageIds);
-      toast.success(`已删除 ${imageIds.length} 张图片`);
+      if (taskIds.length === 0) {
+        toast.error('选中的图片没有关联的任务ID');
+        return;
+      }
+
+      await AIImageSessionsAPI.deleteImages(taskIds);
+      toast.success(`已删除 ${taskIds.length} 个任务及关联图片`);
 
       setSelectedImageIds(new Set());
       onRefreshImages();

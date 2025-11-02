@@ -131,10 +131,10 @@ export class AIImageSessionsAPI {
     return response.data;
   }
 
-  // 批量删除图片(按图片ID删除)
-  static async deleteImages(imageIds: string[]): Promise<void> {
+  // 批量删除任务(按任务ID删除,会同时删除关联的图片)
+  static async deleteImages(taskIds: string[]): Promise<void> {
     await apiClient.post('/images/batch-delete', {
-      imageIds
+      taskIds
     });
   }
 
