@@ -132,6 +132,13 @@ export interface BatchGetTaskImagesResponse {
   [taskId: string]: string[]
 }
 
+// 重新生成商品标题的请求参数
+export interface RegenerateProductTitlesRequest {
+  productIds: string[]
+  productSpec?: string
+  productUsage?: string
+}
+
 export const productService = {
   // 批量创建商品
   batchCreate: async (request: BatchCreateProductRequest): Promise<BatchCreateProductResponse> => {
@@ -148,6 +155,12 @@ export const productService = {
   // 批量获取任务图片
   batchGetTaskImages: async (taskIds: string[]): Promise<BatchGetTaskImagesResponse> => {
     const response = await apiClient.post('/products/batch-get-task-images', { taskIds })
+    return response.data
+  },
+
+  // 重新生成商品标题
+  regenerateTitles: async (request: RegenerateProductTitlesRequest): Promise<void> => {
+    const response = await apiClient.post('/products/regenerate-titles', request)
     return response.data
   }
 }

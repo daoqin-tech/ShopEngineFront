@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
 import { ImageReorderDialog } from '@/components/ImageReorderDialog';
+import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
@@ -49,6 +50,10 @@ export function ProductListing() {
   // 导出状态
   const [isExportingCarouselImages, setIsExportingCarouselImages] = useState(false);
   const [isExportingProductImages, setIsExportingProductImages] = useState(false);
+  const [isRegeneratingTitles, setIsRegeneratingTitles] = useState(false);
+
+  // 重新生成标题对话框
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
 
   // 获取商品列表
   const fetchProducts = async (page: number = currentPage) => {
@@ -500,6 +505,40 @@ export function ProductListing() {
     }
   };
 
+  // 打开重新生成标题对话框
+  const handleOpenRegenerateDialog = () => {
+    if (selectedProductIds.size === 0) {
+      toast.error('请至少选择一个商品');
+      return;
+    }
+    setShowRegenerateDialog(true);
+  };
+
+  // 确认重新生成商品标题
+  const handleConfirmRegenerateTitles = async (productSpec: string, productUsage: string) => {
+    setIsRegeneratingTitles(true);
+    try {
+      const productIds = Array.from(selectedProductIds);
+      await productService.regenerateTitles({
+        productIds,
+        productSpec,
+        productUsage
+      });
+
+      toast.success(`已提交 ${productIds.length} 个商品的标题重新生成任务，正在后台处理中...`, {
+        description: '商品标题由AI生成，请稍后刷新查看结果',
+        duration: 5000
+      });
+
+      setSelectedProductIds(new Set());
+    } catch (error) {
+      console.error('重新生成标题失败:', error);
+      toast.error(error instanceof Error ? error.message : '重新生成标题失败，请重试');
+    } finally {
+      setIsRegeneratingTitles(false);
+    }
+  };
+
   return (
     <div className="flex-1 p-6">
       {/* 页面标题 */}
@@ -572,6 +611,24 @@ export function ProductListing() {
           >
             <FileText className="w-4 h-4" />
             导出产品图PDF {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+          </Button>
+          <Button
+            onClick={handleOpenRegenerateDialog}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={selectedProductIds.size === 0 || isRegeneratingTitles}
+          >
+            {isRegeneratingTitles ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                生成中...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                重新生成标题 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+              </>
+            )}
           </Button>
           <Button onClick={() => navigate('/workspace/batch-upload/create')} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -1134,6 +1191,14 @@ export function ProductListing() {
         products={productsToExport}
         onConfirm={handleConfirmReorder}
         isCalendar={pdfPageSize.startsWith('CALENDAR')}
+      />
+
+      {/* 重新生成标题对话框 */}
+      <RegenerateTitleDialog
+        open={showRegenerateDialog}
+        onOpenChange={setShowRegenerateDialog}
+        selectedCount={selectedProductIds.size}
+        onConfirm={handleConfirmRegenerateTitles}
       />
 
     </div>
