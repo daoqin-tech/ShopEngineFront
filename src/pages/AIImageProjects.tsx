@@ -56,7 +56,26 @@ export function AIImageProjects() {
   const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
-  const [replacementProgress, setReplacementProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // 队列处理进度对话框状态
+  const [queueProgressDialogOpen, setQueueProgressDialogOpen] = useState(false);
+  const [queueProgress, setQueueProgress] = useState<{
+    current: number;
+    total: number;
+    currentImage: string;
+    successCount: number;
+    failedCount: number;
+    isPaused: boolean;
+    isCompleted: boolean;
+  }>({
+    current: 0,
+    total: 0,
+    currentImage: '',
+    successCount: 0,
+    failedCount: 0,
+    isPaused: false,
+    isCompleted: false,
+  });
 
   // 多选状态
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
@@ -466,7 +485,7 @@ export function AIImageProjects() {
     });
   };
 
-  // 确认模板替换
+  // 确认模板替换 - 使用队列处理
   const handleConfirmApplyTemplate = async () => {
     if (selectedProjectIds.size === 0) {
       toast.error('请选择要替换的项目');
@@ -487,11 +506,11 @@ export function AIImageProjects() {
 
       if (!result.totalImages || result.totalImages === 0) {
         toast.error('没有找到符合尺寸的图片');
+        setApplyingTemplate(false);
         return;
       }
 
       console.log('后端返回结果:', result);
-      toast.info(`找到 ${result.totalImages} 张图片，${result.templates.length} 个模板，开始处理...`);
 
       // 2. 获取模板项目信息以确定输出尺寸
       const templateProject = result.templateProject;
@@ -514,99 +533,212 @@ export function AIImageProjects() {
       const templates = result.templates;
       if (templates.length === 0) {
         toast.error('模板项目中没有模板');
+        setApplyingTemplate(false);
         return;
       }
 
-      // 3. 关闭对话框，在后台处理，不阻塞用户操作
+      // 3. 构建任务队列 - 按项目分组
+      const projectTaskQueue: Array<{
+        projectId: string;
+        projectName: string;
+        tasks: Array<{
+          imageId: string;
+          imageUrl: string;
+          templateId: string;
+          templateName: string;
+        }>;
+      }> = [];
+
+      let totalTaskCount = 0;
+      for (const projectResult of result.projectResults) {
+        const projectTasks: Array<{
+          imageId: string;
+          imageUrl: string;
+          templateId: string;
+          templateName: string;
+        }> = [];
+
+        let templateIndex = 0;
+        for (const image of projectResult.images) {
+          const template = templates[templateIndex % templates.length];
+          projectTasks.push({
+            imageId: image.id,
+            imageUrl: image.imageUrl,
+            templateId: template.id,
+            templateName: template.name,
+          });
+          templateIndex++;
+          totalTaskCount++;
+        }
+
+        projectTaskQueue.push({
+          projectId: projectResult.projectId,
+          projectName: projectResult.projectName,
+          tasks: projectTasks,
+        });
+      }
+
+      // 4. 关闭选择对话框，打开队列进度对话框
       setApplyTemplateDialogOpen(false);
       setApplyingTemplate(false);
+      setQueueProgressDialogOpen(true);
+      setQueueProgress({
+        current: 0,
+        total: totalTaskCount,
+        currentImage: '',
+        successCount: 0,
+        failedCount: 0,
+        isPaused: false,
+        isCompleted: false,
+      });
 
-      const updatePromises: Promise<void>[] = [];
-      let processedCount = 0;
-      let failedCount = 0;
-      const total = result.totalImages;
-      let templateIndex = 0;
+      // 5. 开始队列处理 - 按项目处理
+      await processProjectQueueWithDelay(projectTaskQueue, selectedTemplateProjectId, targetWidth, targetHeight);
 
-      // 初始化进度
-      setReplacementProgress({ current: 0, total });
-
-      // 遍历所有项目的图片，每张图片循环使用一个模板
-      for (const projectResult of result.projectResults) {
-        for (const image of projectResult.images) {
-          // 使用当前索引的模板，循环使用
-          const template = templates[templateIndex % templates.length];
-          templateIndex++;
-
-          const promise = (async () => {
-            try {
-              console.log(`处理图片 ${image.id}，使用模板 ${template.id} (索引: ${templateIndex - 1})`);
-
-              // 获取模板详情
-              const templateDetail = await imageTemplateService.getTemplate(selectedTemplateProjectId, template.id);
-              console.log('模板详情:', templateDetail);
-
-              // 合成图片
-              const { blob, width, height } = await compositeImages(
-                templateDetail.imageUrl,
-                templateDetail.regions,
-                image.imageUrl,
-                targetWidth,
-                targetHeight
-              );
-              console.log(`合成完成: ${width}x${height}`);
-
-              // 上传图片
-              const fileName = `template-replaced-${Date.now()}-${image.id}-${template.id}.jpg`;
-              const file = new File([blob], fileName, { type: 'image/jpeg' });
-              const uploadedUrl = await FileUploadAPI.uploadFile(file);
-              console.log('上传完成:', uploadedUrl);
-
-              // 更新图片信息
-              await AIImageSessionsAPI.batchUpdateImages([{
-                imageId: image.id,
-                imageUrl: uploadedUrl,
-                width,
-                height,
-              }]);
-              console.log('更新完成');
-
-              processedCount++;
-              // 更新进度
-              setReplacementProgress({ current: processedCount, total });
-            } catch (error) {
-              failedCount++;
-              console.error(`处理图片 ${image.id} 失败:`, error);
-              toast.error(`处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
-            }
-          })();
-
-          updatePromises.push(promise);
-        }
-      }
-
-      await Promise.all(updatePromises);
-
-      // 清除进度，显示最终结果
-      setReplacementProgress(null);
-
-      if (failedCount === 0) {
-        toast.success(`成功替换 ${processedCount} 张图片`);
-      } else {
-        toast.warning(`完成处理：成功 ${processedCount} 张，失败 ${failedCount} 张`);
-      }
-
-      setSelectedProjectIds(new Set());
-      setSelectedTemplateProjectId('');
-      fetchProjects(currentPage);
     } catch (err: any) {
       setApplyTemplateDialogOpen(false);
       setApplyingTemplate(false);
-      setReplacementProgress(null);
       toast.error('模板替换失败', {
         description: err.response?.data?.message || err.message || '请稍后再试'
       });
       console.error('Error applying template:', err);
     }
+  };
+
+  // 按项目队列处理函数 - 一个项目一个项目处理，带延迟
+  const processProjectQueueWithDelay = async (
+    projectQueue: Array<{
+      projectId: string;
+      projectName: string;
+      tasks: Array<{
+        imageId: string;
+        imageUrl: string;
+        templateId: string;
+        templateName: string;
+      }>;
+    }>,
+    templateProjectId: string,
+    targetWidth: number,
+    targetHeight: number
+  ) => {
+    let successCount = 0;
+    let failedCount = 0;
+    let processedCount = 0;
+
+    // 按项目一个一个处理
+    for (let projectIdx = 0; projectIdx < projectQueue.length; projectIdx++) {
+      const project = projectQueue[projectIdx];
+
+      console.log(`\n开始处理项目 [${projectIdx + 1}/${projectQueue.length}]: ${project.projectName}`);
+
+      // 处理当前项目的所有图片
+      for (let taskIdx = 0; taskIdx < project.tasks.length; taskIdx++) {
+        const task = project.tasks[taskIdx];
+        processedCount++;
+
+        // 更新当前处理的图片信息
+        setQueueProgress(prev => ({
+          ...prev,
+          current: processedCount,
+          currentImage: `[项目 ${projectIdx + 1}/${projectQueue.length}] ${project.projectName} - 图片 ${taskIdx + 1}/${project.tasks.length}`,
+        }));
+
+        try {
+          console.log(`  处理图片 [${taskIdx + 1}/${project.tasks.length}]: ${task.imageId}`);
+
+          // 获取模板详情
+          const templateDetail = await imageTemplateService.getTemplate(templateProjectId, task.templateId);
+
+          // 合成图片
+          const { blob, width, height } = await compositeImages(
+            templateDetail.imageUrl,
+            templateDetail.regions,
+            task.imageUrl,
+            targetWidth,
+            targetHeight
+          );
+
+          // 上传图片
+          const fileName = `template-replaced-${Date.now()}-${task.imageId}-${task.templateId}.jpg`;
+          const file = new File([blob], fileName, { type: 'image/jpeg' });
+          const uploadedUrl = await FileUploadAPI.uploadFile(file);
+
+          // 更新图片信息
+          await AIImageSessionsAPI.batchUpdateImages([{
+            imageId: task.imageId,
+            imageUrl: uploadedUrl,
+            width,
+            height,
+          }]);
+
+          successCount++;
+          setQueueProgress(prev => ({
+            ...prev,
+            successCount,
+          }));
+
+          console.log(`  图片处理成功`);
+
+          // 每张图片间隔 800ms
+          if (taskIdx < project.tasks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+
+        } catch (error) {
+          failedCount++;
+          setQueueProgress(prev => ({
+            ...prev,
+            failedCount,
+          }));
+          console.error(`  图片处理失败:`, error);
+        }
+      }
+
+      console.log(`项目 ${project.projectName} 处理完成\n`);
+
+      // 项目之间间隔 1.5 秒
+      if (projectIdx < projectQueue.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+
+    // 处理完成
+    setQueueProgress(prev => ({
+      ...prev,
+      isCompleted: true,
+      currentImage: '所有项目处理完成',
+    }));
+
+    // 显示最终结果
+    if (failedCount === 0) {
+      toast.success(`成功替换 ${successCount} 张图片`);
+    } else {
+      toast.warning(`完成处理：成功 ${successCount} 张，失败 ${failedCount} 张`);
+    }
+
+    // 刷新项目列表
+    fetchProjects(currentPage);
+  };
+
+  // 关闭队列进度对话框
+  const handleCloseQueueDialog = () => {
+    if (!queueProgress.isCompleted) {
+      const confirm = window.confirm('任务正在处理中，关闭对话框会中断处理，确定要关闭吗？');
+      if (!confirm) return;
+    }
+
+    setQueueProgressDialogOpen(false);
+    setSelectedProjectIds(new Set());
+    setSelectedTemplateProjectId('');
+    setQueueProgress({
+      current: 0,
+      total: 0,
+      currentImage: '',
+      successCount: 0,
+      failedCount: 0,
+      isPaused: false,
+      isCompleted: false,
+    });
   };
 
 
@@ -651,12 +783,12 @@ export function AIImageProjects() {
           </Button>
           <Button
             onClick={handleOpenApplyTemplateDialog}
-            disabled={selectedProjectIds.size === 0 || replacementProgress !== null}
+            disabled={selectedProjectIds.size === 0 || queueProgressDialogOpen}
             variant="outline"
             className="flex items-center gap-2"
           >
             <Image className="w-4 h-4" />
-            {replacementProgress ? `替换中 ${replacementProgress.current}/${replacementProgress.total}` : '模板替换'}
+            {queueProgressDialogOpen ? '替换中...' : '模板替换'}
           </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -1303,6 +1435,109 @@ export function AIImageProjects() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {applyingTemplate ? '处理中...' : '确认替换'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 队列处理进度对话框 */}
+      <Dialog open={queueProgressDialogOpen} onOpenChange={() => handleCloseQueueDialog()}>
+        <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5 text-blue-600" />
+              模板替换进度
+            </DialogTitle>
+            <DialogDescription>
+              正在处理图片替换，请勿关闭此对话框或刷新页面
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* 进度条 */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">总进度</span>
+                <span className="font-medium">
+                  {queueProgress.current} / {queueProgress.total}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${queueProgress.total > 0 ? (queueProgress.current / queueProgress.total) * 100 : 0}%`
+                  }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>
+                  {queueProgress.total > 0
+                    ? `${Math.round((queueProgress.current / queueProgress.total) * 100)}%`
+                    : '0%'}
+                </span>
+                <span>
+                  预计剩余: {Math.ceil((queueProgress.total - queueProgress.current) * 0.8)} 秒
+                </span>
+              </div>
+            </div>
+
+            {/* 当前处理信息 */}
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <p className="text-sm text-gray-600 mb-1">当前处理:</p>
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {queueProgress.currentImage || '准备中...'}
+              </p>
+            </div>
+
+            {/* 统计信息 */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
+                <p className="text-xs text-blue-600 mb-1">已处理</p>
+                <p className="text-lg font-bold text-blue-700">{queueProgress.current}</p>
+              </div>
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md text-center">
+                <p className="text-xs text-green-600 mb-1">成功</p>
+                <p className="text-lg font-bold text-green-700">{queueProgress.successCount}</p>
+              </div>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-center">
+                <p className="text-xs text-red-600 mb-1">失败</p>
+                <p className="text-lg font-bold text-red-700">{queueProgress.failedCount}</p>
+              </div>
+            </div>
+
+            {/* 处理中动画 */}
+            {!queueProgress.isCompleted && (
+              <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>正在处理中，请稍候...</span>
+              </div>
+            )}
+
+            {/* 完成提示 */}
+            {queueProgress.isCompleted && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm text-green-800 text-center font-medium">
+                  ✓ 所有任务处理完成！
+                </p>
+              </div>
+            )}
+
+            {/* 警告提示 */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-xs text-amber-800">
+                ⚠️ 请勿关闭此对话框或刷新页面，否则会中断处理进度
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={handleCloseQueueDialog}
+              disabled={!queueProgress.isCompleted}
+              className={queueProgress.isCompleted ? '' : 'opacity-50 cursor-not-allowed'}
+            >
+              {queueProgress.isCompleted ? '关闭' : '处理中...'}
             </Button>
           </DialogFooter>
         </DialogContent>
