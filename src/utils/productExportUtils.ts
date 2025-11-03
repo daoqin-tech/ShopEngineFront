@@ -490,7 +490,13 @@ export function exportToExcel(
     }
   }
 
+  // 获取店铺名称（取第一个商品的店铺）
+  const firstProduct = products[0];
+  const shopName = firstProduct.shopAccount ? getShopName(firstProduct.shopAccount) : '未知店铺';
+  const dateStr = getDateTimeString();
+  const fileName = `${shopName}_${dateStr}.xlsx`;
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '商品列表');
-  XLSX.writeFile(wb, `商品列表_${getDateTimeString()}.xlsx`);
+  XLSX.writeFile(wb, fileName);
 }
