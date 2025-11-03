@@ -51,14 +51,11 @@ export function AIImageProjects() {
   const [dynamicCopying, setDynamicCopying] = useState(false);
   const [copyMode, setCopyMode] = useState<'dynamic' | 'static'>('dynamic'); // 复制模式：动态复制、静态复制
 
-  // 模板替换对话框状态
-  const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
+  // 模板替换统一对话框状态
+  const [templateReplaceDialogOpen, setTemplateReplaceDialogOpen] = useState(false);
   const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
-  const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
-
-  // 队列处理进度对话框状态
-  const [queueProgressDialogOpen, setQueueProgressDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // 是否正在处理
   const [queueProgress, setQueueProgress] = useState<{
     current: number;
     total: number;
@@ -348,7 +345,7 @@ export function AIImageProjects() {
   };
 
   // 打开模板替换对话框
-  const handleOpenApplyTemplateDialog = async () => {
+  const handleOpenTemplateReplaceDialog = async () => {
     if (selectedProjectIds.size === 0) {
       toast.error('请选择要替换的项目');
       return;
@@ -357,7 +354,17 @@ export function AIImageProjects() {
       const projects = await imageTemplateService.getProjects();
       setTemplateProjects(projects);
       setSelectedTemplateProjectId('');
-      setApplyTemplateDialogOpen(true);
+      setIsProcessing(false);
+      setQueueProgress({
+        current: 0,
+        total: 0,
+        currentImage: '',
+        successCount: 0,
+        failedCount: 0,
+        isPaused: false,
+        isCompleted: false,
+      });
+      setTemplateReplaceDialogOpen(true);
     } catch (err) {
       toast.error('加载模板项目失败');
       console.error('Error loading template projects:', err);
@@ -485,8 +492,8 @@ export function AIImageProjects() {
     });
   };
 
-  // 确认模板替换 - 使用队列处理
-  const handleConfirmApplyTemplate = async () => {
+  // 开始模板替换处理
+  const handleStartTemplateReplace = async () => {
     if (selectedProjectIds.size === 0) {
       toast.error('请选择要替换的项目');
       return;
@@ -498,7 +505,7 @@ export function AIImageProjects() {
     }
 
     try {
-      setApplyingTemplate(true);
+      setIsProcessing(true);
       const projectIdsArray = Array.from(selectedProjectIds);
 
       // 1. 获取模板信息和图片信息
@@ -506,7 +513,7 @@ export function AIImageProjects() {
 
       if (!result.totalImages || result.totalImages === 0) {
         toast.error('没有找到符合尺寸的图片');
-        setApplyingTemplate(false);
+        setIsProcessing(false);
         return;
       }
 
@@ -533,7 +540,7 @@ export function AIImageProjects() {
       const templates = result.templates;
       if (templates.length === 0) {
         toast.error('模板项目中没有模板');
-        setApplyingTemplate(false);
+        setIsProcessing(false);
         return;
       }
 
@@ -578,10 +585,7 @@ export function AIImageProjects() {
         });
       }
 
-      // 4. 关闭选择对话框，打开队列进度对话框
-      setApplyTemplateDialogOpen(false);
-      setApplyingTemplate(false);
-      setQueueProgressDialogOpen(true);
+      // 4. 初始化进度
       setQueueProgress({
         current: 0,
         total: totalTaskCount,
@@ -596,8 +600,7 @@ export function AIImageProjects() {
       await processProjectQueueWithDelay(projectTaskQueue, selectedTemplateProjectId, targetWidth, targetHeight);
 
     } catch (err: any) {
-      setApplyTemplateDialogOpen(false);
-      setApplyingTemplate(false);
+      setIsProcessing(false);
       toast.error('模板替换失败', {
         description: err.response?.data?.message || err.message || '请稍后再试'
       });
@@ -720,16 +723,17 @@ export function AIImageProjects() {
     fetchProjects(currentPage);
   };
 
-  // 关闭队列进度对话框
-  const handleCloseQueueDialog = () => {
-    if (!queueProgress.isCompleted) {
+  // 关闭模板替换对话框
+  const handleCloseTemplateReplaceDialog = () => {
+    if (isProcessing && !queueProgress.isCompleted) {
       const confirm = window.confirm('任务正在处理中，关闭对话框会中断处理，确定要关闭吗？');
       if (!confirm) return;
     }
 
-    setQueueProgressDialogOpen(false);
+    setTemplateReplaceDialogOpen(false);
     setSelectedProjectIds(new Set());
     setSelectedTemplateProjectId('');
+    setIsProcessing(false);
     setQueueProgress({
       current: 0,
       total: 0,
@@ -782,13 +786,13 @@ export function AIImageProjects() {
             复制项目
           </Button>
           <Button
-            onClick={handleOpenApplyTemplateDialog}
-            disabled={selectedProjectIds.size === 0 || queueProgressDialogOpen}
+            onClick={handleOpenTemplateReplaceDialog}
+            disabled={selectedProjectIds.size === 0 || isProcessing}
             variant="outline"
             className="flex items-center gap-2"
           >
             <Image className="w-4 h-4" />
-            {queueProgressDialogOpen ? '替换中...' : '模板替换'}
+            {isProcessing ? '替换中...' : '模板替换'}
           </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -1380,165 +1384,202 @@ export function AIImageProjects() {
         </DialogContent>
       </Dialog>
 
-      {/* 模板替换对话框 */}
-      <Dialog open={applyTemplateDialogOpen} onOpenChange={setApplyTemplateDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>批量模板替换</DialogTitle>
-            <DialogDescription>
-              选择一个模板项目批量替换已选项目中的图片
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="templateProject">模板项目</Label>
-              <select
-                id="templateProject"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={selectedTemplateProjectId}
-                onChange={(e) => setSelectedTemplateProjectId(e.target.value)}
-              >
-                <option value="">请选择模板项目</option>
-                {templateProjects.map((project) => (
-                  <option key={project.projectId} value={project.projectId}>
-                    {project.name} ({project.type === 'calendar_landscape' ? '横版' : '竖版'}) - {project.templateCount} 个模板
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {selectedTemplateProjectId && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md space-y-1">
-                <p className="text-sm text-gray-700">
-                  已选择 {selectedProjectIds.size} 个项目进行模板替换
-                </p>
-                <p className="text-sm text-blue-600">
-                  横版模板匹配 928×1440 图片，竖版模板匹配 1408×992 图片
-                </p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setApplyTemplateDialogOpen(false);
-                setSelectedTemplateProjectId('');
-              }}
-              disabled={applyingTemplate}
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleConfirmApplyTemplate}
-              disabled={applyingTemplate || !selectedTemplateProjectId}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {applyingTemplate ? '处理中...' : '确认替换'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 队列处理进度对话框 */}
-      <Dialog open={queueProgressDialogOpen} onOpenChange={() => handleCloseQueueDialog()}>
-        <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      {/* 模板替换统一对话框 */}
+      <Dialog open={templateReplaceDialogOpen} onOpenChange={() => handleCloseTemplateReplaceDialog()}>
+        <DialogContent
+          className="sm:max-w-2xl"
+          onPointerDownOutside={(e) => isProcessing && e.preventDefault()}
+          onEscapeKeyDown={(e) => isProcessing && e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Image className="w-5 h-5 text-blue-600" />
-              模板替换进度
+              批量模板替换
             </DialogTitle>
             <DialogDescription>
-              正在处理图片替换，请勿关闭此对话框或刷新页面
+              {!isProcessing ? '选择一个模板项目批量替换已选项目中的图片' : '正在处理图片替换，请勿关闭此对话框或刷新页面'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* 进度条 */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">总进度</span>
-                <span className="font-medium">
-                  {queueProgress.current} / {queueProgress.total}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${queueProgress.total > 0 ? (queueProgress.current / queueProgress.total) * 100 : 0}%`
-                  }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>
-                  {queueProgress.total > 0
-                    ? `${Math.round((queueProgress.current / queueProgress.total) * 100)}%`
-                    : '0%'}
-                </span>
-                <span>
-                  预计剩余: {Math.ceil((queueProgress.total - queueProgress.current) * 0.8)} 秒
-                </span>
-              </div>
-            </div>
+            {/* 未开始处理：显示模板选择 */}
+            {!isProcessing && (
+              <>
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">选择日历模板类型</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {templateProjects.map((project) => (
+                      <div
+                        key={project.projectId}
+                        onClick={() => setSelectedTemplateProjectId(project.projectId)}
+                        className={`
+                          relative p-4 border-2 rounded-lg cursor-pointer transition-all
+                          ${selectedTemplateProjectId === project.projectId
+                            ? 'border-blue-500 bg-blue-50 shadow-md'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                          }
+                        `}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`
+                            w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
+                            ${selectedTemplateProjectId === project.projectId
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-600'
+                            }
+                          `}>
+                            <Image className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 mb-1">{project.name}</h3>
+                            <div className="space-y-1">
+                              <p className="text-sm text-gray-600">
+                                {project.type === 'calendar_landscape' ? '📐 横版日历' : '📱 竖版日历'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {project.templateCount} 个模板
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {project.type === 'calendar_landscape' ? '匹配 928×1440 图片' : '匹配 1408×992 图片'}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedTemplateProjectId === project.projectId && (
+                            <div className="absolute top-3 right-3">
+                              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                <Check className="w-4 h-4 text-white" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-            {/* 当前处理信息 */}
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
-              <p className="text-sm text-gray-600 mb-1">当前处理:</p>
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {queueProgress.currentImage || '准备中...'}
-              </p>
-            </div>
-
-            {/* 统计信息 */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
-                <p className="text-xs text-blue-600 mb-1">已处理</p>
-                <p className="text-lg font-bold text-blue-700">{queueProgress.current}</p>
-              </div>
-              <div className="p-3 bg-green-50 border border-green-200 rounded-md text-center">
-                <p className="text-xs text-green-600 mb-1">成功</p>
-                <p className="text-lg font-bold text-green-700">{queueProgress.successCount}</p>
-              </div>
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md text-center">
-                <p className="text-xs text-red-600 mb-1">失败</p>
-                <p className="text-lg font-bold text-red-700">{queueProgress.failedCount}</p>
-              </div>
-            </div>
-
-            {/* 处理中动画 */}
-            {!queueProgress.isCompleted && (
-              <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span>正在处理中，请稍候...</span>
-              </div>
+                {selectedTemplateProjectId && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-gray-700 font-medium mb-1">
+                      ✓ 已选择 {selectedProjectIds.size} 个项目进行模板替换
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      点击下方按钮开始替换
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* 完成提示 */}
-            {queueProgress.isCompleted && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm text-green-800 text-center font-medium">
-                  ✓ 所有任务处理完成！
-                </p>
-              </div>
-            )}
+            {/* 处理中：显示进度 */}
+            {isProcessing && (
+              <>
+                {/* 进度条 */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">总进度</span>
+                    <span className="font-medium">
+                      {queueProgress.current} / {queueProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${queueProgress.total > 0 ? (queueProgress.current / queueProgress.total) * 100 : 0}%`
+                      }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>
+                      {queueProgress.total > 0
+                        ? `${Math.round((queueProgress.current / queueProgress.total) * 100)}%`
+                        : '0%'}
+                    </span>
+                    <span>
+                      预计剩余: {Math.ceil((queueProgress.total - queueProgress.current) * 0.8)} 秒
+                    </span>
+                  </div>
+                </div>
 
-            {/* 警告提示 */}
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-              <p className="text-xs text-amber-800">
-                ⚠️ 请勿关闭此对话框或刷新页面，否则会中断处理进度
-              </p>
-            </div>
+                {/* 当前处理信息 */}
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  <p className="text-sm text-gray-600 mb-1">当前处理:</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {queueProgress.currentImage || '准备中...'}
+                  </p>
+                </div>
+
+                {/* 统计信息 */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
+                    <p className="text-xs text-blue-600 mb-1">已处理</p>
+                    <p className="text-lg font-bold text-blue-700">{queueProgress.current}</p>
+                  </div>
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md text-center">
+                    <p className="text-xs text-green-600 mb-1">成功</p>
+                    <p className="text-lg font-bold text-green-700">{queueProgress.successCount}</p>
+                  </div>
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-center">
+                    <p className="text-xs text-red-600 mb-1">失败</p>
+                    <p className="text-lg font-bold text-red-700">{queueProgress.failedCount}</p>
+                  </div>
+                </div>
+
+                {/* 处理中动画 */}
+                {!queueProgress.isCompleted && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>正在处理中，请稍候...</span>
+                  </div>
+                )}
+
+                {/* 完成提示 */}
+                {queueProgress.isCompleted && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-800 text-center font-medium">
+                      ✓ 所有任务处理完成！
+                    </p>
+                  </div>
+                )}
+
+                {/* 警告提示 */}
+                {!queueProgress.isCompleted && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-xs text-amber-800">
+                      ⚠️ 请勿关闭此对话框或刷新页面，否则会中断处理进度
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <DialogFooter>
-            <Button
-              onClick={handleCloseQueueDialog}
-              disabled={!queueProgress.isCompleted}
-              className={queueProgress.isCompleted ? '' : 'opacity-50 cursor-not-allowed'}
-            >
-              {queueProgress.isCompleted ? '关闭' : '处理中...'}
-            </Button>
+            {!isProcessing ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseTemplateReplaceDialog}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleStartTemplateReplace}
+                  disabled={!selectedTemplateProjectId}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  开始替换
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleCloseTemplateReplaceDialog}
+                disabled={!queueProgress.isCompleted}
+                className={queueProgress.isCompleted ? '' : 'opacity-50 cursor-not-allowed'}
+              >
+                {queueProgress.isCompleted ? '关闭' : '处理中...'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
