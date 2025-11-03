@@ -30,7 +30,7 @@ export function CoverTaskCreator() {
   const [templates, setTemplates] = useState<TemplateSelectionItem[]>([])
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set())
   const [templateSearch, setTemplateSearch] = useState('')
-  const [selectedLayerCountGroup, setSelectedLayerCountGroup] = useState<number | null>(null)
+  const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<string | null>(null)
 
   // 加载状态
   const [loadingAiProjects, setLoadingAiProjects] = useState(true)
@@ -145,12 +145,31 @@ export function CoverTaskCreator() {
     return () => clearTimeout(timer)
   }, [templateSearch])
 
+  // 解析模板名称，提取分类信息
+  const parseTemplateName = (name: string): { displayName: string; category: string } => {
+    // 匹配括号内的内容作为分类
+    const match = name.match(/^(.+?)[(（](.+?)[)）]$/)
+
+    if (match) {
+      return {
+        displayName: match[1].trim(),
+        category: match[2].trim()
+      }
+    }
+
+    // 如果没有括号，返回原名称和默认分类
+    return {
+      displayName: name,
+      category: '其他'
+    }
+  }
+
   // 模板加载完成后，默认选中第一个分组
   useEffect(() => {
-    if (templates.length > 0 && selectedLayerCountGroup === null) {
-      const { layerCounts } = groupedTemplates()
-      if (layerCounts.length > 0) {
-        setSelectedLayerCountGroup(layerCounts[0])
+    if (templates.length > 0 && selectedCategoryGroup === null) {
+      const { categories } = groupedTemplates()
+      if (categories.length > 0) {
+        setSelectedCategoryGroup(categories[0])
       }
     }
   }, [templates])
@@ -276,26 +295,31 @@ export function CoverTaskCreator() {
     setIsPanning(false)
   }
 
-  // 按可替换图片数量分组模板
+  // 按分类分组模板
   const groupedTemplates = () => {
-    // 获取所有唯一的layerCount值并排序
-    const layerCounts = Array.from(new Set(templates.map(t => t.layerCount || 0))).sort((a, b) => a - b)
+    // 获取所有唯一的分类值并排序
+    const categorySet = new Set<string>()
+    templates.forEach(t => {
+      const { category } = parseTemplateName(t.name)
+      categorySet.add(category)
+    })
+    const categories = Array.from(categorySet).sort()
 
     // 创建分组
-    const groups: Record<number, TemplateSelectionItem[]> = {}
-    layerCounts.forEach(count => {
-      groups[count] = templates.filter(t => (t.layerCount || 0) === count)
+    const groups: Record<string, TemplateSelectionItem[]> = {}
+    categories.forEach(category => {
+      groups[category] = templates.filter(t => parseTemplateName(t.name).category === category)
     })
 
-    return { layerCounts, groups }
+    return { categories, groups }
   }
 
   // 获取当前显示的模板列表
   const getFilteredTemplates = () => {
-    if (selectedLayerCountGroup === null) {
+    if (selectedCategoryGroup === null) {
       return []
     }
-    return templates.filter(t => (t.layerCount || 0) === selectedLayerCountGroup)
+    return templates.filter(t => parseTemplateName(t.name).category === selectedCategoryGroup)
   }
 
   // 开始生成
@@ -873,24 +897,23 @@ export function CoverTaskCreator() {
             <div className="px-4 pb-3 overflow-x-auto">
               <div className="flex items-center gap-2 justify-between">
                 <div className="flex items-center gap-2">
-                {groupedTemplates().layerCounts.map(count => {
-                  const group = groupedTemplates().groups[count]
+                {groupedTemplates().categories.map(category => {
                   return (
                     <button
-                      key={count}
+                      key={category}
                       onClick={() => {
-                        setSelectedLayerCountGroup(count)
+                        setSelectedCategoryGroup(category)
                         setSelectedTemplates(new Set()) // 切换分组时清空选择
                       }}
                       className={`
                         px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
-                        ${selectedLayerCountGroup === count
+                        ${selectedCategoryGroup === category
                           ? 'bg-green-100 text-green-700 border border-green-300'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }
                       `}
                     >
-                      {count}图 ({group.length})
+                      {category}
                     </button>
                   )
                 })}

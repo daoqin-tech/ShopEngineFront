@@ -2,13 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
@@ -16,6 +9,16 @@ import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, DECORATIVE_P
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // 商品信息表单数据
 interface ProductFormData {
@@ -170,6 +173,37 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   };
 
   // 初始化时加载数据
+  // 解析模板名称，提取分类信息
+  const parseTemplateName = (name: string): { displayName: string; category: string } => {
+    const match = name.match(/^(.+?)[(（](.+?)[)）]$/)
+    if (match) {
+      return {
+        displayName: match[1].trim(),
+        category: match[2].trim()
+      }
+    }
+    return {
+      displayName: name,
+      category: '其他'
+    }
+  }
+
+  // 按分类分组模板
+  const groupedTemplates = React.useMemo(() => {
+    const groups: { [category: string]: TemplateSearchItem[] } = {}
+    templatesForSearch.forEach(template => {
+      const { category } = parseTemplateName(template.name)
+      if (!groups[category]) {
+        groups[category] = []
+      }
+      groups[category].push(template)
+    })
+    return Object.keys(groups).sort().reduce((acc, category) => {
+      acc[category] = groups[category]
+      return acc
+    }, {} as { [category: string]: TemplateSearchItem[] })
+  }, [templatesForSearch])
+
   React.useEffect(() => {
     fetchAvailableImages(1);
     fetchTemplatesForSearch();
@@ -496,7 +530,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
             {/* 筛选器 */}
             <div className="bg-gray-50 p-4 border-b">
-              <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">模板:</label>
                   <Select
@@ -504,15 +538,29 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     onValueChange={(value) => setTemplateFilter(value || '')}
                     disabled={loadingTemplates}
                   >
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger className="w-64">
                       <SelectValue placeholder="全部模板" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部模板</SelectItem>
-                      {templatesForSearch.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
+                    <SelectContent className="max-h-[400px]">
+                      <SelectItem value="all">全部模板 ({templatesForSearch.length})</SelectItem>
+                      <SelectSeparator />
+                      {Object.entries(groupedTemplates).map(([category, templates], index) => (
+                        <React.Fragment key={category}>
+                          {index > 0 && <SelectSeparator />}
+                          <SelectGroup>
+                            <SelectLabel className="text-xs font-bold text-gray-900 bg-gray-50 px-3 py-2 -mx-1 mb-1">
+                              {category}
+                            </SelectLabel>
+                            {templates.map((template) => {
+                              const { displayName } = parseTemplateName(template.name)
+                              return (
+                                <SelectItem key={template.id} value={template.id} className="pl-6">
+                                  {displayName}
+                                </SelectItem>
+                              )
+                            })}
+                          </SelectGroup>
+                        </React.Fragment>
                       ))}
                     </SelectContent>
                   </Select>
