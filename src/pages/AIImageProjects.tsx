@@ -682,9 +682,9 @@ export function AIImageProjects() {
 
           console.log(`  图片处理成功`);
 
-          // 每张图片间隔 800ms
+          // 每张图片间隔 100ms
           if (taskIdx < project.tasks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
 
         } catch (error) {
@@ -699,10 +699,7 @@ export function AIImageProjects() {
 
       console.log(`项目 ${project.projectName} 处理完成\n`);
 
-      // 项目之间间隔 1.5 秒
-      if (projectIdx < projectQueue.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
+      // 项目之间不需要延时，直接处理下一个项目
     }
 
     // 处理完成
