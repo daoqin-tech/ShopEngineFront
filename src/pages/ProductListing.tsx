@@ -7,12 +7,13 @@ import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Dow
 import { productService, type Product } from '@/services/productService';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import JSZip from 'jszip';
+import { ImageReorderDialog } from '@/components/ImageReorderDialog';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
-  exportToExcel as exportToExcelUtil
+  exportToExcel as exportToExcelUtil,
+  exportProductPdf as exportProductPdfUtil,
+  type PageSizeType
 } from '@/utils/productExportUtils';
 
 export function ProductListing() {
@@ -37,8 +38,10 @@ export function ProductListing() {
 
   // PDF导出相关状态
   const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [pdfPageSize, setPdfPageSize] = useState<'small' | 'large'>('small');
+  const [pdfPageSize, setPdfPageSize] = useState<'JOURNAL_PAPER' | 'DECORATIVE_PAPER' | 'CALENDAR_PORTRAIT' | 'CALENDAR_LANDSCAPE'>('JOURNAL_PAPER');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showReorderDialog, setShowReorderDialog] = useState(false);
+  const [productsToExport, setProductsToExport] = useState<Product[]>([]);
 
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
@@ -162,19 +165,35 @@ export function ProductListing() {
   };
 
   // PDF页面尺寸配置（单位：mm）
-  // 实际PDF尺寸 = 规格尺寸 + 6mm(打印机预留空间)
-  const PAGE_SIZES = {
-    small: {
-      width: 158,   // 15.2cm + 0.6cm = 15.8cm
-      height: 158,
+  // 所有类型: 实际PDF尺寸 = 规格尺寸 + 6mm(打印出血)
+  const PAGE_SIZE_CONFIG = {
+    JOURNAL_PAPER: {
+      width: 152,   // 15.2cm
+      height: 152,
       label: '15.2 × 15.2 cm',
-      displayLabel: '15.2 × 15.2 cm'
+      displayLabel: '15.2 × 15.2 cm',
+      type: '手账纸'
     },
-    large: {
-      width: 306,   // 30cm + 0.6cm = 30.6cm
-      height: 306,
+    DECORATIVE_PAPER: {
+      width: 300,   // 30cm
+      height: 300,
       label: '30 × 30 cm',
-      displayLabel: '30 × 30 cm'
+      displayLabel: '30 × 30 cm',
+      type: '包装纸'
+    },
+    CALENDAR_PORTRAIT: {
+      width: 210,   // 21cm
+      height: 297,  // 29.7cm
+      label: '21 × 29.7 cm',
+      displayLabel: '21 × 29.7 cm',
+      type: '竖版日历'
+    },
+    CALENDAR_LANDSCAPE: {
+      width: 297,   // 29.7cm
+      height: 210,  // 21cm
+      label: '29.7 × 21 cm',
+      displayLabel: '29.7 × 21 cm',
+      type: '横版日历'
     }
   };
 
@@ -349,7 +368,7 @@ export function ProductListing() {
   //   }
   // };
 
-  // 导出产品图PDF - 新版本(单面打印,货号在第一页)
+  // 导出产品图PDF - 点击开始导出按钮
   const handleExportProductPdf = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
@@ -358,138 +377,39 @@ export function ProductListing() {
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
 
-    setIsGeneratingPdf(true);
-
-    try {
-      // 过滤出有产品图的商品
-      const productsWithImages = selectedProducts.filter(p => p.productImages && p.productImages.length > 0);
-
-      if (productsWithImages.length === 0) {
-        toast.error('所选商品没有产品图');
-        setIsGeneratingPdf(false);
-        return;
-      }
-
-      // 创建 JSZip 实例
-      const zip = new JSZip();
-
-      // 获取选择的页面尺寸
-      const pageSize = PAGE_SIZES[pdfPageSize];
-
-      // 为每个商品生成一个PDF
-      for (const product of productsWithImages) {
-        const productImages = product.productImages;
-        if (!productImages || productImages.length === 0) continue;
-
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: [pageSize.width, pageSize.height]
-        });
-
-        const pageWidth = pageSize.width;
-        const pageHeight = pageSize.height;
-
-        // 第一页: 货号页
-        pdf.setFontSize(40);
-        pdf.setTextColor(0, 0, 0);
-        const productCode = product.productCode || product.id;
-        const textWidth = pdf.getTextWidth(productCode);
-        const textX = (pageWidth - textWidth) / 2;
-        const textY = pageHeight / 2;
-        pdf.text(productCode, textX, textY);
-
-        // 添加右下角黑色标记 (用于分本)
-        const blackMarkWidth = 10;  // 1cm
-        const blackMarkHeight = 5;  // 0.5cm
-        const blackMarkX = pageWidth - blackMarkWidth;
-        const blackMarkY = pageHeight - blackMarkHeight - 5;
-        pdf.setFillColor(0, 0, 0);
-        pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
-
-        // 后续页: 产品图(紧跟在货号页后面,不需要空白页)
-        for (const imageUrl of productImages) {
-          try {
-            const response = await fetch(imageUrl, {
-              mode: 'cors',
-              headers: {
-                'Accept': 'image/*',
-              }
-            });
-
-            if (!response.ok) {
-              console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
-              continue;
-            }
-
-            const blob = await response.blob();
-            const imageDataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target?.result as string);
-              reader.readAsDataURL(blob);
-            });
-
-            // 添加新页
-            pdf.addPage();
-
-            // 获取图片尺寸
-            const img = new Image();
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = imageDataUrl;
-            });
-
-            const imgWidth = img.naturalWidth;
-            const imgHeight = img.naturalHeight;
-
-            // 计算图片显示尺寸，保持比例并铺满页面
-            const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-            const displayWidth = imgWidth * ratio;
-            const displayHeight = imgHeight * ratio;
-
-            // 居中显示
-            const x = (pageWidth - displayWidth) / 2;
-            const y = (pageHeight - displayHeight) / 2;
-
-            pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
-
-          } catch (error) {
-            console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
-          }
-        }
-
-        // 生成PDF blob并添加到压缩包
-        const pdfBlob = pdf.output('blob');
-        const pdfFileName = `${product.productCode || product.id}.pdf`;
-        zip.file(pdfFileName, pdfBlob);
-      }
-
-      // 生成压缩包
-      const zipContent = await zip.generateAsync({ type: 'blob' });
-
-      // 生成文件名
-      const now = new Date();
-      const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-      const filename = `产品图PDF_${dateTimeStr}.zip`;
-
-      // 下载压缩包
-      const url = window.URL.createObjectURL(zipContent);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success(`成功导出 ${productsWithImages.length} 个商品的PDF`);
-      setSelectedProductIds(new Set());
+    // 如果是日历模式，先显示重排序对话框
+    if (pdfPageSize.startsWith('CALENDAR')) {
+      setProductsToExport(selectedProducts);
       setShowPdfDialog(false);
+      setShowReorderDialog(true);
+    } else {
+      // 非日历模式直接导出
+      setIsGeneratingPdf(true);
+      try {
+        await exportProductPdfUtil(selectedProducts, pdfPageSize as PageSizeType);
+        toast.success(`成功导出 PDF`);
+        setSelectedProductIds(new Set());
+        setShowPdfDialog(false);
+      } catch (error) {
+        console.error('导出PDF失败:', error);
+        toast.error(error instanceof Error ? error.message : '导出PDF失败，请重试');
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    }
+  };
 
+  // 确认重排序后导出
+  const handleConfirmReorder = async (reorderedProducts: Product[]) => {
+    setIsGeneratingPdf(true);
+    try {
+      await exportProductPdfUtil(reorderedProducts, pdfPageSize as PageSizeType);
+      toast.success(`成功导出 PDF`);
+      setSelectedProductIds(new Set());
+      setShowReorderDialog(false);
     } catch (error) {
       console.error('导出PDF失败:', error);
-      toast.error('导出PDF失败，请重试');
+      toast.error(error instanceof Error ? error.message : '导出PDF失败，请重试');
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -1080,19 +1000,44 @@ export function ProductListing() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    规格
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    选择规格
                   </label>
-                  <select
-                    value={pdfPageSize}
-                    onChange={(e) => setPdfPageSize(e.target.value as 'small' | 'large')}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    <option value="small">{PAGE_SIZES.small.displayLabel}</option>
-                    <option value="large">{PAGE_SIZES.large.displayLabel}</option>
-                  </select>
-                  <p className="mt-2 text-xs text-gray-500">
-                    实际打印尺寸会比规格多 6mm，为打印机预留空间
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(PAGE_SIZE_CONFIG).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => setPdfPageSize(key as any)}
+                        className={`
+                          relative p-4 border-2 rounded-lg text-left transition-all
+                          ${pdfPageSize === key
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                          }
+                        `}
+                      >
+                        <div className="font-semibold text-gray-900 mb-1">
+                          {config.type}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {config.displayLabel}
+                        </div>
+                        {pdfPageSize === key && (
+                          <div className="absolute top-2 right-2">
+                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M5 13l4 4L19 7"></path>
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-xs text-gray-500">
+                    {pdfPageSize.startsWith('CALENDAR')
+                      ? '日历模式会自动添加 6mm 出血，货号显示在页面右下角'
+                      : '手账纸和包装纸会添加 6mm 打印预留空间，货号居中显示'}
                   </p>
                 </div>
               </div>
@@ -1181,6 +1126,15 @@ export function ProductListing() {
           </div>
         </div>
       )}
+
+      {/* 图片重排序对话框 */}
+      <ImageReorderDialog
+        open={showReorderDialog}
+        onOpenChange={setShowReorderDialog}
+        products={productsToExport}
+        onConfirm={handleConfirmReorder}
+        isCalendar={pdfPageSize.startsWith('CALENDAR')}
+      />
 
     </div>
   );

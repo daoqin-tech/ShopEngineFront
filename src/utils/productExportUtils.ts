@@ -4,11 +4,13 @@ import JSZip from 'jszip';
 import { Product } from '@/services/productService';
 import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES } from '@/types/shop';
 
-// PDF页面尺寸配置
+// PDF页面尺寸配置（单位：mm）
+// 所有类型在导出时会自动添加 6mm 出血
 export const PAGE_SIZES = {
-  A4: { width: 210, height: 297 },
-  A5: { width: 148, height: 210 },
-  A6: { width: 105, height: 148 }
+  JOURNAL_PAPER: { width: 152, height: 152 },       // 手账纸 15.2cm x 15.2cm
+  DECORATIVE_PAPER: { width: 300, height: 300 },    // 包装纸 30cm x 30cm
+  CALENDAR_PORTRAIT: { width: 210, height: 297 },   // 竖版日历 21cm x 29.7cm
+  CALENDAR_LANDSCAPE: { width: 297, height: 210 }   // 横版日历 29.7cm x 21cm
 } as const;
 
 export type PageSizeType = keyof typeof PAGE_SIZES;
@@ -38,6 +40,14 @@ export async function exportProductPdf(
   const zip = new JSZip();
   const pageSizeConfig = PAGE_SIZES[pageSize];
 
+  // 判断是否为日历类型
+  const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
+
+  // 计算实际页面尺寸（所有类型都加6mm出血）
+  const bleed = 6;
+  const actualPageWidth = pageSizeConfig.width + bleed;
+  const actualPageHeight = pageSizeConfig.height + bleed;
+
   for (let index = 0; index < productsWithImages.length; index++) {
     const product = productsWithImages[index];
     const productImages = product.productImages;
@@ -47,30 +57,33 @@ export async function exportProductPdf(
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [pageSizeConfig.width, pageSizeConfig.height]
+      format: [actualPageWidth, actualPageHeight]
     });
 
-    const pageWidth = pageSizeConfig.width;
-    const pageHeight = pageSizeConfig.height;
+    const pageWidth = actualPageWidth;
+    const pageHeight = actualPageHeight;
 
-    // 第一页: 货号页
-    pdf.setFontSize(40);
-    pdf.setTextColor(0, 0, 0);
-    const productCode = product.productCode || product.id;
-    const textWidth = pdf.getTextWidth(productCode);
-    const textX = (pageWidth - textWidth) / 2;
-    const textY = pageHeight / 2;
-    pdf.text(productCode, textX, textY);
+    // 非日历模式: 第一页是货号页
+    if (!isCalendar) {
+      pdf.setFontSize(40);
+      pdf.setTextColor(0, 0, 0);
+      const productCode = product.productCode || product.id;
+      const textWidth = pdf.getTextWidth(productCode);
+      const textX = (pageWidth - textWidth) / 2;
+      const textY = pageHeight / 2;
+      pdf.text(productCode, textX, textY);
 
-    // 添加右下角黑色标记 (用于分本)
-    const blackMarkWidth = 10;  // 1cm
-    const blackMarkHeight = 5;  // 0.5cm
-    const blackMarkX = pageWidth - blackMarkWidth;
-    const blackMarkY = pageHeight - blackMarkHeight - 5;
-    pdf.setFillColor(0, 0, 0);
-    pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
+      // 添加右下角黑色标记 (用于分本)
+      const blackMarkWidth = 10;  // 1cm
+      const blackMarkHeight = 5;  // 0.5cm
+      const blackMarkX = pageWidth - blackMarkWidth;
+      const blackMarkY = pageHeight - blackMarkHeight - 5;
+      pdf.setFillColor(0, 0, 0);
+      pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
+    }
 
-    // 后续页: 产品图
+    // 产品图页面
+    let isFirstImage = true;
     for (const imageUrl of productImages) {
       try {
         const response = await fetch(imageUrl, {
@@ -92,8 +105,10 @@ export async function exportProductPdf(
           reader.readAsDataURL(blob);
         });
 
-        // 添加新页
-        pdf.addPage();
+        // 添加新页 (日历模式且第一张图片时不添加，因为没有货号页)
+        if (!isCalendar || !isFirstImage) {
+          pdf.addPage();
+        }
 
         // 获取图片尺寸
         const img = new Image();
@@ -103,19 +118,45 @@ export async function exportProductPdf(
           img.src = imageDataUrl;
         });
 
-        const imgWidth = img.naturalWidth;
-        const imgHeight = img.naturalHeight;
+        // 手账纸和包装纸：直接拉伸铺满整个页面
+        // 日历：保持比例并居中显示
+        let displayWidth: number;
+        let displayHeight: number;
+        let x: number;
+        let y: number;
 
-        // 计算图片显示尺寸，保持比例并铺满页面
-        const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-        const displayWidth = imgWidth * ratio;
-        const displayHeight = imgHeight * ratio;
-
-        // 居中显示
-        const x = (pageWidth - displayWidth) / 2;
-        const y = (pageHeight - displayHeight) / 2;
+        if (isCalendar) {
+          // 日历模式：保持图片比例，居中显示
+          const imgWidth = img.naturalWidth;
+          const imgHeight = img.naturalHeight;
+          const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
+          displayWidth = imgWidth * ratio;
+          displayHeight = imgHeight * ratio;
+          x = (pageWidth - displayWidth) / 2;
+          y = (pageHeight - displayHeight) / 2;
+        } else {
+          // 手账纸/包装纸模式：拉伸铺满整个页面
+          displayWidth = pageWidth;
+          displayHeight = pageHeight;
+          x = 0;
+          y = 0;
+        }
 
         pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
+
+        // 日历模式：在第一张图片的右下角添加货号
+        if (isCalendar && isFirstImage) {
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold'); // 设置粗体
+          pdf.setTextColor(50, 50, 50); // 深灰色
+          const productCode = product.productCode || product.id;
+          const textWidth = pdf.getTextWidth(productCode);
+          const textX = pageWidth - textWidth - 8; // 距离右边缘8mm
+          const textY = pageHeight - 8; // 距离底部8mm
+          pdf.text(productCode, textX, textY);
+        }
+
+        isFirstImage = false;
 
       } catch (error) {
         console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
