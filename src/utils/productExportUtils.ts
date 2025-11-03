@@ -492,7 +492,7 @@ export function exportToExcel(
 
   // 获取店铺名称（取第一个商品的店铺）
   const firstProduct = products[0];
-  const shopName = firstProduct.shopAccount ? getShopName(firstProduct.shopAccount) : '未知店铺';
+  const shopName = firstProduct.shopId ? getShopName(firstProduct.shopId) : '未知店铺';
   const dateStr = getDateTimeString();
   const fileName = `${shopName}_${dateStr}.xlsx`;
 
