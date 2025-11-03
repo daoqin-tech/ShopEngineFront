@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Download, X, ChevronLeft, ChevronRight, Image, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,10 @@ import { DateTimePicker } from '@/components/ui/date-picker'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -52,6 +55,36 @@ export function CoverGeneration() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
   const [previewImages, setPreviewImages] = useState<{ taskId: string; images: string[] } | null>(null)
 
+  // 解析模板名称，提取分类信息
+  const parseTemplateName = (name: string): { displayName: string; category: string } => {
+    const match = name.match(/^(.+?)[(（](.+?)[)）]$/)
+    if (match) {
+      return {
+        displayName: match[1].trim(),
+        category: match[2].trim()
+      }
+    }
+    return {
+      displayName: name,
+      category: '其他'
+    }
+  }
+
+  // 按分类分组模板
+  const groupedTemplates = React.useMemo(() => {
+    const groups: { [category: string]: TemplateSearchItem[] } = {}
+    templatesForSearch.forEach(template => {
+      const { category } = parseTemplateName(template.name)
+      if (!groups[category]) {
+        groups[category] = []
+      }
+      groups[category].push(template)
+    })
+    return Object.keys(groups).sort().reduce((acc, category) => {
+      acc[category] = groups[category]
+      return acc
+    }, {} as { [category: string]: TemplateSearchItem[] })
+  }, [templatesForSearch])
 
   // 获取任务列表
   const fetchTasks = async (page: number = currentPage) => {
@@ -397,12 +430,26 @@ export function CoverGeneration() {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="全部模板" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部模板</SelectItem>
-                {templatesForSearch.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
+              <SelectContent className="max-h-[400px]">
+                <SelectItem value="all">全部模板 ({templatesForSearch.length})</SelectItem>
+                <SelectSeparator />
+                {Object.entries(groupedTemplates).map(([category, templates], index) => (
+                  <React.Fragment key={category}>
+                    {index > 0 && <SelectSeparator />}
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-bold text-gray-900 bg-gray-50 px-3 py-2 -mx-1 mb-1">
+                        {category}
+                      </SelectLabel>
+                      {templates.map((template) => {
+                        const { displayName } = parseTemplateName(template.name)
+                        return (
+                          <SelectItem key={template.id} value={template.id} className="pl-6">
+                            {displayName}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectGroup>
+                  </React.Fragment>
                 ))}
               </SelectContent>
             </Select>
