@@ -194,7 +194,7 @@ export async function exportProductPdf(
  */
 export async function exportCarouselImages(
   products: Product[],
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (currentProject: number, totalProjects: number, currentImage: number, totalImages: number, productName: string) => void
 ): Promise<void> {
   const productsWithImages = products.filter(p => p.carouselImages && p.carouselImages.length > 0);
 
@@ -210,18 +210,21 @@ export async function exportCarouselImages(
     const folder = zip.folder(productCode);
 
     if (folder && product.carouselImages) {
+      const totalImages = product.carouselImages.length;
+
       for (let i = 0; i < product.carouselImages.length; i++) {
         const imageUrl = product.carouselImages[i];
+
+        // 更新进度 - 双维度统计
+        if (onProgress) {
+          onProgress(index + 1, productsWithImages.length, i + 1, totalImages, productCode);
+        }
+
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
         folder.file(`商品图_${i + 1}.${ext}`, blob);
       }
-    }
-
-    // 更新进度
-    if (onProgress) {
-      onProgress(index + 1, productsWithImages.length);
     }
   }
 
@@ -241,7 +244,7 @@ export async function exportCarouselImages(
  */
 export async function exportProductImages(
   products: Product[],
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (currentProject: number, totalProjects: number, currentImage: number, totalImages: number, productName: string) => void
 ): Promise<void> {
   const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
 
@@ -257,18 +260,21 @@ export async function exportProductImages(
     const folder = zip.folder(productCode);
 
     if (folder && product.productImages) {
+      const totalImages = product.productImages.length;
+
       for (let i = 0; i < product.productImages.length; i++) {
         const imageUrl = product.productImages[i];
+
+        // 更新进度 - 双维度统计
+        if (onProgress) {
+          onProgress(index + 1, productsWithImages.length, i + 1, totalImages, productCode);
+        }
+
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
         folder.file(`产品图_${i + 1}.${ext}`, blob);
       }
-    }
-
-    // 更新进度
-    if (onProgress) {
-      onProgress(index + 1, productsWithImages.length);
     }
   }
 

@@ -471,7 +471,7 @@ export function AIImageProjects() {
     compressedCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
     console.log('图片压缩完成');
 
-    // 转换为blob
+    // 转换为blob（提高质量到98%以保留更多细节）
     return new Promise((resolve, reject) => {
       compressedCanvas.toBlob(
         (blob) => {
@@ -487,7 +487,7 @@ export function AIImageProjects() {
           }
         },
         'image/jpeg',
-        0.92
+        0.98
       );
     });
   };

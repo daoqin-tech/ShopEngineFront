@@ -9,6 +9,7 @@ import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
 import { ImageReorderDialog } from '@/components/ImageReorderDialog';
 import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
+import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
@@ -48,9 +49,21 @@ export function ProductListing() {
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
 
   // 导出状态
-  const [isExportingCarouselImages, setIsExportingCarouselImages] = useState(false);
-  const [isExportingProductImages, setIsExportingProductImages] = useState(false);
   const [isRegeneratingTitles, setIsRegeneratingTitles] = useState(false);
+
+  // 统一导出对话框状态
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportDialogConfig, setExportDialogConfig] = useState({
+    title: '',
+    description: '',
+    productCount: 0,
+    stage: 'confirm' as 'confirm' | 'processing' | 'completed',
+    currentProject: 0,
+    totalProjects: 0,
+    currentImage: 0,
+    totalImages: 0,
+    currentProductName: '',
+  });
 
   // 重新生成标题对话框
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
@@ -445,45 +458,122 @@ export function ProductListing() {
   };
 
   // 批量导出商品图
-  const handleExportCarouselImages = async () => {
+  const handleExportCarouselImages = () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
       return;
     }
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-    setIsExportingCarouselImages(true);
+
+    // 显示确认对话框
+    setExportDialogConfig({
+      title: '导出商品图',
+      description: '确定要导出选中商品的商品图吗？',
+      productCount: selectedProducts.length,
+      stage: 'confirm',
+      currentProject: 0,
+      totalProjects: selectedProducts.length,
+      currentImage: 0,
+      totalImages: 0,
+      currentProductName: '',
+    });
+    setShowExportDialog(true);
+  };
+
+  // 执行导出商品图
+  const executeExportCarouselImages = async (selectedProducts: Product[]) => {
+    // 切换到处理阶段
+    setExportDialogConfig(prev => ({ ...prev, stage: 'processing' }));
 
     try {
-      await exportCarouselImagesUtil(selectedProducts);
-      toast.success(`成功导出商品图`);
-      setSelectedProductIds(new Set());
+      await exportCarouselImagesUtil(
+        selectedProducts,
+        (currentProject, totalProjects, currentImage, totalImages, productName) => {
+          setExportDialogConfig(prev => ({
+            ...prev,
+            currentProject,
+            totalProjects,
+            currentImage,
+            totalImages,
+            currentProductName: productName,
+          }));
+        }
+      );
+
+      // 切换到完成阶段
+      setExportDialogConfig(prev => ({ ...prev, stage: 'completed' }));
+
+      // 2秒后自动关闭并清空选择
+      setTimeout(() => {
+        setShowExportDialog(false);
+        setSelectedProductIds(new Set());
+        toast.success(`成功导出 ${selectedProducts.length} 个商品的商品图`);
+      }, 2000);
     } catch (error) {
       console.error('导出商品图失败:', error);
+      setShowExportDialog(false);
       toast.error(error instanceof Error ? error.message : '导出商品图失败');
-    } finally {
-      setIsExportingCarouselImages(false);
     }
   };
 
   // 批量导出产品图
-  const handleExportProductImages = async () => {
+  const handleExportProductImages = () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
       return;
     }
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-    setIsExportingProductImages(true);
+
+    // 显示确认对话框
+    setExportDialogConfig({
+      title: '导出产品图',
+      description: '确定要导出选中商品的产品图吗？',
+      productCount: selectedProducts.length,
+      stage: 'confirm',
+      currentProject: 0,
+      totalProjects: selectedProducts.length,
+      currentImage: 0,
+      totalImages: 0,
+      currentProductName: '',
+    });
+    setShowExportDialog(true);
+  };
+
+  // 执行导出产品图
+  const executeExportProductImages = async (selectedProducts: Product[]) => {
+    // 切换到处理阶段
+    setExportDialogConfig(prev => ({ ...prev, stage: 'processing' }));
+
     try {
-      await exportProductImagesUtil(selectedProducts);
-      toast.success(`成功导出产品图`);
-      setSelectedProductIds(new Set());
+      await exportProductImagesUtil(
+        selectedProducts,
+        (currentProject, totalProjects, currentImage, totalImages, productName) => {
+          setExportDialogConfig(prev => ({
+            ...prev,
+            currentProject,
+            totalProjects,
+            currentImage,
+            totalImages,
+            currentProductName: productName,
+          }));
+        }
+      );
+
+      // 切换到完成阶段
+      setExportDialogConfig(prev => ({ ...prev, stage: 'completed' }));
+
+      // 2秒后自动关闭并清空选择
+      setTimeout(() => {
+        setShowExportDialog(false);
+        setSelectedProductIds(new Set());
+        toast.success(`成功导出 ${selectedProducts.length} 个商品的产品图`);
+      }, 2000);
     } catch (error) {
       console.error('导出产品图失败:', error);
+      setShowExportDialog(false);
       toast.error(error instanceof Error ? error.message : '导出产品图失败');
-    } finally {
-      setIsExportingProductImages(false);
     }
   };
 
@@ -562,37 +652,19 @@ export function ProductListing() {
             onClick={handleExportCarouselImages}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0 || isExportingCarouselImages}
+            disabled={selectedProductIds.size === 0}
           >
-            {isExportingCarouselImages ? (
-              <>
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                导出中...
-              </>
-            ) : (
-              <>
-                <ImageIcon className="w-4 h-4" />
-                导出商品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
-              </>
-            )}
+            <ImageIcon className="w-4 h-4" />
+            导出商品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
             onClick={handleExportProductImages}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0 || isExportingProductImages}
+            disabled={selectedProductIds.size === 0}
           >
-            {isExportingProductImages ? (
-              <>
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                导出中...
-              </>
-            ) : (
-              <>
-                <ImageIcon className="w-4 h-4" />
-                导出产品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
-              </>
-            )}
+            <ImageIcon className="w-4 h-4" />
+            导出产品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
             onClick={handleExport}
@@ -1199,6 +1271,30 @@ export function ProductListing() {
         onOpenChange={setShowRegenerateDialog}
         selectedCount={selectedProductIds.size}
         onConfirm={handleConfirmRegenerateTitles}
+      />
+
+      {/* 统一导出对话框 */}
+      <UnifiedExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        title={exportDialogConfig.title}
+        description={exportDialogConfig.description}
+        productCount={exportDialogConfig.productCount}
+        stage={exportDialogConfig.stage}
+        currentProject={exportDialogConfig.currentProject}
+        totalProjects={exportDialogConfig.totalProjects}
+        currentImage={exportDialogConfig.currentImage}
+        totalImages={exportDialogConfig.totalImages}
+        currentProductName={exportDialogConfig.currentProductName}
+        onConfirm={() => {
+          const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+          if (exportDialogConfig.title === '导出商品图') {
+            executeExportCarouselImages(selectedProducts);
+          } else if (exportDialogConfig.title === '导出产品图') {
+            executeExportProductImages(selectedProducts);
+          }
+        }}
+        onCancel={() => setShowExportDialog(false)}
       />
 
     </div>
