@@ -120,6 +120,7 @@ export function ImageGenerationStep({
         historicalImages={historicalImages}
         isLoadingHistoricalData={isLoadingHistoricalData}
         projectName={projectName}
+        projectId={session.projectId}
         onRefreshImages={async () => {
           if (session.projectId) {
             const images = await AIImageSessionsAPI.loadImages(session.projectId);

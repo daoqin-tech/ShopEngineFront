@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Image as ImageIcon } from 'lucide-react';
 import { PromptStatus, GeneratedImage, Prompt, ReferenceImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
@@ -43,6 +42,7 @@ interface ImageContentAreaProps {
   historicalImages: GeneratedImage[];
   isLoadingHistoricalData: boolean;
   projectName?: string;
+  projectId: string; // 添加 projectId 参数
   onRefreshImages: () => void;
   onToggleReferenceImageSelection?: (id: string) => void;
   onTogglePromptSelection?: (id: string) => void;
@@ -54,6 +54,7 @@ export function ImageContentArea({
   historicalImages,
   isLoadingHistoricalData,
   projectName,
+  projectId,
   onRefreshImages,
   onTogglePromptSelection
 }: ImageContentAreaProps) {
@@ -70,9 +71,8 @@ export function ImageContentArea({
 
   // 批量复制相关状态
   const [showCopyDialog, setShowCopyDialog] = useState(false);
-  const [copyCount, setCopyCount] = useState(1);
+  const [copyCount, setCopyCount] = useState<number | ''>(1);
   const [isCopying, setIsCopying] = useState(false);
-  const [copyType, setCopyType] = useState<'regenerate' | 'duplicate'>('regenerate');
 
   // 批量删除相关状态
   const [isDeleting, setIsDeleting] = useState(false);
@@ -128,35 +128,36 @@ export function ImageContentArea({
     }
   };
 
-  // 批量复制图片
+  // 静态复制图片
   const handleBatchCopy = async () => {
     if (selectedImageIds.size === 0) {
       toast.error('请选择要复制的图片');
       return;
     }
 
+    const count = typeof copyCount === 'number' ? copyCount : 1;
+    if (count < 1 || count > 50) {
+      toast.error('复制份数必须在 1-50 之间');
+      return;
+    }
+
     setIsCopying(true);
 
     try {
-      const selectedImages = completedImages.filter(img => selectedImageIds.has(img.id));
-      const promptIds = selectedImages.map(img => img.promptId);
+      const imageIds = Array.from(selectedImageIds);
 
-      if (copyType === 'regenerate') {
-        await AIImageSessionsAPI.batchGenerateImages(promptIds, copyCount);
-        toast.success(`成功提交批量生成任务：${selectedImageIds.size} 个提示词，每个生成 ${copyCount} 张图片`);
-      } else {
-        await AIImageSessionsAPI.batchDuplicateImages(promptIds, copyCount);
-        toast.success(`成功复制图片：${selectedImageIds.size} 张图片，每张复制 ${copyCount} 份`);
-      }
+      // 调用新接口：在当前项目下复制图片
+      const result = await AIImageSessionsAPI.duplicateImagesInProject(projectId, imageIds, count);
+
+      toast.success(`成功复制 ${result.totalCreated} 张图片`);
 
       setSelectedImageIds(new Set());
       setCopyCount(1);
       setShowCopyDialog(false);
-      setCopyType('regenerate');
 
-      navigate('/workspace/product-images');
+      onRefreshImages();
     } catch (error) {
-      console.error('批量复制图片失败:', error);
+      console.error('静态复制图片失败:', error);
       toast.error('复制失败，请重试');
     } finally {
       setIsCopying(false);
@@ -582,21 +583,20 @@ export function ImageContentArea({
                   </Button>
                 )}
 
-                {/* 批量操作按钮已隐藏 - 该功能已移至 /product-images 页面 */}
-                {/* <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                   onClick={() => setShowCopyDialog(true)} disabled={selectedImageIds.size === 0 || isCopying}>
                   {isCopying ? (
                     <>
                       <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      处理中...
+                      复制中...
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4 mr-2" />
-                      批量操作
+                      复制图片
                     </>
                   )}
-                </Button> */}
+                </Button>
 
                 <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                   onClick={() => {
@@ -836,77 +836,58 @@ export function ImageContentArea({
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowCopyDialog(false)}>
           <div className="bg-white rounded-lg max-w-md w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">批量复制图片</h2>
+              <h2 className="text-xl font-semibold text-gray-900">静态复制图片</h2>
               <Button variant="ghost" size="sm" onClick={() => setShowCopyDialog(false)}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
 
-            <div className="p-6">
-              <Tabs value={copyType} onValueChange={(value) => setCopyType(value as 'regenerate' | 'duplicate')}>
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="regenerate">批量生成</TabsTrigger>
-                  <TabsTrigger value="duplicate">批量复制</TabsTrigger>
-                </TabsList>
+            <div className="p-6 space-y-4">
+              <div className="text-sm text-gray-600">
+                已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
+              </div>
 
-                <TabsContent value="regenerate" className="space-y-4">
-                  <div className="text-sm text-gray-600">
-                    已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
-                  </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                <p className="text-sm text-green-800">
+                  <strong>静态复制：</strong>直接复制相同的图片，每份都完全一样，无需重新生成。
+                </p>
+                <p className="text-xs text-green-700">
+                  <strong>适用场景：</strong>需要大量完全相同的图片用于生产，例如手提纸袋。
+                </p>
+              </div>
 
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                    <p className="text-sm text-blue-800">
-                      <strong>批量生成：</strong>异步生成类似但不同的图片，每张图片都会重新生成。
-                    </p>
-                    <p className="text-xs text-blue-700">
-                      <strong>适用场景：</strong>需要同款不同样式的图片，如同一产品的多角度展示、不同配色方案等，例如手账纸业务。
-                    </p>
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">每张图片复制份数</label>
+                <Input
+                  type="text"
+                  value={copyCount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setCopyCount('' as any);
+                    } else {
+                      const num = parseInt(value);
+                      if (!isNaN(num) && num >= 1 && num <= 50) {
+                        setCopyCount(num);
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    if (copyCount === '' || copyCount < 1) {
+                      setCopyCount(1);
+                    }
+                  }}
+                  className="w-full"
+                  placeholder="输入复制份数 (1-50)"
+                />
+                <p className="text-xs text-gray-500 mt-1">每张图片最多可复制 50 份</p>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">每张图片生成数量</label>
-                    <Input type="number" min="1" max="40" value={copyCount}
-                      onChange={(e) => setCopyCount(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
-                      className="w-full" placeholder="输入生成数量" />
-                    <p className="text-xs text-gray-500 mt-1">每张图片最多可生成 40 个类似图片</p>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="text-sm text-gray-600">
-                      将生成：<span className="font-semibold text-gray-900">{selectedImageIds.size * copyCount}</span> 张新图片
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="duplicate" className="space-y-4">
-                  <div className="text-sm text-gray-600">
-                    已选择 <span className="font-semibold text-gray-900">{selectedImageIds.size}</span> 张图片
-                  </div>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
-                    <p className="text-sm text-green-800">
-                      <strong>批量复制：</strong>直接复制相同的图片，每份都完全一样。
-                    </p>
-                    <p className="text-xs text-green-700">
-                      <strong>适用场景：</strong>需要大量完全相同的图片用于生产，例如手提纸袋。
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">每张图片复制份数</label>
-                    <Input type="number" min="1" max="50" value={copyCount}
-                      onChange={(e) => setCopyCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
-                      className="w-full" placeholder="输入复制份数" />
-                    <p className="text-xs text-gray-500 mt-1">每张图片最多可复制 50 份</p>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="text-sm text-gray-600">
-                      将复制：<span className="font-semibold text-gray-900">{selectedImageIds.size * copyCount}</span> 张图片（完全相同）
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm text-gray-600">
+                  将复制：<span className="font-semibold text-gray-900">{selectedImageIds.size * (typeof copyCount === 'number' ? copyCount : 0)}</span> 张图片（完全相同）
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
@@ -915,12 +896,12 @@ export function ImageContentArea({
                 {isCopying ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    处理中...
+                    复制中...
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 mr-2" />
-                    确认
+                    确认复制
                   </>
                 )}
               </Button>

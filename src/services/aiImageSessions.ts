@@ -114,10 +114,20 @@ export class AIImageSessionsAPI {
     return response.data; // 返回生成任务的结果
   }
 
-  // 批量复制图片(牛皮纸袋模式：直接复制相同图片)
+  // 批量复制图片(牛皮纸袋模式：直接复制相同图片，会创建新项目)
   static async batchDuplicateImages(promptIds: string[], count: number): Promise<void> {
     const response = await apiClient.post(`/images/batchDuplicate`, {
       promptIds,
+      count
+    });
+    return response.data;
+  }
+
+  // 在当前项目下复制图片（静态复制，不创建新项目）
+  static async duplicateImagesInProject(projectId: string, imageIds: string[], count: number): Promise<{ totalCreated: number }> {
+    const response = await apiClient.post(`/images/duplicateInProject`, {
+      projectId,
+      imageIds,
       count
     });
     return response.data;
