@@ -6,7 +6,6 @@ import { PromptStatus, GeneratedImage, Prompt, ReferenceImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 
 // PDF页面尺寸配置（单位：mm）
 const PAGE_SIZES = {
@@ -58,8 +57,6 @@ export function ImageContentArea({
   onRefreshImages,
   onTogglePromptSelection
 }: ImageContentAreaProps) {
-  const navigate = useNavigate();
-
   // 图片预览状态
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
 
