@@ -127,6 +127,29 @@ export const CALENDAR_SPECS: ProductSpec[] = [
   },
 ];
 
+// 手提纸袋商品规格数据 (Mock数据)
+export const PAPER_BAG_SPECS: ProductSpec[] = [
+  {
+    id: 'paper-bag-66x34',
+    name: '66cm×34cm 手提纸袋',
+    sheets: 1,
+    size: '66cm×34cm',
+    length: 66.0,
+    width: 34.0,
+    height: 2.0,
+    weight: 150,
+    declaredPrice: 200,
+    suggestedRetailPrice: 25,
+    variantName: '纸',
+    variantAttributeName1: '材质',
+    variantAttributeValue1: '纸',
+    stock: 6666,
+    shippingTime: 9,
+    productSpec: '66cm×34cm 手提纸袋',
+    productUsage: '适用于礼品包装、购物携带、生日派对、节日庆典、婚礼伴手礼、商品打包、展会赠品等多种场合'
+  },
+];
+
 // 兼容性：保留原有的 PRODUCT_SPECS 导出，默认为手账纸规格
 export const PRODUCT_SPECS = JOURNAL_PAPER_SPECS;
 
@@ -391,6 +414,17 @@ export const CALENDAR_CATEGORIES: ProductCategory[] = [
     categoryName: '办公用品>日常办公用品>日历及个人规划用品>墙挂式规划表',
     categoryId: '993',
     productAttributes: '[{"propName":"是否印刷日期","refPid":7424,"pid":2287,"templatePid":1483866,"numberInputValue":"","valueUnit":"","vid":"246628","propValue":"dated"},{"propName":"起始年份","refPid":7465,"pid":2294,"templatePid":1485844,"numberInputValue":"","valueUnit":"","vid":"278025","propValue":"2026"},{"propName":"起始月份","refPid":7475,"pid":2299,"templatePid":1488063,"numberInputValue":"","valueUnit":"","vid":"280351","propValue":"1月"},{"propName":"结束年份","refPid":7503,"pid":2309,"templatePid":1491196,"numberInputValue":"","valueUnit":"","vid":"326008","propValue":"2026"},{"propName":"结束月份","refPid":7527,"pid":2325,"templatePid":1495471,"numberInputValue":"","valueUnit":"","vid":"327909","propValue":"12月"},{"propName":"计划本类型","refPid":7423,"pid":2286,"templatePid":1483031,"numberInputValue":"","valueUnit":"","vid":"246619","propValue":"日计划"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":962558,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"目标听众","refPid":434,"pid":437,"templatePid":369743,"numberInputValue":"","valueUnit":"","vid":"17047","propValue":"成人"}]'
+  }
+];
+
+// 手提纸袋商品分类数据
+export const PAPER_BAG_CATEGORIES: ProductCategory[] = [
+  {
+    id: 'paper-bag-gift-category',
+    name: '礼品包装袋',
+    categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装袋',
+    categoryId: '39879',
+    productAttributes: '[{"propName":"是否有提手","refPid":7228,"pid":2197,"templatePid":1410540,"numberInputValue":"","valueUnit":"","vid":"210452","propValue":"是"},{"propName":"是否纸质提手","refPid":7229,"pid":2198,"templatePid":1410668,"numberInputValue":"","valueUnit":"","vid":"210457","propValue":"是"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909806,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447663,"numberInputValue":"","valueUnit":"","vid":"12608","propValue":"皱纹纸"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447662,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"}]'
   }
 ];
 

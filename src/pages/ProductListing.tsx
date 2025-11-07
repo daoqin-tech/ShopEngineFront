@@ -15,6 +15,7 @@ import {
   exportProductImages as exportProductImagesUtil,
   exportToExcel as exportToExcelUtil,
   exportProductPdf as exportProductPdfUtil,
+  exportPaperBagPdf as exportPaperBagPdfUtil,
   type PageSizeType
 } from '@/utils/productExportUtils';
 
@@ -40,7 +41,7 @@ export function ProductListing() {
 
   // PDF导出相关状态
   const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [pdfPageSize, setPdfPageSize] = useState<'JOURNAL_PAPER' | 'DECORATIVE_PAPER' | 'CALENDAR_PORTRAIT' | 'CALENDAR_LANDSCAPE'>('JOURNAL_PAPER');
+  const [pdfPageSize, setPdfPageSize] = useState<'JOURNAL_PAPER' | 'DECORATIVE_PAPER' | 'CALENDAR_PORTRAIT' | 'CALENDAR_LANDSCAPE' | 'PAPER_BAG'>('JOURNAL_PAPER');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [productsToExport, setProductsToExport] = useState<Product[]>([]);
@@ -212,6 +213,13 @@ export function ProductListing() {
       label: '29.7 × 21 cm',
       displayLabel: '29.7 × 21 cm',
       type: '横版日历'
+    },
+    PAPER_BAG: {
+      width: 660,   // 66cm
+      height: 340,  // 34cm
+      label: '66 × 34 cm',
+      displayLabel: '66 × 34 cm',
+      type: '手提纸袋'
     }
   };
 
@@ -394,6 +402,23 @@ export function ProductListing() {
     }
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+
+    // 如果是手提纸袋模式，使用专门的导出函数
+    if (pdfPageSize === 'PAPER_BAG') {
+      setIsGeneratingPdf(true);
+      try {
+        await exportPaperBagPdfUtil(selectedProducts);
+        toast.success(`成功导出手提纸袋PDF`);
+        setSelectedProductIds(new Set());
+        setShowPdfDialog(false);
+      } catch (error) {
+        console.error('导出手提纸袋PDF失败:', error);
+        toast.error(error instanceof Error ? error.message : '导出手提纸袋PDF失败，请重试');
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+      return;
+    }
 
     // 如果是日历模式，先显示重排序对话框
     if (pdfPageSize.startsWith('CALENDAR')) {
@@ -1166,6 +1191,8 @@ export function ProductListing() {
                   <p className="mt-3 text-xs text-gray-500">
                     {pdfPageSize.startsWith('CALENDAR')
                       ? '日历模式会自动添加 6mm 出血，货号显示在页面右下角'
+                      : pdfPageSize === 'PAPER_BAG'
+                      ? '手提纸袋模式：使用前2张产品图并排平铺，图像区域 64.6cm × 27.6cm'
                       : '手账纸和包装纸会添加 6mm 打印预留空间，货号居中显示'}
                   </p>
                 </div>

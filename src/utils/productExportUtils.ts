@@ -10,7 +10,8 @@ export const PAGE_SIZES = {
   JOURNAL_PAPER: { width: 152, height: 152 },       // 手账纸 15.2cm x 15.2cm
   DECORATIVE_PAPER: { width: 300, height: 300 },    // 包装纸 30cm x 30cm
   CALENDAR_PORTRAIT: { width: 210, height: 297 },   // 竖版日历 21cm x 29.7cm
-  CALENDAR_LANDSCAPE: { width: 297, height: 210 }   // 横版日历 29.7cm x 21cm
+  CALENDAR_LANDSCAPE: { width: 297, height: 210 },  // 横版日历 29.7cm x 21cm
+  PAPER_BAG: { width: 660, height: 340 }            // 手提纸袋 66cm x 34cm
 } as const;
 
 export type PageSizeType = keyof typeof PAGE_SIZES;
@@ -21,6 +22,164 @@ export type PageSizeType = keyof typeof PAGE_SIZES;
 function getDateTimeString(): string {
   const now = new Date();
   return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * 导出手提纸袋PDF
+ * 纸袋尺寸: 66cm x 34cm
+ * 实际导出尺寸: 66.6cm x 34.6cm (包含6mm出血)
+ * 图像区域: 64.6cm x 27.6cm
+ * 每个商品使用2张图片,各占一半,从(0,0)开始平铺
+ */
+export async function exportPaperBagPdf(
+  products: Product[],
+  onProgress?: (current: number, total: number) => void
+): Promise<void> {
+  const productsWithImages = products.filter(p => p.productImages && p.productImages.length >= 2);
+
+  if (productsWithImages.length === 0) {
+    throw new Error('所选商品需要至少2张产品图才能导出纸袋PDF');
+  }
+
+  const zip = new JSZip();
+
+  // 纸袋尺寸配置 (单位: mm)
+  const bagWidth = 660;  // 66cm
+  const bagHeight = 340; // 34cm
+  const bleed = 6;       // 6mm 出血
+
+  // 实际PDF页面尺寸 (包含出血)
+  const pageWidth = bagWidth + bleed;   // 66.6cm
+  const pageHeight = bagHeight + bleed; // 34.6cm
+
+  // 图像填充区域 (64.6cm x 27.6cm)
+  const imageWidth = 646;  // 64.6cm
+  const imageHeight = 276; // 27.6cm
+
+  // 图像区域起始位置 (从x=0, y=0开始)
+  const imageX = 0;
+  const imageY = 0;
+
+  // 每张图占据的宽度 (一半)
+  const halfWidth = imageWidth / 2;
+
+  for (let index = 0; index < productsWithImages.length; index++) {
+    const product = productsWithImages[index];
+    const productImages = product.productImages;
+
+    if (!productImages || productImages.length < 2) continue;
+
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: [pageWidth, pageHeight]
+    });
+
+    try {
+      // 获取前两张图片
+      const image1Url = productImages[0];
+      const image2Url = productImages[1];
+
+      // 加载第一张图片
+      const response1 = await fetch(image1Url, {
+        mode: 'cors',
+        headers: { 'Accept': 'image/*' }
+      });
+      const blob1 = await response1.blob();
+      const imageDataUrl1 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(blob1);
+      });
+
+      // 加载第二张图片
+      const response2 = await fetch(image2Url, {
+        mode: 'cors',
+        headers: { 'Accept': 'image/*' }
+      });
+      const blob2 = await response2.blob();
+      const imageDataUrl2 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(blob2);
+      });
+
+      // 获取图片原始尺寸
+      const img1 = new Image();
+      await new Promise((resolve, reject) => {
+        img1.onload = resolve;
+        img1.onerror = reject;
+        img1.src = imageDataUrl1;
+      });
+
+      const img2 = new Image();
+      await new Promise((resolve, reject) => {
+        img2.onload = resolve;
+        img2.onerror = reject;
+        img2.src = imageDataUrl2;
+      });
+
+      // 计算图片实际显示尺寸（保持原始比例，不压缩）
+      // 以高度为基准，计算对应的宽度
+      const img1Ratio = img1.naturalWidth / img1.naturalHeight;
+      const img1DisplayHeight = imageHeight; // 27.6cm
+      const img1DisplayWidth = img1DisplayHeight * img1Ratio;
+
+      const img2Ratio = img2.naturalWidth / img2.naturalHeight;
+      const img2DisplayHeight = imageHeight; // 27.6cm
+      const img2DisplayWidth = img2DisplayHeight * img2Ratio;
+
+      // 第一张图片: 左半部分，保持比例，从左到右裁剪
+      // 保存图形状态
+      pdf.saveGraphicsState();
+      // 设置裁剪区域（左半部分）
+      pdf.rect(imageX, imageY, halfWidth, imageHeight);
+      pdf.clip();
+      // 添加第一张图片，超出裁剪区域的部分会被裁掉
+      pdf.addImage(imageDataUrl1, 'JPEG', imageX, imageY, img1DisplayWidth, img1DisplayHeight, undefined, 'NONE');
+      // 恢复图形状态
+      pdf.restoreGraphicsState();
+
+      // 第二张图片: 右半部分，保持比例，从左到右裁剪
+      // 保存图形状态
+      pdf.saveGraphicsState();
+      // 设置裁剪区域（右半部分）
+      pdf.rect(imageX + halfWidth, imageY, halfWidth, imageHeight);
+      pdf.clip();
+      // 添加第二张图片，超出裁剪区域的部分会被裁掉
+      pdf.addImage(imageDataUrl2, 'JPEG', imageX + halfWidth, imageY, img2DisplayWidth, img2DisplayHeight, undefined, 'NONE');
+      // 恢复图形状态
+      pdf.restoreGraphicsState();
+
+    } catch (error) {
+      console.warn(`处理商品 ${product.productCode || product.id} 的图片时出错:`, error);
+      continue;
+    }
+
+    // 生成PDF blob并添加到压缩包
+    const pdfBlob = pdf.output('blob');
+    const pdfFileName = `${product.productCode || product.id}_纸袋.pdf`;
+    zip.file(pdfFileName, pdfBlob);
+
+    // 更新进度
+    if (onProgress) {
+      onProgress(index + 1, productsWithImages.length);
+    }
+  }
+
+  // 生成压缩包
+  const zipContent = await zip.generateAsync({ type: 'blob' });
+  const filename = `手提纸袋PDF_${getDateTimeString()}.zip`;
+
+  // 下载压缩包
+  const url = window.URL.createObjectURL(zipContent);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 }
 
 /**
