@@ -363,8 +363,8 @@ export function ImageGeneration() {
       // count 参数表示每张参考图生成多少张图片（1-15）
       const countPerImage = params.count && params.count >= 1 && params.count <= 15 ? params.count : 1;
 
-      // 基础提示词：主体可变，但主题、色系、风格必须一致
-      const basePrompt = 'Generate a similar image inspired by this reference. Keep the exact same theme, color palette, style, lighting, and overall atmosphere. The main subject can be different but should be harmonious and contextually appropriate. Maintain consistent visual aesthetics throughout.';
+      // 基础提示词：保持主体、主题、色系、风格完全一致
+      const basePrompt = 'Generate a similar image based on this reference. Keep the same subject, theme, color palette, style, lighting, and overall atmosphere. The generated image should closely resemble the reference while maintaining high quality.';
 
       const response = await AIImageSessionsAPI.generateImageFromImages({
         projectId,
