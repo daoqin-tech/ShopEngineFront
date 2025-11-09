@@ -667,7 +667,7 @@ export function exportToExcel(
 }
 
 /**
- * 根据分类ID判断产品名称
+ * 根据分类ID判断产品中文名称
  */
 function getProductNameByCategoryId(categoryId: string): string {
   // 手账本分类
@@ -699,6 +699,37 @@ function getProductNameByCategoryId(categoryId: string): string {
 }
 
 /**
+ * 根据分类ID判断产品英文名称
+ */
+function getProductEnglishNameByCategoryId(categoryId: string): string {
+  // 手账本分类
+  const journalCategories = JOURNAL_PAPER_CATEGORIES.map(c => c.categoryId);
+  if (journalCategories.includes(categoryId)) {
+    return 'Journal Paper';
+  }
+
+  // 包装纸分类
+  const decorativeCategories = DECORATIVE_PAPER_CATEGORIES.map(c => c.categoryId);
+  if (decorativeCategories.includes(categoryId)) {
+    return 'Wrapping Paper';
+  }
+
+  // 日历分类
+  const calendarCategories = CALENDAR_CATEGORIES.map(c => c.categoryId);
+  if (calendarCategories.includes(categoryId)) {
+    // 根据分类名称判断横版还是竖版
+    const category = CALENDAR_CATEGORIES.find(c => c.categoryId === categoryId);
+    if (category?.categoryName?.includes('横版')) {
+      return 'Calendar Landscape';
+    }
+    return 'Calendar Portrait';
+  }
+
+  // 手提纸袋
+  return 'Paper Bag';
+}
+
+/**
  * 导出物流信息Excel
  * 列：序号, Fnsku, seller sku, 产品名称, 产品英文名称, 重量, 系统重量, 长, 宽, 高, 货值, 状态, 添加时间
  */
@@ -713,13 +744,18 @@ export function exportLogisticsInfo(
   // 准备导出数据
   const exportData = products.map((product, index) => {
     const productName = getProductNameByCategoryId(product.categoryId);
+    const productEnglishName = getProductEnglishNameByCategoryId(product.categoryId);
+
+    // 格式化时间为 YYYY-MM-DD HH:mm:ss
+    const createdDate = new Date(product.createdAt);
+    const formattedDate = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}-${String(createdDate.getDate()).padStart(2, '0')} ${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}:${String(createdDate.getSeconds()).padStart(2, '0')}`;
 
     return {
       '序号': index + 1,
       'Fnsku': product.productCode || '',
       'seller sku': product.productCode || '',
       '产品名称': productName,
-      '产品英文名称': product.nameEn || '',
+      '产品英文名称': productEnglishName,
       '重量': product.weight || '',
       '系统重量': 0,
       '长': product.length || '',
@@ -727,14 +763,7 @@ export function exportLogisticsInfo(
       '高': product.height || '',
       '货值': 0.99,
       '状态': '启用',
-      '添加时间': new Date(product.createdAt).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
+      '添加时间': formattedDate
     };
   });
 
