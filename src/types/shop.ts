@@ -206,44 +206,17 @@ export const TEMU_SHOPS: ShopInfo[] = [
     freightTemplateName: '运费模板',
     operatingSite: '美国'
   },
-  // {
-  //   id: 'jolly-wrappings',
-  //   name: 'Jolly Wrappings',
-  //   shopId: '634418226370462',
-  //   type: '半托',
-  //   account: '18071105270',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-
-  // Temu 卖家账号C (13318288060)
-  // {
-  //   id: 'festive-fold-papers',
-  //   name: 'Festive Fold Papers',
-  //   shopId: '634418226385393',
-  //   type: '全托',
-  //   account: '13318288060',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-  // {
-  //   id: 'the-gift-wrap-collective',
-  //   name: 'The Gift Wrap Collective',
-  //   shopId: '634418226385374',
-  //   type: '全托',
-  //   account: '13318288060',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-  // {
-  //   id: 'rainbowhive-products',
-  //   name: 'RainbowHive Products',
-  //   shopId: '634418222312396',
-  //   type: '全托',
-  //   account: '13318288060',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
+  {
+    id: 'jolly-wrappings',
+    name: 'Jolly Wrappings',
+    shopId: '634418226370462',
+    type: '半托',
+    businessCode: '5270C',
+    account: '18071105270',
+    freightTemplateId: 'HFT-16501331439862061950',
+    freightTemplateName: '运费模板',
+    operatingSite: '美国'
+  },
   {
     id: 'paper-palette-gifts',
     name: 'Paper Palette Gifts',
@@ -266,35 +239,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     freightTemplateName: '运费模板',
     operatingSite: '美国'
   },
-
-  // Temu 卖家账号D (18986183395)
-  // {
-  //   id: 'the-impressory',
-  //   name: 'The Impressory',
-  //   shopId: '634418226386473',
-  //   type: '全托',
-  //   account: '18986183395',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-  // {
-  //   id: 'precision-press-paper-co',
-  //   name: 'Precision Press Paper Co',
-  //   shopId: '634418226386048',
-  //   type: '全托',
-  //   account: '18986183395',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-  // {
-  //   id: 'ecochic-wrappings',
-  //   name: 'EcoChic Wrappings',
-  //   shopId: '634418226385986',
-  //   type: '全托',
-  //   account: '18986183395',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
   {
     id: 'kaleidowrap-designs',
     name: 'KaleidoWrap Designs',
@@ -317,15 +261,17 @@ export const TEMU_SHOPS: ShopInfo[] = [
     freightTemplateName: '运费模板',
     operatingSite: '美国'
   },
-  // {
-  //   id: 'artisan-wrap-depot',
-  //   name: 'Artisan Wrap Depot',
-  //   shopId: '634418226385538',
-  //   type: '半托',
-  //   account: '18986183395',
-  //   categoryName: '',
-  //   categoryId: ''
-  // }
+  {
+    id: 'artisan-wrap-depot',
+    name: 'Artisan Wrap Depot',
+    shopId: '634418226385538',
+    type: '半托',
+    businessCode: '3395C',
+    account: '18986183395',
+    freightTemplateId: 'HFT-16501225659514980642',
+    freightTemplateName: '运费模板',
+    operatingSite: '美国'
+  }
 ];
 
 // 装饰纸商品分类数据
