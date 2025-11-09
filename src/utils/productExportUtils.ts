@@ -668,39 +668,39 @@ export function exportToExcel(
 
 /**
  * 根据产品尺寸判断产品类型
- * 尺寸匹配规则（单位：mm）：
- * - 手账纸: 152x152
- * - 包装纸: 300x300
- * - 竖版日历: 210x297
- * - 横版日历: 297x210
- * - 手提纸袋: 660x340
+ * 尺寸匹配规则（单位：cm，数据库存储单位）：
+ * - 手账纸: 15.2x15.2
+ * - 包装纸: 30x30
+ * - 竖版日历: 21x29.7
+ * - 横版日历: 29.7x21
+ * - 手提纸袋: 66x34
  */
 function getProductTypeBySize(length: number, width: number): {
   nameCn: string;
   nameEn: string;
 } {
   // 手账纸 15.2cm x 15.2cm
-  if (length === 152 && width === 152) {
+  if (length === 15.2 && width === 15.2) {
     return { nameCn: '手帐本', nameEn: 'Journal Paper' };
   }
 
   // 包装纸 30cm x 30cm
-  if (length === 300 && width === 300) {
+  if (length === 30 && width === 30) {
     return { nameCn: '包装纸', nameEn: 'Wrapping Paper' };
   }
 
   // 竖版日历 21cm x 29.7cm
-  if (length === 210 && width === 297) {
+  if (length === 21 && width === 29.7) {
     return { nameCn: '竖版日历', nameEn: 'Calendar Portrait' };
   }
 
   // 横版日历 29.7cm x 21cm
-  if (length === 297 && width === 210) {
+  if (length === 29.7 && width === 21) {
     return { nameCn: '横版日历', nameEn: 'Calendar Landscape' };
   }
 
   // 手提纸袋 66cm x 34cm
-  if (length === 660 && width === 340) {
+  if (length === 66 && width === 34) {
     return { nameCn: '手提纸袋', nameEn: 'Paper Bag' };
   }
 
