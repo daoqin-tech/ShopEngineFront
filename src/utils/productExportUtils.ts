@@ -721,7 +721,7 @@ export function exportLogisticsInfo(
   }
 
   // 准备导出数据
-  const exportData = products.map((product, index) => {
+  const exportData = products.map((product) => {
     // 根据产品尺寸判断类型
     const productType = getProductTypeBySize(product.length, product.width);
 
