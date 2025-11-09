@@ -694,8 +694,8 @@ function getProductNameByCategoryId(categoryId: string): string {
   }
 
   // 手提纸袋 - 需要根据实际的分类ID判断
-  // 暂时返回"包装袋"作为默认值
-  return '包装袋';
+  // 暂时返回"手提纸袋"作为默认值
+  return '手提纸袋';
 }
 
 /**
@@ -731,7 +731,7 @@ function getProductEnglishNameByCategoryId(categoryId: string): string {
 
 /**
  * 导出物流信息Excel
- * 列：序号, Fnsku, seller sku, 产品名称, 产品英文名称, 重量, 系统重量, 长, 宽, 高, 货值, 状态, 添加时间
+ * 列：Fnsku, seller sku, 产品名称, 产品英文名称, 重量, 系统重量, 长, 宽, 高, 货值, 状态, 添加时间
  */
 export function exportLogisticsInfo(
   products: Product[],
@@ -751,7 +751,6 @@ export function exportLogisticsInfo(
     const formattedDate = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}-${String(createdDate.getDate()).padStart(2, '0')} ${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}:${String(createdDate.getSeconds()).padStart(2, '0')}`;
 
     return {
-      '序号': index + 1,
       'Fnsku': product.productCode || '',
       'seller sku': product.productCode || '',
       '产品名称': productName,
@@ -772,7 +771,6 @@ export function exportLogisticsInfo(
 
   // 设置列宽
   const colWidths = [
-    { wch: 8 },   // 序号
     { wch: 15 },  // Fnsku
     { wch: 15 },  // seller sku
     { wch: 12 },  // 产品名称
