@@ -103,13 +103,4 @@ export class AIImageProjectsAPI {
     });
     return response.data;
   }
-
-  // 获取模板匹配信息
-  static async getTemplateMatchInfo(projectIds: string[], templateProjectId: string): Promise<any> {
-    const response = await apiClient.post('/projects/template-match', {
-      projectIds,
-      templateProjectId
-    });
-    return response.data;
-  }
 }

@@ -494,6 +494,9 @@ export function AIImageProjects() {
 
   // 开始模板替换处理
   const handleStartTemplateReplace = async () => {
+    // 防止重复点击
+    if (isProcessing) return;
+
     if (selectedProjectIds.size === 0) {
       toast.error('请选择要替换的项目');
       return;
@@ -504,91 +507,40 @@ export function AIImageProjects() {
       return;
     }
 
+    setIsProcessing(true);
+
     try {
-      setIsProcessing(true);
-      const projectIdsArray = Array.from(selectedProjectIds);
-
-      // 1. 获取模板信息和图片信息
-      const result = await AIImageProjectsAPI.getTemplateMatchInfo(projectIdsArray, selectedTemplateProjectId);
-
-      if (!result.totalImages || result.totalImages === 0) {
-        toast.error('没有找到符合尺寸的图片');
+      // 1. 获取选中的模板项目信息
+      const templateProject = templateProjects.find(p => p.projectId === selectedTemplateProjectId);
+      if (!templateProject) {
+        toast.error('模板项目不存在');
         setIsProcessing(false);
         return;
       }
 
-      console.log('后端返回结果:', result);
-
-      // 2. 获取模板项目信息以确定输出尺寸
-      const templateProject = result.templateProject;
-      let targetWidth: number, targetHeight: number;
-
-      switch (templateProject.type) {
-        case 'calendar_landscape':
-          targetWidth = 1440;
-          targetHeight = 1120;
-          break;
-        case 'calendar_portrait':
-          targetWidth = 1024;
-          targetHeight = 1440;
-          break;
-        default:
-          targetWidth = 1024;
-          targetHeight = 1440;
-      }
-
-      const templates = result.templates;
-      if (templates.length === 0) {
-        toast.error('模板项目中没有模板');
+      // 2. 获取该模板项目的所有模板
+      const templateList = await imageTemplateService.getTemplates(selectedTemplateProjectId);
+      if (templateList.length === 0) {
+        toast.error('该模板项目没有任何模板');
         setIsProcessing(false);
         return;
       }
 
-      // 3. 构建任务队列 - 按项目分组
-      const projectTaskQueue: Array<{
-        projectId: string;
-        projectName: string;
-        tasks: Array<{
-          imageId: string;
-          imageUrl: string;
-          templateId: string;
-          templateName: string;
-        }>;
-      }> = [];
+      // 3. 获取模板详情(用户只会选择一个模板)
+      const template = templateList[0];
+      const templateDetail = await imageTemplateService.getTemplate(selectedTemplateProjectId, template.templateId);
 
-      let totalTaskCount = 0;
-      for (const projectResult of result.projectResults) {
-        const projectTasks: Array<{
-          imageId: string;
-          imageUrl: string;
-          templateId: string;
-          templateName: string;
-        }> = [];
+      // 4. 根据模板类型确定目标尺寸
+      const targetImageWidth = templateProject.type === 'calendar_landscape' ? 928 : 1408;
+      const targetImageHeight = templateProject.type === 'calendar_landscape' ? 1440 : 992;
+      const outputWidth = templateProject.type === 'calendar_landscape' ? 1440 : 1024;
+      const outputHeight = templateProject.type === 'calendar_landscape' ? 1120 : 1440;
 
-        let templateIndex = 0;
-        for (const image of projectResult.images) {
-          const template = templates[templateIndex % templates.length];
-          projectTasks.push({
-            imageId: image.id,
-            imageUrl: image.imageUrl,
-            templateId: template.id,
-            templateName: template.name,
-          });
-          templateIndex++;
-          totalTaskCount++;
-        }
-
-        projectTaskQueue.push({
-          projectId: projectResult.projectId,
-          projectName: projectResult.projectName,
-          tasks: projectTasks,
-        });
-      }
-
-      // 4. 初始化进度
+      // 5. 初始化进度
+      const projectsArray = Array.from(selectedProjectIds);
       setQueueProgress({
         current: 0,
-        total: totalTaskCount,
+        total: projectsArray.length,
         currentImage: '',
         successCount: 0,
         failedCount: 0,
@@ -596,126 +548,97 @@ export function AIImageProjects() {
         isCompleted: false,
       });
 
-      // 5. 开始队列处理 - 按项目处理
-      await processProjectQueueWithDelay(projectTaskQueue, selectedTemplateProjectId, targetWidth, targetHeight);
+      // 6. 逐个项目处理
+      let successCount = 0;
+      let failedCount = 0;
+
+      for (let projectIndex = 0; projectIndex < projectsArray.length; projectIndex++) {
+        const projectId = projectsArray[projectIndex];
+
+        // 更新当前处理的项目进度
+        setQueueProgress(prev => ({
+          ...prev,
+          current: projectIndex + 1,
+          currentImage: `正在处理第 ${projectIndex + 1}/${projectsArray.length} 个项目`,
+        }));
+
+        // 获取项目名称
+        const project = projects.find(p => p.id === projectId);
+        const projectName = project?.name || `项目${projectIndex + 1}`;
+
+        // 获取项目的所有图片
+        const images = await AIImageSessionsAPI.loadImages(projectId);
+
+        // 筛选符合尺寸的图片
+        const matchedImages = images.filter(
+          img => img.width === targetImageWidth && img.height === targetImageHeight
+        );
+
+        console.log(`\n开始处理项目 [${projectIndex + 1}/${projectsArray.length}]: ${projectName}, 符合尺寸图片: ${matchedImages.length}张`);
+
+        // 为每张图片应用模板
+        for (const image of matchedImages) {
+          try {
+            // 合成图片
+            const { blob, width, height } = await compositeImages(
+              templateDetail.imageUrl,
+              templateDetail.regions,
+              image.imageUrl,
+              outputWidth,
+              outputHeight
+            );
+
+            // 上传
+            const fileName = `template-replaced-${Date.now()}-${image.id}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            const uploadedUrl = await FileUploadAPI.uploadFile(file);
+
+            // 更新数据库
+            await AIImageSessionsAPI.batchUpdateImages([{
+              imageId: image.id,
+              imageUrl: uploadedUrl,
+              width,
+              height,
+            }]);
+
+            successCount++;
+            setQueueProgress(prev => ({ ...prev, successCount }));
+            console.log(`  图片 ${image.id} 处理成功`);
+
+          } catch (error) {
+            console.error(`  图片 ${image.id} 处理失败:`, error);
+            failedCount++;
+            setQueueProgress(prev => ({ ...prev, failedCount }));
+          }
+        }
+
+        console.log(`项目 ${projectName} 处理完成\n`);
+      }
+
+      // 7. 完成
+      setQueueProgress(prev => ({
+        ...prev,
+        current: projectsArray.length,
+        isCompleted: true,
+        currentImage: '所有项目处理完成',
+      }));
+
+      if (failedCount === 0) {
+        toast.success(`成功替换 ${successCount} 张图片`);
+      } else {
+        toast.warning(`完成处理：成功 ${successCount} 张，失败 ${failedCount} 张`);
+      }
+
+      fetchProjects(currentPage);
 
     } catch (err: any) {
-      setIsProcessing(false);
       toast.error('模板替换失败', {
         description: err.response?.data?.message || err.message || '请稍后再试'
       });
       console.error('Error applying template:', err);
+    } finally {
+      setIsProcessing(false);
     }
-  };
-
-  // 按项目队列处理函数 - 一个项目一个项目处理，带延迟
-  const processProjectQueueWithDelay = async (
-    projectQueue: Array<{
-      projectId: string;
-      projectName: string;
-      tasks: Array<{
-        imageId: string;
-        imageUrl: string;
-        templateId: string;
-        templateName: string;
-      }>;
-    }>,
-    templateProjectId: string,
-    targetWidth: number,
-    targetHeight: number
-  ) => {
-    let successCount = 0;
-    let failedCount = 0;
-    let processedCount = 0;
-
-    // 按项目一个一个处理
-    for (let projectIdx = 0; projectIdx < projectQueue.length; projectIdx++) {
-      const project = projectQueue[projectIdx];
-
-      console.log(`\n开始处理项目 [${projectIdx + 1}/${projectQueue.length}]: ${project.projectName}`);
-
-      // 处理当前项目的所有图片
-      for (let taskIdx = 0; taskIdx < project.tasks.length; taskIdx++) {
-        const task = project.tasks[taskIdx];
-        processedCount++;
-
-        // 更新当前处理的图片信息
-        setQueueProgress(prev => ({
-          ...prev,
-          current: processedCount,
-          currentImage: `[项目 ${projectIdx + 1}/${projectQueue.length}] ${project.projectName} - 图片 ${taskIdx + 1}/${project.tasks.length}`,
-        }));
-
-        try {
-          console.log(`  处理图片 [${taskIdx + 1}/${project.tasks.length}]: ${task.imageId}`);
-
-          // 获取模板详情
-          const templateDetail = await imageTemplateService.getTemplate(templateProjectId, task.templateId);
-
-          // 合成图片
-          const { blob, width, height } = await compositeImages(
-            templateDetail.imageUrl,
-            templateDetail.regions,
-            task.imageUrl,
-            targetWidth,
-            targetHeight
-          );
-
-          // 上传图片
-          const fileName = `template-replaced-${Date.now()}-${task.imageId}-${task.templateId}.jpg`;
-          const file = new File([blob], fileName, { type: 'image/jpeg' });
-          const uploadedUrl = await FileUploadAPI.uploadFile(file);
-
-          // 更新图片信息
-          await AIImageSessionsAPI.batchUpdateImages([{
-            imageId: task.imageId,
-            imageUrl: uploadedUrl,
-            width,
-            height,
-          }]);
-
-          successCount++;
-          setQueueProgress(prev => ({
-            ...prev,
-            successCount,
-          }));
-
-          console.log(`  图片处理成功`);
-
-        } catch (error) {
-          failedCount++;
-          setQueueProgress(prev => ({
-            ...prev,
-            failedCount,
-          }));
-          console.error(`  图片处理失败:`, error);
-        }
-      }
-
-      console.log(`项目 ${project.projectName} 处理完成\n`);
-
-      // 项目之间间隔 1 秒
-      if (projectIdx < projectQueue.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-
-    // 处理完成
-    setQueueProgress(prev => ({
-      ...prev,
-      isCompleted: true,
-      currentImage: '所有项目处理完成',
-    }));
-
-    // 显示最终结果
-    if (failedCount === 0) {
-      toast.success(`成功替换 ${successCount} 张图片`);
-    } else {
-      toast.warning(`完成处理：成功 ${successCount} 张，失败 ${failedCount} 张`);
-    }
-
-    // 刷新项目列表
-    fetchProjects(currentPage);
   };
 
   // 关闭模板替换对话框

@@ -167,33 +167,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     freightTemplateName: '运费模板',
     operatingSite: '美国'
   },
-  // {
-  //   id: 'artful-spirals',
-  //   name: 'Artful Spirals',
-  //   shopId: '634418226384302',
-  //   type: '全托',
-  //   account: '18071105270',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-  // {
-  //   id: 'the-gifted-page',
-  //   name: 'The Gifted Page',
-  //   shopId: '634418226384222',
-  //   type: '全托',
-  //   account: '18071105270',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
-  // {
-  //   id: 'the-green-spiral',
-  //   name: 'The Green Spiral',
-  //   shopId: '634418226370526',
-  //   type: '全托',
-  //   account: '18071105270',
-  //   categoryName: '',
-  //   categoryId: ''
-  // },
 
   {
     id: 'present-perfect-papers',
