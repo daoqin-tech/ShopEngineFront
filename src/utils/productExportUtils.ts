@@ -667,66 +667,45 @@ export function exportToExcel(
 }
 
 /**
- * 根据分类ID判断产品中文名称
+ * 根据产品尺寸判断产品类型
+ * 尺寸匹配规则（单位：mm）：
+ * - 手账纸: 152x152
+ * - 包装纸: 300x300
+ * - 竖版日历: 210x297
+ * - 横版日历: 297x210
+ * - 手提纸袋: 660x340
  */
-function getProductNameByCategoryId(categoryId: string): string {
-  // 手账本分类
-  const journalCategories = JOURNAL_PAPER_CATEGORIES.map(c => c.categoryId);
-  if (journalCategories.includes(categoryId)) {
-    return '手帐本';
+function getProductTypeBySize(length: number, width: number): {
+  nameCn: string;
+  nameEn: string;
+} {
+  // 手账纸 15.2cm x 15.2cm
+  if (length === 152 && width === 152) {
+    return { nameCn: '手帐本', nameEn: 'Journal Paper' };
   }
 
-  // 包装纸分类
-  const decorativeCategories = DECORATIVE_PAPER_CATEGORIES.map(c => c.categoryId);
-  if (decorativeCategories.includes(categoryId)) {
-    return '包装纸';
+  // 包装纸 30cm x 30cm
+  if (length === 300 && width === 300) {
+    return { nameCn: '包装纸', nameEn: 'Wrapping Paper' };
   }
 
-  // 日历分类
-  const calendarCategories = CALENDAR_CATEGORIES.map(c => c.categoryId);
-  if (calendarCategories.includes(categoryId)) {
-    // 根据分类名称判断横版还是竖版
-    const category = CALENDAR_CATEGORIES.find(c => c.categoryId === categoryId);
-    if (category?.categoryName?.includes('横版')) {
-      return '横版日历';
-    }
-    return '竖版日历';
+  // 竖版日历 21cm x 29.7cm
+  if (length === 210 && width === 297) {
+    return { nameCn: '竖版日历', nameEn: 'Calendar Portrait' };
   }
 
-  // 手提纸袋 - 需要根据实际的分类ID判断
-  // 暂时返回"手提纸袋"作为默认值
-  return '手提纸袋';
-}
-
-/**
- * 根据分类ID判断产品英文名称
- */
-function getProductEnglishNameByCategoryId(categoryId: string): string {
-  // 手账本分类
-  const journalCategories = JOURNAL_PAPER_CATEGORIES.map(c => c.categoryId);
-  if (journalCategories.includes(categoryId)) {
-    return 'Journal Paper';
+  // 横版日历 29.7cm x 21cm
+  if (length === 297 && width === 210) {
+    return { nameCn: '横版日历', nameEn: 'Calendar Landscape' };
   }
 
-  // 包装纸分类
-  const decorativeCategories = DECORATIVE_PAPER_CATEGORIES.map(c => c.categoryId);
-  if (decorativeCategories.includes(categoryId)) {
-    return 'Wrapping Paper';
+  // 手提纸袋 66cm x 34cm
+  if (length === 660 && width === 340) {
+    return { nameCn: '手提纸袋', nameEn: 'Paper Bag' };
   }
 
-  // 日历分类
-  const calendarCategories = CALENDAR_CATEGORIES.map(c => c.categoryId);
-  if (calendarCategories.includes(categoryId)) {
-    // 根据分类名称判断横版还是竖版
-    const category = CALENDAR_CATEGORIES.find(c => c.categoryId === categoryId);
-    if (category?.categoryName?.includes('横版')) {
-      return 'Calendar Landscape';
-    }
-    return 'Calendar Portrait';
-  }
-
-  // 手提纸袋
-  return 'Paper Bag';
+  // 默认返回未知类型
+  return { nameCn: '未知类型', nameEn: 'Unknown' };
 }
 
 /**
@@ -743,8 +722,8 @@ export function exportLogisticsInfo(
 
   // 准备导出数据
   const exportData = products.map((product, index) => {
-    const productName = getProductNameByCategoryId(product.categoryId);
-    const productEnglishName = getProductEnglishNameByCategoryId(product.categoryId);
+    // 根据产品尺寸判断类型
+    const productType = getProductTypeBySize(product.length, product.width);
 
     // 格式化时间为 YYYY-MM-DD HH:mm:ss
     const createdDate = new Date(product.createdAt);
@@ -753,8 +732,8 @@ export function exportLogisticsInfo(
     return {
       'Fnsku': product.productCode || '',
       'seller sku': product.productCode || '',
-      '产品名称': productName,
-      '产品英文名称': productEnglishName,
+      '产品名称': productType.nameCn,
+      '产品英文名称': productType.nameEn,
       '重量': product.weight || '',
       '系统重量': 0,
       '长': product.length || '',
