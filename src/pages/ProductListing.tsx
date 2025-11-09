@@ -16,6 +16,7 @@ import {
   exportToExcel as exportToExcelUtil,
   exportProductPdf as exportProductPdfUtil,
   exportPaperBagPdf as exportPaperBagPdfUtil,
+  exportLogisticsInfo as exportLogisticsInfoUtil,
   type PageSizeType
 } from '@/utils/productExportUtils';
 
@@ -620,6 +621,24 @@ export function ProductListing() {
     }
   };
 
+  // 导出物流信息功能
+  const handleExportLogistics = () => {
+    try {
+      if (selectedProductIds.size === 0) {
+        toast.error('请至少选择一个商品');
+        return;
+      }
+
+      const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+      exportLogisticsInfoUtil(selectedProducts, getShopName);
+      toast.success(`成功导出 ${selectedProductIds.size} 个商品的物流信息`);
+      setSelectedProductIds(new Set());
+    } catch (error) {
+      console.error('导出物流信息失败:', error);
+      toast.error(error instanceof Error ? error.message : '导出物流信息失败');
+    }
+  };
+
   // 打开重新生成标题对话框
   const handleOpenRegenerateDialog = () => {
     if (selectedProductIds.size === 0) {
@@ -699,6 +718,15 @@ export function ProductListing() {
           >
             <Download className="w-4 h-4" />
             导出上架表格 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+          </Button>
+          <Button
+            onClick={handleExportLogistics}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={selectedProductIds.size === 0}
+          >
+            <Download className="w-4 h-4" />
+            导出物流信息 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
             onClick={() => setShowPdfDialog(true)}

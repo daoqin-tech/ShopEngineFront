@@ -665,3 +665,144 @@ export function exportToExcel(
   XLSX.utils.book_append_sheet(wb, ws, '商品列表');
   XLSX.writeFile(wb, fileName);
 }
+
+/**
+ * 根据分类ID判断产品名称
+ */
+function getProductNameByCategoryId(categoryId: string): string {
+  // 手账本分类
+  const journalCategories = JOURNAL_PAPER_CATEGORIES.map(c => c.categoryId);
+  if (journalCategories.includes(categoryId)) {
+    return '手帐本';
+  }
+
+  // 包装纸分类
+  const decorativeCategories = DECORATIVE_PAPER_CATEGORIES.map(c => c.categoryId);
+  if (decorativeCategories.includes(categoryId)) {
+    return '包装纸';
+  }
+
+  // 日历分类
+  const calendarCategories = CALENDAR_CATEGORIES.map(c => c.categoryId);
+  if (calendarCategories.includes(categoryId)) {
+    // 根据分类名称判断横版还是竖版
+    const category = CALENDAR_CATEGORIES.find(c => c.categoryId === categoryId);
+    if (category?.categoryName?.includes('横版')) {
+      return '横版日历';
+    }
+    return '竖版日历';
+  }
+
+  // 手提纸袋 - 需要根据实际的分类ID判断
+  // 暂时返回"包装袋"作为默认值
+  return '包装袋';
+}
+
+/**
+ * 导出物流信息Excel
+ * 列：序号, Fnsku, seller sku, 产品名称, 产品英文名称, 重量, 系统重量, 长, 宽, 高, 货值, 状态, 添加时间
+ */
+export function exportLogisticsInfo(
+  products: Product[],
+  getShopName: (shopId: string) => string
+): void {
+  if (products.length === 0) {
+    throw new Error('请至少选择一个商品');
+  }
+
+  // 准备导出数据
+  const exportData = products.map((product, index) => {
+    const productName = getProductNameByCategoryId(product.categoryId);
+
+    return {
+      '序号': index + 1,
+      'Fnsku': product.productCode || '',
+      'seller sku': product.productCode || '',
+      '产品名称': productName,
+      '产品英文名称': product.nameEn || '',
+      '重量': product.weight || '',
+      '系统重量': 0,
+      '长': product.length || '',
+      '宽': product.width || '',
+      '高': product.height || '',
+      '货值': 0.99,
+      '状态': '启用',
+      '添加时间': new Date(product.createdAt).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    };
+  });
+
+  // 创建工作簿
+  const ws = XLSX.utils.json_to_sheet(exportData);
+
+  // 设置列宽
+  const colWidths = [
+    { wch: 8 },   // 序号
+    { wch: 15 },  // Fnsku
+    { wch: 15 },  // seller sku
+    { wch: 12 },  // 产品名称
+    { wch: 40 },  // 产品英文名称
+    { wch: 10 },  // 重量
+    { wch: 10 },  // 系统重量
+    { wch: 8 },   // 长
+    { wch: 8 },   // 宽
+    { wch: 8 },   // 高
+    { wch: 10 },  // 货值
+    { wch: 10 },  // 状态
+    { wch: 20 }   // 添加时间
+  ];
+  ws['!cols'] = colWidths;
+
+  // 设置表头样式
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!ws[cellAddress]) continue;
+
+    ws[cellAddress].s = {
+      font: { bold: true, sz: 11 },
+      fill: { fgColor: { rgb: 'E8F5E9' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      }
+    };
+  }
+
+  // 设置数据单元格样式和边框
+  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[cellAddress]) continue;
+
+      ws[cellAddress].s = {
+        alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+        border: {
+          top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+          bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+          left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+          right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+        }
+      };
+    }
+  }
+
+  // 生成文件名
+  const firstProduct = products[0];
+  const shopName = firstProduct.shopId ? getShopName(firstProduct.shopId) : '未知店铺';
+  const dateStr = getDateTimeString();
+  const fileName = `${shopName}_物流信息_${dateStr}.xlsx`;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '物流信息');
+  XLSX.writeFile(wb, fileName);
+}
