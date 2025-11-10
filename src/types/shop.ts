@@ -18,10 +18,15 @@ export interface ProductSpec {
   size: string;                 // 尺寸描述 (如: '15.2cm×15.2cm')
 
   // 物理属性
-  length: number;               // 长度(cm)
-  width: number;                // 宽度(cm)
-  height: number;               // 高度(cm)
+  length: number;               // 长度(cm) - 生产规格
+  width: number;                // 宽度(cm) - 生产规格
+  height: number;               // 高度(cm) - 生产规格
   weight: number;               // 重量(g)
+
+  // 实际尺寸（用于物流，仅纸袋需要）
+  actualLength?: number;        // 实际长度(cm) - 折叠后
+  actualWidth?: number;         // 实际宽度(cm) - 折叠后
+  actualHeight?: number;        // 实际高度(cm) - 折叠后
 
   // 价格
   declaredPrice: number;        // 申报价格(人民币)
@@ -137,9 +142,13 @@ export const PAPER_BAG_SPECS: ProductSpec[] = [
     length: 66.0,
     width: 34.0,
     height: 2.0,
-    weight: 150,
-    declaredPrice: 200,
-    suggestedRetailPrice: 25,
+    weight: 1700,  // 1.7kg = 1700g
+    // 实际尺寸（折叠后用于物流）
+    actualLength: 27.0,
+    actualWidth: 21.0,
+    actualHeight: 11.0,
+    declaredPrice: 300,  // 300元
+    suggestedRetailPrice: 43,  // 43美元
     variantName: '纸',
     variantAttributeName1: '材质',
     variantAttributeValue1: '纸',

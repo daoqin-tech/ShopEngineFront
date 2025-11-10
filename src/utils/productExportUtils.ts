@@ -465,6 +465,14 @@ export function exportToExcel(
   const exportData = products.map(product => {
     const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
 
+    // 获取产品类型信息（包含实际尺寸）
+    const productType = getProductTypeBySize(product.length, product.width);
+
+    // 对于纸袋，使用实际尺寸（折叠后）；其他产品使用原尺寸
+    const exportLength = productType.actualLength ?? product.length;
+    const exportWidth = productType.actualWidth ?? product.width;
+    const exportHeight = productType.actualHeight ?? product.height;
+
     return {
       '产品标题': product.nameZh || '',
       '英文标题': product.nameEn || '',
@@ -478,9 +486,9 @@ export function exportToExcel(
       '预览图': product.previewImage || '',
       '申报价格': product.declaredPrice || '',
       'SKU货号': product.productCode || '',
-      '长': product.length || '',
-      '宽': product.width || '',
-      '高': product.height || '',
+      '长': exportLength || '',
+      '宽': exportWidth || '',
+      '高': exportHeight || '',
       '重量': product.weight || '',
       '识别码类型': '',
       '识别码': '',
@@ -673,11 +681,14 @@ export function exportToExcel(
  * - 包装纸: 30x30
  * - 竖版日历: 21x29.7
  * - 横版日历: 29.7x21
- * - 手提纸袋: 66x34
+ * - 手提纸袋: 66x34（生产规格）-> 实际尺寸 27x21x11（折叠后）
  */
 function getProductTypeBySize(length: number, width: number): {
   nameCn: string;
   nameEn: string;
+  actualLength?: number;  // 实际长度（仅纸袋）
+  actualWidth?: number;   // 实际宽度（仅纸袋）
+  actualHeight?: number;  // 实际高度（仅纸袋）
 } {
   // 手账纸 15.2cm x 15.2cm
   if (length === 15.2 && width === 15.2) {
@@ -699,9 +710,15 @@ function getProductTypeBySize(length: number, width: number): {
     return { nameCn: '横版日历', nameEn: 'Calendar Landscape' };
   }
 
-  // 手提纸袋 66cm x 34cm
+  // 手提纸袋 66cm x 34cm（生产规格）-> 实际尺寸 27x21x11
   if (length === 66 && width === 34) {
-    return { nameCn: '手提纸袋', nameEn: 'Paper Bag' };
+    return {
+      nameCn: '手提纸袋',
+      nameEn: 'Paper Bag',
+      actualLength: 27.0,  // 折叠后实际长度
+      actualWidth: 21.0,   // 折叠后实际宽度
+      actualHeight: 11.0   // 折叠后实际高度
+    };
   }
 
   // 默认返回未知类型
@@ -720,48 +737,161 @@ export function exportLogisticsInfo(
     throw new Error('请至少选择一个商品');
   }
 
-  // 准备导出数据
+  // 准备导出数据 - 使用完整的68列表头结构
   const exportData = products.map((product) => {
     // 根据产品尺寸判断类型
     const productType = getProductTypeBySize(product.length, product.width);
 
-    // 格式化时间为 YYYY-MM-DD HH:mm:ss
-    const createdDate = new Date(product.createdAt);
-    const formattedDate = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}-${String(createdDate.getDate()).padStart(2, '0')} ${String(createdDate.getHours()).padStart(2, '0')}:${String(createdDate.getMinutes()).padStart(2, '0')}:${String(createdDate.getSeconds()).padStart(2, '0')}`;
+    // 对于纸袋，使用实际尺寸（折叠后）；其他产品使用原尺寸
+    const exportLength = productType.actualLength ?? product.length;
+    const exportWidth = productType.actualWidth ?? product.width;
+    const exportHeight = productType.actualHeight ?? product.height;
 
     return {
       'Fnsku': product.productCode || '',
       'seller sku': product.productCode || '',
-      '产品名称': productType.nameCn,
-      '产品英文名称': productType.nameEn,
+      '产品英文名': productType.nameEn,
+      '产品中文名': productType.nameCn,
+      '产品描述': '',
+      '申报价值': 0.99,
       '重量': product.weight || '',
-      '系统重量': 0,
-      '长': product.length || '',
-      '宽': product.width || '',
-      '高': product.height || '',
-      '货值': 0.99,
-      '状态': '启用',
-      '添加时间': formattedDate
+      '长': exportLength || '',
+      '宽': exportWidth || '',
+      '高': exportHeight || '',
+      '海关编码': '',
+      '原产地': '',
+      '是否带电池': '不含电池',
+      '颜色': '',
+      '平台SKU(如有多个请用英文逗号隔开)': '',
+      '规格型号': '',
+      '图片URL': product.productImages && product.productImages.length > 0 ? product.productImages[0] : '',
+      '备注': '',
+      '是否组合[1为组合sku]': '',
+      '组合sku1': '',
+      '组合数量1': '',
+      '组合sku2': '',
+      '组合数量2': '',
+      '组合sku3': '',
+      '组合数量3': '',
+      '组合sku4': '',
+      '组合数量4': '',
+      '组合sku5': '',
+      '组合数量5': '',
+      '组合sku6': '',
+      '组合数量6': '',
+      '组合sku7': '',
+      '组合数量7': '',
+      '组合sku8': '',
+      '组合数量8': '',
+      '组合sku9': '',
+      '组合数量9': '',
+      '组合sku10': '',
+      '组合数量10': '',
+      '组合sku11': '',
+      '组合数量11': '',
+      '组合sku12': '',
+      '组合数量12': '',
+      '组合sku13': '',
+      '组合数量13': '',
+      '组合sku14': '',
+      '组合数量14': '',
+      '组合sku15': '',
+      '组合数量15': '',
+      '组合sku16': '',
+      '组合数量16': '',
+      '组合sku17': '',
+      '组合数量17': '',
+      '组合sku18': '',
+      '组合数量18': '',
+      '组合sku19': '',
+      '组合数量19': '',
+      '组合sku20': '',
+      '组合数量20': '',
+      '组合sku21': '',
+      '组合数量21': '',
+      '组合sku22': '',
+      '组合数量22': '',
+      '组合sku23': '',
+      '组合数量23': '',
+      '组合sku24': '',
+      '组合数量24': '',
+      '组合sku25': ''
     };
   });
 
   // 创建工作簿
   const ws = XLSX.utils.json_to_sheet(exportData);
 
-  // 设置列宽
+  // 设置列宽 - 68列
   const colWidths = [
     { wch: 15 },  // Fnsku
     { wch: 15 },  // seller sku
-    { wch: 12 },  // 产品名称
-    { wch: 40 },  // 产品英文名称
+    { wch: 20 },  // 产品英文名
+    { wch: 12 },  // 产品中文名
+    { wch: 20 },  // 产品描述
+    { wch: 10 },  // 申报价值
     { wch: 10 },  // 重量
-    { wch: 10 },  // 系统重量
     { wch: 8 },   // 长
     { wch: 8 },   // 宽
     { wch: 8 },   // 高
-    { wch: 10 },  // 货值
-    { wch: 10 },  // 状态
-    { wch: 20 }   // 添加时间
+    { wch: 12 },  // 海关编码
+    { wch: 10 },  // 原产地
+    { wch: 12 },  // 是否带电池
+    { wch: 10 },  // 颜色
+    { wch: 20 },  // 平台SKU
+    { wch: 12 },  // 规格型号
+    { wch: 20 },  // 图片URL
+    { wch: 15 },  // 备注
+    { wch: 10 },  // 是否组合
+    { wch: 12 },  // 组合sku1
+    { wch: 10 },  // 组合数量1
+    { wch: 12 },  // 组合sku2
+    { wch: 10 },  // 组合数量2
+    { wch: 12 },  // 组合sku3
+    { wch: 10 },  // 组合数量3
+    { wch: 12 },  // 组合sku4
+    { wch: 10 },  // 组合数量4
+    { wch: 12 },  // 组合sku5
+    { wch: 10 },  // 组合数量5
+    { wch: 12 },  // 组合sku6
+    { wch: 10 },  // 组合数量6
+    { wch: 12 },  // 组合sku7
+    { wch: 10 },  // 组合数量7
+    { wch: 12 },  // 组合sku8
+    { wch: 10 },  // 组合数量8
+    { wch: 12 },  // 组合sku9
+    { wch: 10 },  // 组合数量9
+    { wch: 12 },  // 组合sku10
+    { wch: 10 },  // 组合数量10
+    { wch: 12 },  // 组合sku11
+    { wch: 10 },  // 组合数量11
+    { wch: 12 },  // 组合sku12
+    { wch: 10 },  // 组合数量12
+    { wch: 12 },  // 组合sku13
+    { wch: 10 },  // 组合数量13
+    { wch: 12 },  // 组合sku14
+    { wch: 10 },  // 组合数量14
+    { wch: 12 },  // 组合sku15
+    { wch: 10 },  // 组合数量15
+    { wch: 12 },  // 组合sku16
+    { wch: 10 },  // 组合数量16
+    { wch: 12 },  // 组合sku17
+    { wch: 10 },  // 组合数量17
+    { wch: 12 },  // 组合sku18
+    { wch: 10 },  // 组合数量18
+    { wch: 12 },  // 组合sku19
+    { wch: 10 },  // 组合数量19
+    { wch: 12 },  // 组合sku20
+    { wch: 10 },  // 组合数量20
+    { wch: 12 },  // 组合sku21
+    { wch: 10 },  // 组合数量21
+    { wch: 12 },  // 组合sku22
+    { wch: 10 },  // 组合数量22
+    { wch: 12 },  // 组合sku23
+    { wch: 10 },  // 组合数量23
+    { wch: 12 },  // 组合sku24
+    { wch: 10 },  // 组合数量24
+    { wch: 12 }   // 组合sku25
   ];
   ws['!cols'] = colWidths;
 
@@ -806,9 +936,10 @@ export function exportLogisticsInfo(
   const firstProduct = products[0];
   const shopName = firstProduct.shopId ? getShopName(firstProduct.shopId) : '未知店铺';
   const dateStr = getDateTimeString();
-  const fileName = `${shopName}_物流信息_${dateStr}.xlsx`;
+  const fileName = `${shopName}_物流信息_${dateStr}.xls`;
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '物流信息');
-  XLSX.writeFile(wb, fileName);
+  // 导出为 .xls 格式 (Excel 97-2003)
+  XLSX.writeFile(wb, fileName, { bookType: 'xls' });
 }
