@@ -166,7 +166,7 @@ export function PSDImportDialog({ open, onOpenChange, templateId }: PSDImportDia
                     拖拽PSD文件到此处，或点击选择
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    支持最大500MB的PSD文件
+                    支持最大1GB的PSD文件
                   </div>
                 </div>
               </div>

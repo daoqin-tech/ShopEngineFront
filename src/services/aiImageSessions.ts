@@ -175,7 +175,7 @@ export class AIImageSessionsAPI {
   }
 
   // 批量生成截图提示词
-  static async batchGeneratePrompts(sourceImageId: string, images: Array<{ imageUrl: string }>): Promise<{
+  static async batchGeneratePrompts(sourceImageId: string, images: Array<{ imageUrl: string }>, projectId: string): Promise<{
     items: Array<{
       id: string;
       sourceImageId: string;
@@ -195,6 +195,7 @@ export class AIImageSessionsAPI {
   }> {
     const response = await apiClient.post('/projects/cropped-images/prompts/batch', {
       sourceImageId,
+      projectId,
       images
     });
     return response.data;

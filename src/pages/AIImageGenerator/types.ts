@@ -199,8 +199,10 @@ export interface ImageGenerationStepProps {
   onGenerateFromImages?: (params: ImageGenerationParams) => void; // 以图生图回调
   onTogglePromptSelection?: (id: string) => void; // 切换提示词选择
   onToggleReferenceImageSelection?: (id: string) => void; // 切换参考图片选择
+  onDeleteReferenceImage?: (id: string) => void; // 删除参考图片
   refreshTrigger?: number; // 触发历史数据重新加载
   projectName?: string; // 项目名称，用于导出文件命名
+  categoryId?: string; // 产品分类ID，用于加载规格配置
   isGeneratingImages?: boolean; // 是否正在生成图片
   onStartPolling?: (promptIds: string[]) => void; // 开始轮询回调
 }

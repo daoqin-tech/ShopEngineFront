@@ -162,13 +162,13 @@ export class FileUploadAPI {
   }
 
   // 验证PSD文件
-  static validatePSDFile(file: File, maxSize: number = 500 * 1024 * 1024): boolean {
+  static validatePSDFile(file: File, maxSize: number = 1024 * 1024 * 1024): boolean {
     // 验证文件扩展名
     if (!file.name.toLowerCase().endsWith('.psd')) {
       throw new Error('只能上传PSD文件');
     }
 
-    // 验证文件大小（默认100MB）
+    // 验证文件大小（默认1GB）
     if (file.size > maxSize) {
       throw new Error(`文件大小不能超过 ${Math.round(maxSize / 1024 / 1024)}MB`);
     }

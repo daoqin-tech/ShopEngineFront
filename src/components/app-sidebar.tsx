@@ -3,6 +3,7 @@ import {
   SquareTerminal,
   Layers,
   Package,
+  Settings,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -81,6 +82,18 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           {
             title: "图片模板",
             url: "/workspace/image-templates",
+          },
+        ],
+      },
+      {
+        title: "系统配置",
+        url: "/workspace/settings",
+        icon: Settings,
+        isActive: false,
+        items: [
+          {
+            title: "产品分类",
+            url: "/workspace/settings/categories",
           },
         ],
       },

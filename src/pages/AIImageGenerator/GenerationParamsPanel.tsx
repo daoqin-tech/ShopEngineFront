@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { AspectRatio, ASPECT_RATIOS, ImageGenerationParams } from './types';
+import { AspectRatio, ImageGenerationParams } from './types';
+import { productCategorySpecService } from '@/services/productCategorySpecService';
 
 // 这些验证函数暂时保留供将来自定义尺寸功能使用
 // const validateDimension = (value: number): number => {
@@ -35,13 +36,12 @@ interface GenerationParamsPanelProps {
   hasPrompts?: boolean; // 是否有可用的提示词
   hasReferenceImages?: boolean; // 是否有可用的参考图
   onModelChange?: (model: string) => void; // 模型改变时的回调
+  categoryId?: string; // 产品分类ID
 }
 
 // 可用的模型选项
 const MODEL_OPTIONS = [
-  { value: 'flux-dev', label: 'Flux Dev', description: '提示词生图' },
-  // { value: 'flux-pro-1.1', label: 'Flux Pro 1.1', description: '专业版 1.1' },
-  { value: 'doubao-seedream-4-0-250828', label: 'Doubao Seedream 4.0', description: '以图生图' }
+  { value: 'doubao-seedream-4-0-250828', label: '提示词生图', description: 'Doubao Seedream 4.0' }
 ];
 
 export function GenerationParamsPanel({
@@ -50,16 +50,50 @@ export function GenerationParamsPanel({
   onGenerateImages,
   isImageToImageMode,
   hasPrompts = false,
-  hasReferenceImages = false,
-  onModelChange
+  hasReferenceImages: _hasReferenceImages = false,
+  onModelChange,
+  categoryId
 }: GenerationParamsPanelProps) {
   // 生成参数状态
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio>(ASPECT_RATIOS[0]); // 默认选择1:1
-  // const [customWidth, setCustomWidth] = useState<number>(1024);
-  // const [customHeight, setCustomHeight] = useState<number>(1024);
-  // const [useCustomSize, setUseCustomSize] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>('flux-dev'); // 默认模型
+  const [aspectRatios, setAspectRatios] = useState<AspectRatio[]>([]); // 从规格配置加载
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatio | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('doubao-seedream-4-0-250828'); // 默认模型
   const [imageCount, setImageCount] = useState<number>(1); // 每张参考图生成的图片数量（1-40）
+  const [loading, setLoading] = useState(false);
+
+  // 根据分类ID加载规格配置
+  useEffect(() => {
+    if (!categoryId) return;
+
+    const loadSpecs = async () => {
+      try {
+        setLoading(true);
+        const specs = await productCategorySpecService.getSpecsByCategoryId(categoryId, true);
+
+        // 将规格转换为 AspectRatio 格式
+        const ratios: AspectRatio[] = specs.map(spec => ({
+          name: spec.id,
+          label: spec.aspectRatio,
+          width: spec.width,
+          height: spec.height,
+          description: `${spec.name} (${spec.count}张)`
+        }));
+
+        setAspectRatios(ratios);
+
+        // 默认选择第一个规格
+        if (ratios.length > 0) {
+          setSelectedAspectRatio(ratios[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load category specs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSpecs();
+  }, [categoryId]);
 
   // 输入验证反馈状态
   // const [widthAdjusted, setWidthAdjusted] = useState(false);
@@ -126,7 +160,7 @@ export function GenerationParamsPanel({
         {/* 模型选择 */}
         <div className="mb-6">
           <label className="text-sm font-medium text-gray-700 mb-3 block">选择模型</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             {MODEL_OPTIONS.map((model) => (
               <button
                 key={model.value}
@@ -134,7 +168,7 @@ export function GenerationParamsPanel({
                   setSelectedModel(model.value);
                   onModelChange?.(model.value);
                 }}
-                className={`p-3 text-left border rounded-lg transition-all duration-200 ${
+                className={`w-full p-3 text-left border rounded-lg transition-all duration-200 ${
                   selectedModel === model.value
                     ? 'border-blue-600 bg-blue-50 text-blue-900'
                     : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -186,33 +220,39 @@ export function GenerationParamsPanel({
 
         {/* 比例选择 */}
         <div className="mb-6">
-          <label className="text-sm font-medium text-gray-700 mb-3 block">选择比例</label>
-          <div className="grid grid-cols-2 gap-2">
-            {ASPECT_RATIOS.map((ratio) => (
-              <button
-                key={ratio.name}
-                onClick={() => handleAspectRatioChange(ratio)}
-                className={`p-3 text-left border rounded-lg transition-all duration-200 ${
-                  selectedAspectRatio.name === ratio.name
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex flex-col">
-                  <div className="text-sm font-medium mb-1">{ratio.description}</div>
-                  <div className="text-xs opacity-75">{ratio.label}</div>
-                  <div className="text-xs opacity-75">({ratio.width}×{ratio.height})</div>
-                  {selectedAspectRatio.name === ratio.name && (
-                    <div className="mt-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+          <label className="text-sm font-medium text-gray-700 mb-3 block">选择规格</label>
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">加载规格配置中...</div>
+          ) : aspectRatios.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">暂无可用规格配置</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {aspectRatios.map((ratio) => (
+                <button
+                  key={ratio.name}
+                  onClick={() => handleAspectRatioChange(ratio)}
+                  className={`p-3 text-left border rounded-lg transition-all duration-200 ${
+                    selectedAspectRatio?.name === ratio.name
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex flex-col">
+                    <div className="text-sm font-medium mb-1">{ratio.description}</div>
+                    <div className="text-xs opacity-75">{ratio.label}</div>
+                    <div className="text-xs opacity-75">({ratio.width}×{ratio.height})</div>
+                    {selectedAspectRatio?.name === ratio.name && (
+                      <div className="mt-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 自定义尺寸选项 */}
@@ -320,18 +360,21 @@ export function GenerationParamsPanel({
             const doubaoDisabled = isDoubao && selectedPromptsCount === 0;
 
             // 按钮禁用条件：正在生成中，或者没有选中任何内容
-            const isDisabled = isGeneratingImages || fluxDevDisabled || doubaoDisabled;
+            const isDisabled = isGeneratingImages || fluxDevDisabled || doubaoDisabled || !selectedAspectRatio;
 
             return (
               <>
                 <Button
-                  onClick={() => onGenerateImages({
-                    width: selectedAspectRatio.width,
-                    height: selectedAspectRatio.height,
-                    aspectRatio: selectedAspectRatio.name,
-                    model: selectedModel,
-                    count: imageCount
-                  })}
+                  onClick={() => {
+                    if (!selectedAspectRatio) return;
+                    onGenerateImages({
+                      width: selectedAspectRatio.width,
+                      height: selectedAspectRatio.height,
+                      aspectRatio: selectedAspectRatio.name,
+                      model: selectedModel,
+                      count: imageCount
+                    });
+                  }}
                   disabled={isDisabled}
                   className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -365,16 +408,6 @@ export function GenerationParamsPanel({
                     <p className="text-xs text-amber-800">
                       <span className="font-semibold">Flux Dev 模型</span>仅支持提示词生图。
                       请前往"提示词生成"步骤生成提示词。
-                    </p>
-                  </div>
-                )}
-
-                {/* Doubao 模型提示 */}
-                {isDoubao && !hasReferenceImages && selectedPromptsCount === 0 && (
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-xs text-blue-800">
-                      <span className="font-semibold">Doubao 模型</span>仅支持以图生图。
-                      请上传参考图或从"热销品文案"导入图片。
                     </p>
                   </div>
                 )}

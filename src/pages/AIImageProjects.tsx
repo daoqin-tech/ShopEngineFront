@@ -3,12 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
 import { FileUploadAPI } from '@/services/fileUpload';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
+import { productCategoryService } from '@/services/productCategoryService';
+import type { ProductCategory } from '@/types/productCategory';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -84,8 +87,16 @@ export function AIImageProjects() {
 
   // 筛选状态
   const [nameFilter, setNameFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState(''); // 分类筛选
   const [startTime, setStartTime] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState<Date | undefined>();
+
+  // 新建项目对话框状态
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [creating, setCreating] = useState(false);
 
   // 获取项目列表
   const fetchProjects = async (page: number = currentPage) => {
@@ -103,6 +114,10 @@ export function AIImageProjects() {
 
       if (nameFilter.trim()) {
         params.name = nameFilter.trim();
+      }
+
+      if (categoryFilter) {
+        params.categoryId = categoryFilter;
       }
 
       if (startTime) {
@@ -129,6 +144,7 @@ export function AIImageProjects() {
 
   useEffect(() => {
     fetchProjects(1);
+    loadCategories(); // 加载分类数据供筛选器使用
   }, []);
 
   // 应用筛选 - 保持当前页码
@@ -139,23 +155,58 @@ export function AIImageProjects() {
   // 重置筛选
   const handleResetFilters = () => {
     setNameFilter('');
+    setCategoryFilter('');
     setStartTime(undefined);
     setEndTime(undefined);
     setCurrentPage(1);
     fetchProjects(1);
   };
 
-  const handleNewProject = async () => {
+  // 加载分类列表
+  const loadCategories = async () => {
     try {
+      const data = await productCategoryService.getAllCategories(true); // 只获取启用的分类
+      setCategories(data);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      toast.error('加载分类失败');
+    }
+  };
+
+  // 打开新建项目对话框
+  const handleNewProject = async () => {
+    setNewProjectName('');
+    setSelectedCategoryId('');
+    setCreateDialogOpen(true);
+    await loadCategories();
+  };
+
+  // 确认创建项目
+  const handleConfirmCreate = async () => {
+    if (!newProjectName.trim()) {
+      toast.error('请输入项目名称');
+      return;
+    }
+    if (!selectedCategoryId) {
+      toast.error('请选择产品分类');
+      return;
+    }
+
+    try {
+      setCreating(true);
       const newProject = await AIImageProjectsAPI.createAIImageProject({
-        name: '新建项目',
+        name: newProjectName.trim(),
+        categoryId: selectedCategoryId,
       });
+      setCreateDialogOpen(false);
       navigate(`/workspace/project/${newProject.id}/image-generation`);
     } catch (err) {
       toast.error('创建项目失败', {
         description: '请稍后再试'
       });
       console.error('Error creating project:', err);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -735,6 +786,21 @@ export function AIImageProjects() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">产品分类:</label>
+            <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || '')}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="全部分类" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">开始时间:</label>
             <DateTimePicker
               date={startTime}
@@ -783,7 +849,7 @@ export function AIImageProjects() {
             <div className="flex-1 overflow-auto">
               <div className="bg-white border-l border-r border-t">
                 {/* 表头 */}
-                <div className="grid grid-cols-[auto_auto_1fr_2fr_2fr_1fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
+                <div className="grid grid-cols-[auto_auto_1fr_2fr_1fr_2fr_1fr_1.5fr_1fr] gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-10">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -795,6 +861,7 @@ export function AIImageProjects() {
                   <div className="text-center">序号</div>
                   <div className="text-center">缩略图</div>
                   <div>项目名称</div>
+                  <div>产品分类</div>
                   <div>任务状态</div>
                   <div>生成图片数</div>
                   <div>创建时间</div>
@@ -805,7 +872,7 @@ export function AIImageProjects() {
                 {projects.map((project, index) => (
                   <div
                     key={project.id}
-                    className="grid grid-cols-[auto_auto_1fr_2fr_2fr_1fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
+                    className="grid grid-cols-[auto_auto_1fr_2fr_1fr_2fr_1fr_1.5fr_1fr] gap-4 p-4 border-b hover:bg-gray-50 group"
                   >
                     {/* 复选框 */}
                     <div className="flex items-center justify-center">
@@ -883,6 +950,13 @@ export function AIImageProjects() {
                           {project.name}
                         </div>
                       )}
+                    </div>
+
+                    {/* 产品分类 */}
+                    <div className="flex items-center">
+                      <span className="text-sm text-gray-600">
+                        {categories.find(c => c.id === project.categoryId)?.name || '-'}
+                      </span>
                     </div>
 
                     {/* 任务状态 */}
@@ -1498,6 +1572,61 @@ export function AIImageProjects() {
                 {queueProgress.isCompleted ? '关闭' : '处理中...'}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新建项目对话框 */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>新建商品制图项目</DialogTitle>
+            <DialogDescription>
+              选择产品分类并输入项目名称
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>产品分类 *</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {categories.map((category) => (
+                  <div
+                    key={category.id}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 ${
+                      selectedCategoryId === category.id
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="font-medium">{category.name}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="projectName">项目名称 *</Label>
+              <input
+                id="projectName"
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="请输入项目名称"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogOpen(false)}
+              disabled={creating}
+            >
+              取消
+            </Button>
+            <Button onClick={handleConfirmCreate} disabled={creating}>
+              {creating ? '创建中...' : '确定'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

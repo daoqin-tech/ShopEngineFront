@@ -250,7 +250,7 @@ export function ImageCropEditorForPrompts({
       );
 
       // 立即调用后端API生成提示词
-      const response = await AIImageSessionsAPI.batchGeneratePrompts(sourceImageId, [{ imageUrl: uploadedUrl }]);
+      const response = await AIImageSessionsAPI.batchGeneratePrompts(sourceImageId, [{ imageUrl: uploadedUrl }], projectId);
 
       // 更新提示词列表 - 新的放在最前面
       if (response.items && response.items.length > 0) {

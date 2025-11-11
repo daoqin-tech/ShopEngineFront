@@ -4,6 +4,7 @@ import { apiClient } from '@/lib/api';
 export interface AIImageProject {
   id: string;
   name: string;
+  categoryId: string;
   createdAt: string;
   updatedAt: string;
   totalTasks: number;
@@ -18,6 +19,7 @@ export interface AIImageProject {
 
 export interface CreateAIImageProjectRequest {
   name: string;
+  categoryId: string;
 }
 
 export interface UpdateAIImageProjectRequest {
@@ -39,6 +41,7 @@ export class AIImageProjectsAPI {
     page?: number;
     limit?: number;
     name?: string;       // 项目名称搜索
+    categoryId?: string; // 分类ID过滤
     startTime?: number;  // 秒级时间戳
     endTime?: number;    // 秒级时间戳
   }): Promise<AIImageProjectsListResponse> {
@@ -47,6 +50,7 @@ export class AIImageProjectsAPI {
         page: params?.page || 1,
         limit: params?.limit || 50,
         ...(params?.name && { name: params.name }),
+        ...(params?.categoryId && { categoryId: params.categoryId }),
         ...(params?.startTime && { startTime: params.startTime }),
         ...(params?.endTime && { endTime: params.endTime })
       }

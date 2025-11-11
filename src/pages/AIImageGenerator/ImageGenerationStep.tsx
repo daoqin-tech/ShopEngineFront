@@ -13,8 +13,10 @@ export function ImageGenerationStep({
   onGenerateFromImages,
   onTogglePromptSelection,
   onToggleReferenceImageSelection,
+  onDeleteReferenceImage,
   refreshTrigger,
   projectName,
+  categoryId,
   isGeneratingImages,
   onStartPolling
 }: ImageGenerationStepProps) {
@@ -24,10 +26,9 @@ export function ImageGenerationStep({
   );
 
   // 根据选择的模型判断是提示词生图还是以图生图模式
-  // flux-dev: 提示词生图
-  // doubao-seedream-4-0-250828: 以图生图
-  const [selectedModel, setSelectedModel] = useState<string>('flux-dev');
-  const isImageToImageMode = selectedModel === 'doubao-seedream-4-0-250828';
+  // doubao-seedream-4-0-250828: 提示词生图
+  const [_selectedModel, setSelectedModel] = useState<string>('doubao-seedream-4-0-250828');
+  const isImageToImageMode = false; // 不再使用以图生图模式
 
   // 加载状态
   const [isLoadingHistoricalData, setIsLoadingHistoricalData] = useState(false);
@@ -111,6 +112,7 @@ export function ImageGenerationStep({
         hasPrompts={hasPrompts}
         hasReferenceImages={hasReferenceImages}
         onModelChange={setSelectedModel}
+        categoryId={categoryId}
       />
 
       {/* 右侧内容区域 */}
@@ -129,6 +131,7 @@ export function ImageGenerationStep({
         }}
         onTogglePromptSelection={onTogglePromptSelection}
         onToggleReferenceImageSelection={onToggleReferenceImageSelection}
+        onDeleteReferenceImage={onDeleteReferenceImage}
       />
     </div>
   );

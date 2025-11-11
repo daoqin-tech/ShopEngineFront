@@ -25,9 +25,11 @@ export function PromptGenerationWithScreenshot() {
   const [currentEditingImage, setCurrentEditingImage] = useState<CapturedImage | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 100,
+    limit: 200, // 每页200条
     total: 0,
   });
+  const [allImages, setAllImages] = useState<CapturedImage[]>([]); // 保存所有已加载的图片
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const handleBack = () => {
     navigate(`/workspace/project/${projectId}/prompt-generation`);
@@ -91,20 +93,21 @@ export function PromptGenerationWithScreenshot() {
     return sortedGroups;
   };
 
-  // 加载图片列表
+  // 加载图片列表（初始加载，会清空已有数据）
   const loadImages = async () => {
     setIsLoading(true);
     try {
       const response = await capturedImageService.getCapturedImages({
         platform: activeTab,
-        page: pagination.page,
+        page: 1,
         limit: pagination.limit,
       });
 
+      setAllImages(response.data);
       const grouped = groupImagesByDate(response.data);
       setImagesByDate(grouped);
       setPagination({
-        page: response.page,
+        page: 1,
         limit: response.limit,
         total: response.total,
       });
@@ -113,6 +116,43 @@ export function PromptGenerationWithScreenshot() {
       toast.error('加载图片失败');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 加载更多图片（追加数据）
+  const loadMoreImages = async () => {
+    if (isLoadingMore) return;
+
+    const nextPage = pagination.page + 1;
+    const maxPage = Math.ceil(pagination.total / pagination.limit);
+
+    if (nextPage > maxPage) {
+      toast.info('已经加载全部数据');
+      return;
+    }
+
+    setIsLoadingMore(true);
+    try {
+      const response = await capturedImageService.getCapturedImages({
+        platform: activeTab,
+        page: nextPage,
+        limit: pagination.limit,
+      });
+
+      const updatedImages = [...allImages, ...response.data];
+      setAllImages(updatedImages);
+      const grouped = groupImagesByDate(updatedImages);
+      setImagesByDate(grouped);
+      setPagination((prev) => ({
+        ...prev,
+        page: nextPage,
+      }));
+      toast.success(`加载了 ${response.data.length} 条数据`);
+    } catch (error) {
+      console.error('加载更多失败:', error);
+      toast.error('加载更多失败');
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -140,16 +180,9 @@ export function PromptGenerationWithScreenshot() {
 
   // 切换平台时重新加载
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, page: 1 }));
     loadImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
-
-  // 页码变化时重新加载
-  useEffect(() => {
-    loadImages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.page]);
 
   // 处理截图完成
   const handleCropComplete = () => {
@@ -248,7 +281,7 @@ export function PromptGenerationWithScreenshot() {
                       </div>
 
                       {/* 右侧图片网格 */}
-                      <div className="flex-1">
+                      <div className="flex-1 space-y-6">
                         {imagesByDate.map((dateGroup) => (
                           dateGroup.expanded && (
                             <div key={dateGroup.date} id={`date-group-${dateGroup.date}`} className="rounded-lg border bg-card p-6">
@@ -298,6 +331,39 @@ export function PromptGenerationWithScreenshot() {
                             </div>
                           )
                         ))}
+
+                        {/* 加载更多按钮 */}
+                        {!isLoading && imagesByDate.length > 0 && allImages.length < pagination.total && (
+                          <div className="flex justify-center py-8">
+                            <Button
+                              onClick={loadMoreImages}
+                              disabled={isLoadingMore}
+                              variant="outline"
+                              size="lg"
+                              className="min-w-[200px]"
+                            >
+                              {isLoadingMore ? (
+                                <>
+                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                  加载中...
+                                </>
+                              ) : (
+                                <>
+                                  加载更多 ({allImages.length} / {pagination.total})
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* 已加载全部提示 */}
+                        {!isLoading && allImages.length > 0 && allImages.length >= pagination.total && (
+                          <div className="flex justify-center py-8">
+                            <p className="text-sm text-muted-foreground">
+                              已加载全部 {pagination.total} 条数据
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

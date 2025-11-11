@@ -22,6 +22,7 @@ import { CoverTaskCreator } from "@/pages/CoverTaskCreator"
 import { TemplateEditor } from "@/pages/TemplateEditor"
 import { ProductListing } from "@/pages/ProductListing"
 import { BatchProductCreator } from "@/pages/BatchProductCreator"
+import { ProductCategories } from "@/pages/ProductCategories"
 import { Toaster } from "sonner"
 
 
@@ -154,6 +155,14 @@ function App() {
           <Route path="/workspace/batch-upload/create" element={
             <ProtectedRoute>
               <BatchProductCreator />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/categories" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <ProductCategories />
+              </WorkspaceLayout>
             </ProtectedRoute>
           } />
 

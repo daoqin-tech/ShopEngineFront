@@ -44,6 +44,7 @@ interface ImageContentAreaProps {
   projectId: string; // 添加 projectId 参数
   onRefreshImages: () => void;
   onToggleReferenceImageSelection?: (id: string) => void;
+  onDeleteReferenceImage?: (id: string) => void;
   onTogglePromptSelection?: (id: string) => void;
 }
 
@@ -55,6 +56,8 @@ export function ImageContentArea({
   projectName,
   projectId,
   onRefreshImages,
+  onToggleReferenceImageSelection: _onToggleReferenceImageSelection,
+  onDeleteReferenceImage,
   onTogglePromptSelection
 }: ImageContentAreaProps) {
   // 图片预览状态
@@ -487,11 +490,11 @@ export function ImageContentArea({
             <div className="grid grid-cols-2 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
               {selectedReferenceImages.map((refImage) => (
                 <div key={refImage.id} className="group relative border border-gray-300 rounded-lg bg-white hover:shadow-md transition-all duration-200">
-                  {onTogglePromptSelection && (
+                  {onDeleteReferenceImage && (
                     <button
-                      onClick={() => onTogglePromptSelection(refImage.id)}
+                      onClick={() => onDeleteReferenceImage(refImage.id)}
                       className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                      title="取消选择"
+                      title="删除"
                     >
                       <X className="w-4 h-4" />
                     </button>

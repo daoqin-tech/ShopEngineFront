@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Home, MessageSquare, Scissors } from 'lucide-react';
+import { Home, MessageSquare } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 import { ImageGenerationStep } from './AIImageGenerator/ImageGenerationStep';
@@ -317,10 +317,6 @@ export function ImageGeneration() {
     navigate(`/workspace/project/${projectId}/prompt-generation`);
   };
 
-  const handleGoToHotProductCopy = () => {
-    navigate(`/workspace/project/${projectId}/hot-product-copy`);
-  };
-
   // 切换提示词选择
   const togglePromptSelection = (id: string) => {
     setSelectedPromptIds(prev => {
@@ -343,6 +339,20 @@ export function ImageGeneration() {
       } else {
         newSet.add(id);
       }
+      return newSet;
+    });
+  };
+
+  // 删除参考图
+  const deleteReferenceImage = (id: string) => {
+    setReferenceImagesMap(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(id);
+      return newMap;
+    });
+    setSelectedReferenceImageIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
       return newSet;
     });
   };
@@ -457,14 +467,14 @@ export function ImageGeneration() {
                   <MessageSquare className="w-4 h-4 mr-2" />
                   AI对话生图
                 </Button>
-                <Button
+                {/* <Button
                   onClick={handleGoToHotProductCopy}
                   variant="outline"
                   className="border-gray-300 hover:bg-gray-50"
                 >
                   <Scissors className="w-4 h-4 mr-2" />
                   以图生图
-                </Button>
+                </Button> */}
               </div>
             </div>
           </div>
@@ -480,8 +490,10 @@ export function ImageGeneration() {
             onGenerateFromImages={generateFromImages}
             onTogglePromptSelection={togglePromptSelection}
             onToggleReferenceImageSelection={toggleReferenceImageSelection}
+            onDeleteReferenceImage={deleteReferenceImage}
             refreshTrigger={historyRefreshTrigger}
             projectName={project?.name}
+            categoryId={project?.categoryId}
             isGeneratingImages={isGeneratingImages}
             onStartPolling={startPolling}
           />
