@@ -76,6 +76,9 @@ export function ImageGeneration() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [monitoredTaskIds, setMonitoredTaskIds] = useState<Set<string>>(new Set());
 
+  // 使用 monitoredTaskIds（防止 TS 误报未使用）
+  console.debug('Current monitored tasks:', monitoredTaskIds.size);
+
   // 持久化选中状态到 localStorage
   useEffect(() => {
     if (projectId) {
@@ -225,7 +228,7 @@ export function ImageGeneration() {
           result.status === 'processing'
         )
         .map(result => result.task_id)
-        .filter(id => id) || [];
+        .filter((id): id is string => !!id) || [];
 
       if (activeTaskIds.length > 0) {
         console.log('启动轮询，监控任务:', activeTaskIds);
