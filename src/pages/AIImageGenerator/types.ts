@@ -138,6 +138,7 @@ export interface ImageGenerationRequest {
   width: number;
   height: number;
   model?: string;
+  count?: number; // 每个提示词生成的图片数量(1-40)
 }
 
 // 以图生图API请求参数

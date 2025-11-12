@@ -193,7 +193,7 @@ export function GenerationParamsPanel({
           <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-medium text-gray-700">
-                期望生成数量
+                每个提示词生成张数
               </label>
               <div className="flex items-center justify-center w-8 h-6 bg-gray-900 text-white rounded text-xs font-semibold">
                 {imageCount}
@@ -388,7 +388,7 @@ export function GenerationParamsPanel({
                       生成图片
                       {selectedPromptsCount > 0 && (
                         <span className="ml-2 text-sm opacity-75">
-                          ({selectedPromptsCount}个)
+                          ({selectedPromptsCount * imageCount}张)
                         </span>
                       )}
                     </>

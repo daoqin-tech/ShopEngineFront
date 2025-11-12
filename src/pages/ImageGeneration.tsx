@@ -74,6 +74,7 @@ export function ImageGeneration() {
 
   // 轮询管理状态
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [monitoredTaskIds, setMonitoredTaskIds] = useState<Set<string>>(new Set());
 
   // 持久化选中状态到 localStorage
   useEffect(() => {
@@ -190,13 +191,66 @@ export function ImageGeneration() {
     };
   }, [pollingInterval]);
 
-  // 开始轮询管理器（使用taskIds进行轮询）
-  const startPolling = (taskIdsToMonitor: string[]) => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
+  // 页面加载后检查是否有正在进行的任务，如果有则启动轮询
+  useEffect(() => {
+    if (!projectId || promptsMap.size === 0) return;
+
+    // 查找所有正在进行中的任务
+    const activePrompts = Array.from(promptsMap.values()).filter(p =>
+      p.status === PromptStatus.QUEUED ||
+      p.status === PromptStatus.PROCESSING
+    );
+
+    if (activePrompts.length > 0 && !pollingInterval) {
+      console.log('发现正在进行的任务，启动轮询...', activePrompts.length);
+      // 需要获取这些提示词对应的 taskIds
+      // 由于我们只有 promptId，我们可以传递空数组让后端根据项目ID查询所有任务
+      loadAndStartPolling();
+    }
+  }, [promptsMap, projectId]);
+
+  // 加载项目的所有任务并启动轮询
+  const loadAndStartPolling = async () => {
+    if (!projectId) return;
+
+    try {
+      // 获取项目的所有任务状态
+      const statusResponse = await AIImageSessionsAPI.getBatchGenerationStatus(projectId, []);
+
+      // 提取所有活跃任务的ID
+      const activeTaskIds = statusResponse.results
+        ?.filter(result =>
+          result.status === 'pending' ||
+          result.status === 'queued' ||
+          result.status === 'processing'
+        )
+        .map(result => result.task_id)
+        .filter(id => id) || [];
+
+      if (activeTaskIds.length > 0) {
+        console.log('启动轮询，监控任务:', activeTaskIds);
+        startPolling(activeTaskIds);
+      }
+    } catch (error) {
+      console.error('加载任务状态失败:', error);
+    }
+  };
+
+  // 开始轮询管理器（动态监控项目下的所有任务）
+  const startPolling = (newTaskIds: string[]) => {
+    if (newTaskIds.length === 0) {
+      return;
     }
 
-    if (taskIdsToMonitor.length === 0) {
+    // 合并新任务到监控列表
+    setMonitoredTaskIds(prev => {
+      const updated = new Set(prev);
+      newTaskIds.forEach(id => updated.add(id));
+      return updated;
+    });
+
+    // 如果已经在轮询，不需要重新启动
+    if (pollingInterval) {
       return;
     }
 
@@ -204,21 +258,38 @@ export function ImageGeneration() {
       if (!projectId) return;
 
       try {
-        const statusResponse = await AIImageSessionsAPI.getBatchGenerationStatus(projectId, taskIdsToMonitor);
+        setMonitoredTaskIds(currentIds => {
+          if (currentIds.size === 0) return currentIds;
 
-        updatePromptsFromStatusResponse(statusResponse);
+          // 轮询当前监控的所有任务
+          AIImageSessionsAPI.getBatchGenerationStatus(projectId, Array.from(currentIds))
+            .then(statusResponse => {
+              updatePromptsFromStatusResponse(statusResponse);
 
-        const hasActiveTasks = statusResponse.results?.some(result =>
-          result.status === 'pending' || result.status === 'queued' || result.status === 'processing'
-        );
+              // 检查是否还有活跃任务
+              const hasActiveTasks = statusResponse.results?.some(result =>
+                result.status === 'pending' || result.status === 'queued' || result.status === 'processing'
+              );
 
-        if (!hasActiveTasks) {
-          clearInterval(interval);
-          setPollingInterval(null);
-        }
+              // 如果没有活跃任务，停止轮询
+              if (!hasActiveTasks) {
+                if (pollingInterval) {
+                  clearInterval(pollingInterval);
+                  setPollingInterval(null);
+                }
+                setMonitoredTaskIds(new Set());
+                // 最后触发一次图片刷新
+                setHistoryRefreshTrigger(prev => prev + 1);
+              }
+            })
+            .catch(error => {
+              console.error('轮询状态更新失败:', error);
+            });
 
+          return currentIds;
+        });
       } catch (error) {
-        console.error('轮询状态更新失败:', error);
+        console.error('轮询错误:', error);
       }
     }, 5000);
 
@@ -270,7 +341,8 @@ export function ImageGeneration() {
         promptIds: Array.from(selectedPromptIds),
         width: params.width,
         height: params.height,
-        ...(params.model && { model: params.model })
+        ...(params.model && { model: params.model }),
+        ...(params.count && { count: params.count })
       };
 
       const response = await AIImageSessionsAPI.startImageGeneration(request);
@@ -294,7 +366,7 @@ export function ImageGeneration() {
       // 触发历史图片数据重新加载
       setHistoryRefreshTrigger(prev => prev + 1);
 
-      // 开始轮询状态（使用返回的taskIDs，过滤掉空字符串）
+      // 开始轮询状态（使用返回的taskIDs）
       if (response.taskIDs && response.taskIDs.length > 0) {
         const validTaskIds = response.taskIDs.filter((id: string) => id && id.trim() !== '');
         if (validTaskIds.length > 0) {

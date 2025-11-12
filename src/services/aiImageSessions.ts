@@ -133,6 +133,16 @@ export class AIImageSessionsAPI {
     return response.data;
   }
 
+  // 在当前项目下动态复制图片（生成相似提示词并重新生成）
+  static async dynamicDuplicateImagesInProject(projectId: string, imageIds: string[], count: number): Promise<{ totalTasksCreated: number }> {
+    const response = await apiClient.post(`/images/dynamicDuplicateInProject`, {
+      projectId,
+      imageIds,
+      count
+    });
+    return response.data;
+  }
+
   // 批量重新生成失败的图片
   static async retryFailedImages(taskIds: string[]): Promise<null> {
     const response = await apiClient.post('/images/retry', {

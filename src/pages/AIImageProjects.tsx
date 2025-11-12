@@ -53,6 +53,7 @@ export function AIImageProjects() {
   const [copyCount, setCopyCount] = useState<number>(1);
   const [dynamicCopying, setDynamicCopying] = useState(false);
   const [copyMode, setCopyMode] = useState<'dynamic' | 'static'>('dynamic'); // 复制模式：动态复制、静态复制
+  const [variationMode, setVariationMode] = useState<'minor' | 'subject' | 'background' | 'style'>('minor'); // 变化模式
 
   // 模板替换统一对话框状态
   const [templateReplaceDialogOpen, setTemplateReplaceDialogOpen] = useState(false);
@@ -379,11 +380,18 @@ export function AIImageProjects() {
     try {
       setDynamicCopying(true);
       const projectIdsArray = Array.from(selectedProjectIds);
-      await AIImageProjectsAPI.dynamicCopyProjects(projectIdsArray, copyCount);
+
+      // 只有在动态复制模式下才传递 variationOptions
+      const variationOptions = copyMode === 'dynamic' ? {
+        mode: variationMode,
+      } : undefined;
+
+      await AIImageProjectsAPI.dynamicCopyProjects(projectIdsArray, copyCount, variationOptions);
       toast.success(`已成功复制 ${selectedProjectIds.size} 个项目，正在后台生成图片`);
       setDynamicCopyDialogOpen(false);
       setSelectedProjectIds(new Set());
       setCopyCount(1);
+      setVariationMode('minor');
       fetchProjects(currentPage); // 刷新列表
     } catch (err: any) {
       toast.error('项目复制失败', {
@@ -1287,36 +1295,70 @@ export function AIImageProjects() {
             </TabsList>
 
             <TabsContent value="dynamic" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="copyCount">每个项目复制数量</Label>
-                <Input
-                  id="copyCount"
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={copyCount}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value)) {
-                      setCopyCount(value);
-                    } else if (e.target.value === '') {
-                      setCopyCount(1);
-                    }
-                  }}
-                  placeholder="输入复制数量（1-10）"
-                  className="w-full"
-                />
-                <p className="text-sm text-gray-500">
-                  已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
-                </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-800">
-                    <strong>动态复制：</strong>生成的图片都不同
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="copyCount">每个项目复制数量</Label>
+                  <Input
+                    id="copyCount"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={copyCount}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (!isNaN(value)) {
+                        setCopyCount(value);
+                      } else if (e.target.value === '') {
+                        setCopyCount(1);
+                      }
+                    }}
+                    placeholder="输入复制数量（1-10）"
+                    className="w-full"
+                  />
+                  <p className="text-sm text-gray-500">
+                    已选择 {selectedProjectIds.size} 个项目，每个项目将创建 {copyCount} 个副本，共 {selectedProjectIds.size * copyCount} 个新项目
                   </p>
                 </div>
-                <p className="text-sm text-amber-600">
-                  具体实现逻辑待开发
-                </p>
+
+                <div className="space-y-3">
+                  <Label>变化模式</Label>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'minor', label: '微调模式', desc: '保持主要元素，微调细节' },
+                      { value: 'subject', label: '主体变化', desc: '替换主要物体，保持场景' },
+                      { value: 'background', label: '背景变化', desc: '保持主体，改变背景' },
+                      { value: 'style', label: '风格变化', desc: '改变艺术表现风格' },
+                    ].map((option) => (
+                      <label
+                        key={option.value}
+                        className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          variationMode === option.value
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="variationMode"
+                          value={option.value}
+                          checked={variationMode === option.value}
+                          onChange={(e) => setVariationMode(e.target.value as any)}
+                          className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{option.label}</div>
+                          <div className="text-xs text-gray-600 mt-0.5">{option.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>动态复制：</strong>基于原图生成相似但有变化的新图片
+                  </p>
+                </div>
               </div>
             </TabsContent>
 

@@ -100,10 +100,17 @@ export class AIImageProjectsAPI {
   }
 
   // 动态复制项目（基于AI生成相似提示词）
-  static async dynamicCopyProjects(projectIds: string[], count: number): Promise<null> {
+  static async dynamicCopyProjects(
+    projectIds: string[],
+    count: number,
+    variationOptions?: {
+      mode: 'minor' | 'subject' | 'background' | 'style';
+    }
+  ): Promise<null> {
     const response = await apiClient.post('/projects/dynamic-copy', {
       projectIds,
-      count
+      count,
+      ...(variationOptions && { variationOptions })
     });
     return response.data;
   }
