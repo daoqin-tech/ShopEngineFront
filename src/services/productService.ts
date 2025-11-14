@@ -6,8 +6,8 @@ export interface BatchCreateProductRequest {
   shopId: string
   shopAccount: string
 
-  // 分类信息
-  categoryId?: string
+  // 分类信息(生成新货号必填)
+  categoryId: string
   categoryName?: string
 
   // 产地
