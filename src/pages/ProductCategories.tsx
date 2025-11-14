@@ -34,6 +34,8 @@ export function ProductCategories() {
     name: '',
     sortOrder: 0,
     isActive: true,
+    typeCode: '',
+    sizeCode: '',
   });
 
   // 规格配置相关状态
@@ -76,6 +78,8 @@ export function ProductCategories() {
       name: '',
       sortOrder: categories.length + 1,
       isActive: true,
+      typeCode: '',
+      sizeCode: '',
     });
     setIsDialogOpen(true);
   };
@@ -87,6 +91,8 @@ export function ProductCategories() {
       name: category.name,
       sortOrder: category.sortOrder,
       isActive: category.isActive,
+      typeCode: category.typeCode || '',
+      sizeCode: category.sizeCode || '',
     });
     setIsDialogOpen(true);
   };
@@ -105,6 +111,8 @@ export function ProductCategories() {
           name: formData.name.trim(),
           sortOrder: formData.sortOrder,
           isActive: formData.isActive,
+          typeCode: formData.typeCode.trim() || undefined,
+          sizeCode: formData.sizeCode.trim() || undefined,
         };
         await productCategoryService.updateCategory(editingCategory.id, updateData);
         toast.success('更新成功');
@@ -114,6 +122,8 @@ export function ProductCategories() {
           name: formData.name.trim(),
           sortOrder: formData.sortOrder,
           isActive: formData.isActive,
+          typeCode: formData.typeCode.trim() || undefined,
+          sizeCode: formData.sizeCode.trim() || undefined,
         };
         await productCategoryService.createCategory(createData);
         toast.success('创建成功');
@@ -281,16 +291,18 @@ export function ProductCategories() {
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="text-left p-4 font-medium">分类名称</th>
-                <th className="text-center p-4 font-medium w-32">排序</th>
-                <th className="text-center p-4 font-medium w-32">状态</th>
-                <th className="text-left p-4 font-medium w-48">创建时间</th>
+                <th className="text-center p-4 font-medium w-24">类型码</th>
+                <th className="text-center p-4 font-medium w-24">尺寸码</th>
+                <th className="text-center p-4 font-medium w-24">排序</th>
+                <th className="text-center p-4 font-medium w-24">状态</th>
+                <th className="text-left p-4 font-medium w-40">创建时间</th>
                 <th className="text-center p-4 font-medium w-32">操作</th>
               </tr>
             </thead>
             <tbody>
               {!categories || categories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     暂无数据
                   </td>
                 </tr>
@@ -298,6 +310,16 @@ export function ProductCategories() {
                 categories.map((category) => (
                   <tr key={category.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="p-4">{category.name}</td>
+                    <td className="p-4 text-center">
+                      <span className="font-mono text-sm">
+                        {category.typeCode || '-'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="font-mono text-sm">
+                        {category.sizeCode || '-'}
+                      </span>
+                    </td>
                     <td className="p-4 text-center">{category.sortOrder}</td>
                     <td className="p-4 text-center">
                       <span
@@ -365,6 +387,34 @@ export function ProductCategories() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="请输入分类名称"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="typeCode">类型码</Label>
+                <Input
+                  id="typeCode"
+                  value={formData.typeCode}
+                  onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
+                  placeholder="如: SZ, BZ, HR"
+                  maxLength={10}
+                />
+                <p className="text-xs text-muted-foreground">
+                  用于生成货号（SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋）
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sizeCode">尺寸码</Label>
+                <Input
+                  id="sizeCode"
+                  value={formData.sizeCode}
+                  onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
+                  placeholder="如: 15, 21, 30, 66"
+                  maxLength={10}
+                />
+                <p className="text-xs text-muted-foreground">
+                  用于生成货号（15-15cm, 21-21cm, 30-30cm, 66-66cm）
+                </p>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="sortOrder">排序顺序</Label>
