@@ -135,15 +135,15 @@ export const CALENDAR_SPECS: ProductSpec[] = [
 // 手提纸袋商品规格数据 (Mock数据)
 export const PAPER_BAG_SPECS: ProductSpec[] = [
   {
-    id: 'paper-bag-66x34',
-    name: '66cm×34cm 手提纸袋',
-    sheets: 1,
-    size: '66cm×34cm',
-    length: 66.0,
-    width: 34.0,
-    height: 2.0,
-    weight: 1700,  // 1.7kg = 1700g
-    // 实际尺寸（折叠后用于物流）
+    id: 'paper-bag-27x21',
+    name: '20张 27cm×21cm×11cm',
+    sheets: 20,  // 20张一包
+    size: '27cm×21cm×11cm',  // 打包后的实际尺寸
+    length: 27.0,   // 打包后长度
+    width: 21.0,    // 打包后宽度
+    height: 11.0,   // 打包后高度
+    weight: 1700,   // 20张总重 1.7kg = 1700g
+    // 实际尺寸（打包后用于物流，与上面相同）
     actualLength: 27.0,
     actualWidth: 21.0,
     actualHeight: 11.0,
@@ -154,7 +154,7 @@ export const PAPER_BAG_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '66cm×34cm 手提纸袋',
+    productSpec: '20张 27cm×21cm×11cm 手提纸袋',
     productUsage: '适用于礼品包装、购物携带、生日派对、节日庆典、婚礼伴手礼、商品打包、展会赠品等多种场合'
   },
 ];
