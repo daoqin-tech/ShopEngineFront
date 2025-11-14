@@ -870,7 +870,8 @@ export function ProductListing() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预览图</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">商品信息</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">货号</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">老货号</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">新货号</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">店铺</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
@@ -925,6 +926,9 @@ export function ProductListing() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {product.productCode || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {product.newProductCode || '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {getShopName(product.shopId)}

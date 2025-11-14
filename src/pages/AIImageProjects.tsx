@@ -585,9 +585,7 @@ export function AIImageProjects() {
         return;
       }
 
-      // 3. 获取模板详情(用户只会选择一个模板)
-      const template = templateList[0];
-      const templateDetail = await imageTemplateService.getTemplate(selectedTemplateProjectId, template.templateId);
+      console.log(`模板项目包含 ${templateList.length} 个模板`);
 
       // 4. 根据模板类型确定目标尺寸
       const targetImageWidth = templateProject.type === 'calendar_landscape' ? 928 : 1408;
@@ -633,11 +631,25 @@ export function AIImageProjects() {
           img => img.width === targetImageWidth && img.height === targetImageHeight
         );
 
-        console.log(`\n开始处理项目 [${projectIndex + 1}/${projectsArray.length}]: ${projectName}, 符合尺寸图片: ${matchedImages.length}张`);
+        console.log(`\n开始处理项目 [${projectIndex + 1}/${projectsArray.length}]: ${projectName}, 符合尺寸图片: ${matchedImages.length}张, 模板数: ${templateList.length}`);
 
-        // 为每张图片应用模板
-        for (const image of matchedImages) {
+        // 确定要处理的数量（取图片和模板数量的最小值）
+        const processCount = Math.min(matchedImages.length, templateList.length);
+
+        // 图片和模板一一对应处理
+        for (let i = 0; i < processCount; i++) {
+          const image = matchedImages[i];
+          const templateItem = templateList[i];
+
           try {
+            // 获取当前模板的详情
+            const templateDetail = await imageTemplateService.getTemplate(
+              selectedTemplateProjectId,
+              templateItem.templateId
+            );
+
+            console.log(`  处理第 ${i + 1}/${processCount} 张图片，使用模板 ${i + 1}`);
+
             // 合成图片
             const { blob, width, height } = await compositeImages(
               templateDetail.imageUrl,
@@ -662,7 +674,7 @@ export function AIImageProjects() {
 
             successCount++;
             setQueueProgress(prev => ({ ...prev, successCount }));
-            console.log(`  图片 ${image.id} 处理成功`);
+            console.log(`  图片 ${image.id} 处理成功，使用了模板 ${i + 1}`);
 
           } catch (error) {
             console.error(`  图片 ${image.id} 处理失败:`, error);

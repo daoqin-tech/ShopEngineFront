@@ -102,6 +102,7 @@ export interface Product {
   stock: number
   shippingTime: number
   productCode: string
+  newProductCode?: string   // 新货号
   productId?: string        // 平台商品ID
   errorMessage?: string
   createdAt: string
