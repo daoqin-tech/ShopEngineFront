@@ -366,7 +366,7 @@ export async function exportCarouselImages(
 
   for (let index = 0; index < productsWithImages.length; index++) {
     const product = productsWithImages[index];
-    const productCode = product.productCode || product.id;
+    const productCode = product.newProductCode || product.id;
     const folder = zip.folder(productCode);
 
     if (folder && product.carouselImages) {
@@ -416,7 +416,7 @@ export async function exportProductImages(
 
   for (let index = 0; index < productsWithImages.length; index++) {
     const product = productsWithImages[index];
-    const productCode = product.productCode || product.id;
+    const productCode = product.newProductCode || product.id;
     const folder = zip.folder(productCode);
 
     if (folder && product.productImages) {
@@ -478,7 +478,7 @@ export function exportToExcel(
       '变种属性值二': '',
       '预览图': product.previewImage || '',
       '申报价格': product.declaredPrice || '',
-      'SKU货号': product.productCode || '',
+      'SKU货号': product.newProductCode || '',
       '长': product.length || '',
       '宽': product.width || '',
       '高': product.height || '',
