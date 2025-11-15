@@ -201,7 +201,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       groups[category].push(template)
     })
     return Object.keys(groups).sort().reduce((acc, category) => {
-      acc[category] = groups[category]
+      // 对每个分类下的模板按照名称中的数字进行排序
+      acc[category] = groups[category].sort((a, b) => {
+        // 提取模板名称中的数字部分进行比较
+        const numA = parseInt(a.name.match(/\d+/)?.[0] || '0')
+        const numB = parseInt(b.name.match(/\d+/)?.[0] || '0')
+        return numA - numB
+      })
       return acc
     }, {} as { [category: string]: TemplateSearchItem[] })
   }, [templatesForSearch])
