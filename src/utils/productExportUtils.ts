@@ -153,13 +153,13 @@ export async function exportPaperBagPdf(
       pdf.restoreGraphicsState();
 
     } catch (error) {
-      console.warn(`处理商品 ${product.productCode || product.id} 的图片时出错:`, error);
+      console.warn(`处理商品 ${product.newProductCode || product.id} 的图片时出错:`, error);
       continue;
     }
 
     // 生成PDF blob并添加到压缩包
     const pdfBlob = pdf.output('blob');
-    const pdfFileName = `${product.productCode || product.id}_纸袋.pdf`;
+    const pdfFileName = `${product.newProductCode || product.id}_纸袋.pdf`;
     zip.file(pdfFileName, pdfBlob);
 
     // 更新进度
@@ -227,7 +227,7 @@ export async function exportProductPdf(
     if (!isCalendar) {
       pdf.setFontSize(40);
       pdf.setTextColor(0, 0, 0);
-      const productCode = product.productCode || product.id;
+      const productCode = product.newProductCode || product.id;
       const textWidth = pdf.getTextWidth(productCode);
       const textX = (pageWidth - textWidth) / 2;
       const textY = pageHeight / 2;
@@ -309,7 +309,7 @@ export async function exportProductPdf(
           pdf.setFontSize(12);
           pdf.setFont('helvetica', 'bold'); // 设置粗体
           pdf.setTextColor(50, 50, 50); // 深灰色
-          const productCode = product.productCode || product.id;
+          const productCode = product.newProductCode || product.id;
           const textWidth = pdf.getTextWidth(productCode);
           const textX = pageWidth - textWidth - 8; // 距离右边缘8mm
           const textY = pageHeight - 8; // 距离底部8mm
@@ -325,7 +325,7 @@ export async function exportProductPdf(
 
     // 生成PDF blob并添加到压缩包
     const pdfBlob = pdf.output('blob');
-    const pdfFileName = `${product.productCode || product.id}.pdf`;
+    const pdfFileName = `${product.newProductCode || product.id}.pdf`;
     zip.file(pdfFileName, pdfBlob);
 
     // 更新进度
