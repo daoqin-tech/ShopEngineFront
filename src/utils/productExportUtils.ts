@@ -470,7 +470,7 @@ export function exportToExcel(
       '产品标题': product.nameZh || '',
       '英文标题': product.nameEn || '',
       '产品描述': '',
-      '产品货号': product.productCode || '',
+      '产品货号': product.newProductCode || '',
       '变种名称': product.variantName || '',
       '变种属性名称一': product.variantAttributeName1 || '',
       '变种属性值一': product.variantAttributeValue1 || '',
