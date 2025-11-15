@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx-js-style';
+import * as XLSXNative from 'xlsx'; // 导入原生xlsx库用于物流信息导出
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import { Product } from '@/services/productService';
@@ -727,7 +728,7 @@ function getProductTypeBySize(length: number, width: number): {
 
 /**
  * 导出物流信息Excel
- * 列：Fnsku, seller sku, 产品名称, 产品英文名称, 重量, 系统重量, 长, 宽, 高, 货值, 状态, 添加时间
+ * 使用原生xlsx库，不添加任何自定义格式
  */
 export function exportLogisticsInfo(
   products: Product[],
@@ -737,7 +738,7 @@ export function exportLogisticsInfo(
     throw new Error('请至少选择一个商品');
   }
 
-  // 准备导出数据 - 使用完整的68列表头结构
+  // 准备导出数据 - 不做任何格式转换，让xlsx自动处理
   const exportData = products.map((product) => {
     // 根据产品尺寸判断类型
     const productType = getProductTypeBySize(product.length, product.width);
@@ -748,8 +749,8 @@ export function exportLogisticsInfo(
     const exportHeight = productType.actualHeight ?? product.height;
 
     return {
-      'Fnsku': product.productCode || '',
-      'seller sku': product.productCode || '',
+      'Fnsku': product.productCode ? String(product.productCode) : '',
+      'seller sku': product.productCode ? String(product.productCode) : '',
       '产品英文名': productType.nameEn,
       '产品中文名': productType.nameCn,
       '产品描述': '',
@@ -819,118 +820,10 @@ export function exportLogisticsInfo(
     };
   });
 
-  // 创建工作簿
-  const ws = XLSX.utils.json_to_sheet(exportData);
-
-  // 设置列宽 - 68列
-  const colWidths = [
-    { wch: 15 },  // Fnsku
-    { wch: 15 },  // seller sku
-    { wch: 20 },  // 产品英文名
-    { wch: 12 },  // 产品中文名
-    { wch: 20 },  // 产品描述
-    { wch: 10 },  // 申报价值
-    { wch: 10 },  // 重量
-    { wch: 8 },   // 长
-    { wch: 8 },   // 宽
-    { wch: 8 },   // 高
-    { wch: 12 },  // 海关编码
-    { wch: 10 },  // 原产地
-    { wch: 12 },  // 是否带电池
-    { wch: 10 },  // 颜色
-    { wch: 20 },  // 平台SKU
-    { wch: 12 },  // 规格型号
-    { wch: 20 },  // 图片URL
-    { wch: 15 },  // 备注
-    { wch: 10 },  // 是否组合
-    { wch: 12 },  // 组合sku1
-    { wch: 10 },  // 组合数量1
-    { wch: 12 },  // 组合sku2
-    { wch: 10 },  // 组合数量2
-    { wch: 12 },  // 组合sku3
-    { wch: 10 },  // 组合数量3
-    { wch: 12 },  // 组合sku4
-    { wch: 10 },  // 组合数量4
-    { wch: 12 },  // 组合sku5
-    { wch: 10 },  // 组合数量5
-    { wch: 12 },  // 组合sku6
-    { wch: 10 },  // 组合数量6
-    { wch: 12 },  // 组合sku7
-    { wch: 10 },  // 组合数量7
-    { wch: 12 },  // 组合sku8
-    { wch: 10 },  // 组合数量8
-    { wch: 12 },  // 组合sku9
-    { wch: 10 },  // 组合数量9
-    { wch: 12 },  // 组合sku10
-    { wch: 10 },  // 组合数量10
-    { wch: 12 },  // 组合sku11
-    { wch: 10 },  // 组合数量11
-    { wch: 12 },  // 组合sku12
-    { wch: 10 },  // 组合数量12
-    { wch: 12 },  // 组合sku13
-    { wch: 10 },  // 组合数量13
-    { wch: 12 },  // 组合sku14
-    { wch: 10 },  // 组合数量14
-    { wch: 12 },  // 组合sku15
-    { wch: 10 },  // 组合数量15
-    { wch: 12 },  // 组合sku16
-    { wch: 10 },  // 组合数量16
-    { wch: 12 },  // 组合sku17
-    { wch: 10 },  // 组合数量17
-    { wch: 12 },  // 组合sku18
-    { wch: 10 },  // 组合数量18
-    { wch: 12 },  // 组合sku19
-    { wch: 10 },  // 组合数量19
-    { wch: 12 },  // 组合sku20
-    { wch: 10 },  // 组合数量20
-    { wch: 12 },  // 组合sku21
-    { wch: 10 },  // 组合数量21
-    { wch: 12 },  // 组合sku22
-    { wch: 10 },  // 组合数量22
-    { wch: 12 },  // 组合sku23
-    { wch: 10 },  // 组合数量23
-    { wch: 12 },  // 组合sku24
-    { wch: 10 },  // 组合数量24
-    { wch: 12 }   // 组合sku25
-  ];
-  ws['!cols'] = colWidths;
-
-  // 设置表头样式
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-  for (let C = range.s.c; C <= range.e.c; ++C) {
-    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
-    if (!ws[cellAddress]) continue;
-
-    ws[cellAddress].s = {
-      font: { bold: true, sz: 11 },
-      fill: { fgColor: { rgb: 'E8F5E9' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: {
-        top: { style: 'thin', color: { rgb: '000000' } },
-        bottom: { style: 'thin', color: { rgb: '000000' } },
-        left: { style: 'thin', color: { rgb: '000000' } },
-        right: { style: 'thin', color: { rgb: '000000' } }
-      }
-    };
-  }
-
-  // 设置数据单元格样式和边框
-  for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!ws[cellAddress]) continue;
-
-      ws[cellAddress].s = {
-        alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
-        border: {
-          top: { style: 'thin', color: { rgb: 'CCCCCC' } },
-          bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
-          left: { style: 'thin', color: { rgb: 'CCCCCC' } },
-          right: { style: 'thin', color: { rgb: 'CCCCCC' } }
-        }
-      };
-    }
-  }
+  // 使用原生xlsx创建worksheet
+  const ws = XLSXNative.utils.json_to_sheet(exportData);
+  const wb = XLSXNative.utils.book_new();
+  XLSXNative.utils.book_append_sheet(wb, ws, '物流信息');
 
   // 生成文件名
   const firstProduct = products[0];
@@ -938,8 +831,9 @@ export function exportLogisticsInfo(
   const dateStr = getDateTimeString();
   const fileName = `${shopName}_物流信息_${dateStr}.xls`;
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '物流信息');
-  // 导出为 .xls 格式 (Excel 97-2003)
-  XLSX.writeFile(wb, fileName, { bookType: 'xls' });
+  // 使用 bookSST: true 确保使用 LabelSST 记录（与模板文件一致）
+  XLSXNative.writeFile(wb, fileName, {
+    bookType: 'xls',
+    bookSST: true  // 使用共享字符串表（Shared String Table）
+  });
 }
