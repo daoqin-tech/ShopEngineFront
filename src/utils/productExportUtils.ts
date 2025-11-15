@@ -676,54 +676,38 @@ export function exportToExcel(
 }
 
 /**
- * 根据产品尺寸判断产品类型
- * 尺寸匹配规则（单位：cm，数据库存储单位）：
- * - 手账纸: 15.2x15.2
- * - 包装纸: 30x30
- * - 竖版日历: 21x29.7
- * - 横版日历: 29.7x21
- * - 手提纸袋: 66x34（生产规格）-> 实际尺寸 27x21x11（折叠后）
+ * 根据分类ID获取产品名称和英文名（用于物流导出）
+ * 英文名暂时写死，后期可以在后端分类表中添加
  */
-function getProductTypeBySize(length: number, width: number): {
+function getProductNamesByCategoryId(categoryId: string, categoryName?: string): {
   nameCn: string;
   nameEn: string;
-  actualLength?: number;  // 实际长度（仅纸袋）
-  actualWidth?: number;   // 实际宽度（仅纸袋）
-  actualHeight?: number;  // 实际高度（仅纸袋）
 } {
-  // 手账纸 15.2cm x 15.2cm
-  if (length === 15.2 && width === 15.2) {
-    return { nameCn: '手帐本', nameEn: 'Journal Paper' };
-  }
+  // 分类ID到英文名的映射表（对应数据库 product_categories 表）
+  const categoryEnglishNames: Record<string, string> = {
+    '1': 'Scrapbook Paper',      // 手账纸
+    '2': 'Wrapping Paper',        // 包装纸
+    '3': 'Wall Calendar',         // 竖版日历
+    '4': 'Desk Calendar',         // 横版日历
+    '5': 'Paper Bag',             // 手提纸袋
+  };
 
-  // 包装纸 30cm x 30cm
-  if (length === 30 && width === 30) {
-    return { nameCn: '包装纸', nameEn: 'Wrapping Paper' };
-  }
+  // 分类ID到中文名的映射表（备用，如果 categoryName 为空）
+  const defaultChineseNames: Record<string, string> = {
+    '1': '手账纸',
+    '2': '包装纸',
+    '3': '竖版日历',
+    '4': '横版日历',
+    '5': '手提纸袋',
+  };
 
-  // 竖版日历 21cm x 29.7cm
-  if (length === 21 && width === 29.7) {
-    return { nameCn: '竖版日历', nameEn: 'Calendar Portrait' };
-  }
+  // 获取英文名
+  const nameEn = categoryEnglishNames[categoryId] || 'Paper Product';
 
-  // 横版日历 29.7cm x 21cm
-  if (length === 29.7 && width === 21) {
-    return { nameCn: '横版日历', nameEn: 'Calendar Landscape' };
-  }
+  // 获取中文名：优先使用 categoryName，否则使用映射表
+  const nameCn = categoryName || defaultChineseNames[categoryId] || '纸制品';
 
-  // 手提纸袋 66cm x 34cm（生产规格）-> 实际尺寸 27x21x11
-  if (length === 66 && width === 34) {
-    return {
-      nameCn: '手提纸袋',
-      nameEn: 'Paper Bag',
-      actualLength: 27.0,  // 折叠后实际长度
-      actualWidth: 21.0,   // 折叠后实际宽度
-      actualHeight: 11.0   // 折叠后实际高度
-    };
-  }
-
-  // 默认返回未知类型
-  return { nameCn: '未知类型', nameEn: 'Unknown' };
+  return { nameCn, nameEn };
 }
 
 /**
@@ -740,25 +724,20 @@ export function exportLogisticsInfo(
 
   // 准备导出数据 - 不做任何格式转换，让xlsx自动处理
   const exportData = products.map((product) => {
-    // 根据产品尺寸判断类型
-    const productType = getProductTypeBySize(product.length, product.width);
-
-    // 对于纸袋，使用实际尺寸（折叠后）；其他产品使用原尺寸
-    const exportLength = productType.actualLength ?? product.length;
-    const exportWidth = productType.actualWidth ?? product.width;
-    const exportHeight = productType.actualHeight ?? product.height;
+    // 根据分类ID获取产品名称
+    const productNames = getProductNamesByCategoryId(product.categoryId, product.categoryName);
 
     return {
       'Fnsku': product.productCode ? String(product.productCode) : '',
       'seller sku': product.productCode ? String(product.productCode) : '',
-      '产品英文名': productType.nameEn,
-      '产品中文名': productType.nameCn,
+      '产品英文名': productNames.nameEn,
+      '产品中文名': productNames.nameCn,
       '产品描述': '',
       '申报价值': 0.99,
       '重量': product.weight || '',
-      '长': exportLength || '',
-      '宽': exportWidth || '',
-      '高': exportHeight || '',
+      '长': product.length || '',
+      '宽': product.width || '',
+      '高': product.height || '',
       '海关编码': '',
       '原产地': '',
       '是否带电池': '不含电池',
