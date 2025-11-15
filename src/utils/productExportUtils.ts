@@ -466,14 +466,6 @@ export function exportToExcel(
   const exportData = products.map(product => {
     const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
 
-    // 获取产品类型信息（包含实际尺寸）
-    const productType = getProductTypeBySize(product.length, product.width);
-
-    // 对于纸袋，使用实际尺寸（折叠后）；其他产品使用原尺寸
-    const exportLength = productType.actualLength ?? product.length;
-    const exportWidth = productType.actualWidth ?? product.width;
-    const exportHeight = productType.actualHeight ?? product.height;
-
     return {
       '产品标题': product.nameZh || '',
       '英文标题': product.nameEn || '',
@@ -487,9 +479,9 @@ export function exportToExcel(
       '预览图': product.previewImage || '',
       '申报价格': product.declaredPrice || '',
       'SKU货号': product.productCode || '',
-      '长': exportLength || '',
-      '宽': exportWidth || '',
-      '高': exportHeight || '',
+      '长': product.length || '',
+      '宽': product.width || '',
+      '高': product.height || '',
       '重量': product.weight || '',
       '识别码类型': '',
       '识别码': '',
@@ -728,8 +720,8 @@ export function exportLogisticsInfo(
     const productNames = getProductNamesByCategoryId(product.categoryId, product.categoryName);
 
     return {
-      'Fnsku': product.productCode ? String(product.productCode) : '',
-      'seller sku': product.productCode ? String(product.productCode) : '',
+      'Fnsku': product.newProductCode ? String(product.newProductCode) : '',
+      'seller sku': product.newProductCode ? String(product.newProductCode) : '',
       '产品英文名': productNames.nameEn,
       '产品中文名': productNames.nameCn,
       '产品描述': '',
