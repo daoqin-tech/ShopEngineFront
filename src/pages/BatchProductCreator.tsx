@@ -299,11 +299,20 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   // 获取所有已选任务的唯一taskId列表
                   const taskIds = Array.from(new Set(selectedProducts.map(p => p.taskId)));
 
+                  // 产品类型到数据库分类ID的映射
+                  const productCategoryIdMap: Record<string, string> = {
+                    'journal': '1',      // 手账纸
+                    'decorative': '2',   // 包装纸
+                    'calendar': '3',     // 日历 (注: 竖版和横版可能需要区分，暂时统一为3)
+                    'paper-bag': '5',    // 手提纸袋
+                  };
+
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
-                    categoryId: selectedCategory.categoryId,
+                    categoryId: selectedCategory.categoryId,  // TEMU平台分类ID
                     categoryName: selectedCategory.categoryName,
+                    productCategoryId: productCategoryIdMap[productType],  // 自定义产品分类ID (1-5)
                     productAttributes: selectedCategory.productAttributes,
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,

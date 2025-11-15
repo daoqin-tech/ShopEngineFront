@@ -7,8 +7,9 @@ export interface BatchCreateProductRequest {
   shopAccount: string
 
   // 分类信息(生成新货号必填)
-  categoryId: string
+  categoryId: string           // TEMU平台分类ID
   categoryName?: string
+  productCategoryId?: string   // 自定义产品分类ID (1-5, 关联product_categories表)
 
   // 产地
   origin: string
