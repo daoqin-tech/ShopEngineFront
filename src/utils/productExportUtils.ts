@@ -668,41 +668,6 @@ export function exportToExcel(
 }
 
 /**
- * 根据分类ID获取产品名称和英文名（用于物流导出）
- * 英文名暂时写死，后期可以在后端分类表中添加
- */
-function getProductNamesByCategoryId(categoryId: string, categoryName?: string): {
-  nameCn: string;
-  nameEn: string;
-} {
-  // 分类ID到英文名的映射表（对应数据库 product_categories 表）
-  const categoryEnglishNames: Record<string, string> = {
-    '1': 'Scrapbook Paper',      // 手账纸
-    '2': 'Wrapping Paper',        // 包装纸
-    '3': 'Wall Calendar',         // 竖版日历
-    '4': 'Desk Calendar',         // 横版日历
-    '5': 'Paper Bag',             // 手提纸袋
-  };
-
-  // 分类ID到中文名的映射表（备用，如果 categoryName 为空）
-  const defaultChineseNames: Record<string, string> = {
-    '1': '手账纸',
-    '2': '包装纸',
-    '3': '竖版日历',
-    '4': '横版日历',
-    '5': '手提纸袋',
-  };
-
-  // 获取英文名
-  const nameEn = categoryEnglishNames[categoryId] || 'Paper Product';
-
-  // 获取中文名：优先使用 categoryName，否则使用映射表
-  const nameCn = categoryName || defaultChineseNames[categoryId] || '纸制品';
-
-  return { nameCn, nameEn };
-}
-
-/**
  * 导出物流信息Excel
  * 使用原生xlsx库，不添加任何自定义格式
  */
@@ -716,17 +681,14 @@ export function exportLogisticsInfo(
 
   // 准备导出数据 - 不做任何格式转换，让xlsx自动处理
   const exportData = products.map((product) => {
-    // 根据分类ID获取产品名称
-    const productNames = getProductNamesByCategoryId(product.categoryId, product.categoryName);
-
     return {
       'Fnsku': product.newProductCode ? String(product.newProductCode) : '',
       'seller sku': product.newProductCode ? String(product.newProductCode) : '',
-      '产品英文名': productNames.nameEn,
-      '产品中文名': productNames.nameCn,
+      '产品英文名': product.productCategoryNameEn || '',
+      '产品中文名': product.productCategoryName || '',
       '产品描述': '',
       '申报价值': 0.99,
-      '重量': product.weight || '',
+      '重量': product.weight ? product.weight / 1000 : '',
       '长': product.length || '',
       '宽': product.width || '',
       '高': product.height || '',

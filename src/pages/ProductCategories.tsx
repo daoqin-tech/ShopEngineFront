@@ -32,6 +32,7 @@ export function ProductCategories() {
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    nameEn: '',
     sortOrder: 0,
     isActive: true,
     typeCode: '',
@@ -76,6 +77,7 @@ export function ProductCategories() {
     setEditingCategory(null);
     setFormData({
       name: '',
+      nameEn: '',
       sortOrder: categories.length + 1,
       isActive: true,
       typeCode: '',
@@ -89,6 +91,7 @@ export function ProductCategories() {
     setEditingCategory(category);
     setFormData({
       name: category.name,
+      nameEn: category.nameEn || '',
       sortOrder: category.sortOrder,
       isActive: category.isActive,
       typeCode: category.typeCode || '',
@@ -109,6 +112,7 @@ export function ProductCategories() {
         // 更新
         const updateData: UpdateProductCategoryRequest = {
           name: formData.name.trim(),
+          nameEn: formData.nameEn.trim() || undefined,
           sortOrder: formData.sortOrder,
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
@@ -120,6 +124,7 @@ export function ProductCategories() {
         // 新增
         const createData: CreateProductCategoryRequest = {
           name: formData.name.trim(),
+          nameEn: formData.nameEn.trim() || undefined,
           sortOrder: formData.sortOrder,
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
@@ -290,7 +295,8 @@ export function ProductCategories() {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-4 font-medium">分类名称</th>
+                <th className="text-left p-4 font-medium">中文名称</th>
+                <th className="text-left p-4 font-medium">英文名称</th>
                 <th className="text-center p-4 font-medium w-24">类型码</th>
                 <th className="text-center p-4 font-medium w-24">尺寸码</th>
                 <th className="text-center p-4 font-medium w-24">排序</th>
@@ -302,7 +308,7 @@ export function ProductCategories() {
             <tbody>
               {!categories || categories.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     暂无数据
                   </td>
                 </tr>
@@ -310,6 +316,7 @@ export function ProductCategories() {
                 categories.map((category) => (
                   <tr key={category.id} className="border-b last:border-0 hover:bg-muted/30">
                     <td className="p-4">{category.name}</td>
+                    <td className="p-4 text-muted-foreground">{category.nameEn || '-'}</td>
                     <td className="p-4 text-center">
                       <span className="font-mono text-sm">
                         {category.typeCode || '-'}
@@ -379,14 +386,25 @@ export function ProductCategories() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">分类名称</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="请输入分类名称"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">中文名称 *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="请输入中文名称"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nameEn">英文名称</Label>
+                <Input
+                  id="nameEn"
+                  value={formData.nameEn}
+                  onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                  placeholder="如: Scrapbook Paper"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

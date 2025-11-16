@@ -2,6 +2,7 @@
 export interface ProductCategory {
   id: string;
   name: string;
+  nameEn?: string;    // 英文名称
   sortOrder: number;
   isActive: boolean;
   typeCode?: string;  // 类型代码(如: SZ, BZ, HR, SR, ST)
@@ -13,6 +14,7 @@ export interface ProductCategory {
 // 创建分类请求
 export interface CreateProductCategoryRequest {
   name: string;
+  nameEn?: string;    // 英文名称
   sortOrder?: number;
   isActive?: boolean;
   typeCode?: string;  // 类型代码(如: SZ, BZ, HR, SR, ST)
@@ -22,6 +24,7 @@ export interface CreateProductCategoryRequest {
 // 更新分类请求
 export interface UpdateProductCategoryRequest {
   name: string;
+  nameEn?: string;    // 英文名称
   sortOrder: number;
   isActive: boolean;
   typeCode?: string;  // 类型代码(如: SZ, BZ, HR, SR, ST)

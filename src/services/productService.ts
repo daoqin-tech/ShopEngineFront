@@ -79,8 +79,11 @@ export interface Product {
   shopId: string
   shopName?: string
   shopAccount: string
-  categoryId: string
-  categoryName: string
+  categoryId: string          // Temu平台分类ID
+  categoryName: string        // Temu平台分类名称
+  productCategoryId?: string  // 平台分类ID
+  productCategoryName?: string   // 平台分类中文名称
+  productCategoryNameEn?: string // 平台分类英文名称
   origin: string
   nameEn: string
   nameZh: string

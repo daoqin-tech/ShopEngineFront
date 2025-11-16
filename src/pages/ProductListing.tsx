@@ -631,7 +631,6 @@ export function ProductListing() {
 
       const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
       exportLogisticsInfoUtil(selectedProducts, getShopName);
-      toast.success(`成功导出 ${selectedProductIds.size} 个商品的物流信息`);
       setSelectedProductIds(new Set());
     } catch (error) {
       console.error('导出物流信息失败:', error);
