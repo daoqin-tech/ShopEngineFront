@@ -824,13 +824,11 @@ export function exportLogisticsInfo(
  * - 日历类型需要逐个调整月份顺序
  *
  * @param products 要导出的产品列表
- * @param onNeedReorder 当遇到日历类型时的回调，返回需要调整顺序的日历产品
  * @param onProgress 导出进度回调
  * @returns 返回导出结果，包括需要调整顺序的日历产品列表
  */
 export async function exportProductPdfSmart(
   products: Product[],
-  onNeedReorder?: (calendarProducts: Product[], pageSize: PageSizeType) => Promise<Product[]>,
   onProgress?: (current: number, total: number, categoryName: string) => void
 ): Promise<{
   exported: number;
@@ -882,14 +880,14 @@ export async function exportProductPdfSmart(
       // 非日历类型：直接批量导出
       if (pageSize === 'PAPER_BAG') {
         // 手提纸袋使用专门的导出函数
-        await exportPaperBagPdf(categoryProducts, (current, total) => {
+        await exportPaperBagPdf(categoryProducts, (current) => {
           if (onProgress) {
             onProgress(exportedCount + current, productsWithImages.length, categoryName);
           }
         });
       } else {
         // 其他类型使用通用PDF导出
-        await exportProductPdf(categoryProducts, pageSize, (current, total) => {
+        await exportProductPdf(categoryProducts, pageSize, (current) => {
           if (onProgress) {
             onProgress(exportedCount + current, productsWithImages.length, categoryName);
           }
