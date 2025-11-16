@@ -14,9 +14,10 @@ import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
   exportToExcel as exportToExcelUtil,
-  exportProductPdf as exportProductPdfUtil,
   exportLogisticsInfo as exportLogisticsInfoUtil,
   exportProductPdfSmart as exportProductPdfSmartUtil,
+  addCalendarPdfsToZip,
+  downloadZip,
   type PageSizeType
 } from '@/utils/productExportUtils';
 
@@ -45,6 +46,7 @@ export function ProductListing() {
   const [showReorderDialog, setShowReorderDialog] = useState(false);
   const [calendarProductsList, setCalendarProductsList] = useState<{ products: Product[]; pageSize: PageSizeType }[]>([]);
   const [currentCalendarIndex, setCurrentCalendarIndex] = useState(0);
+  const [sharedZip, setSharedZip] = useState<any>(null); // 共享的ZIP对象
 
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
@@ -355,7 +357,7 @@ export function ProductListing() {
   //   }
   // };
 
-  // 导出产品图PDF - 使用智能导出
+  // 导出产品图PDF - 使用智能导出（统一打包）
   const handleExportProductPdf = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
@@ -367,27 +369,32 @@ export function ProductListing() {
     setIsGeneratingPdf(true);
 
     try {
-      // 使用智能导出函数，自动识别分类
+      // 使用智能导出函数，自动识别分类并生成非日历PDF
       const result = await exportProductPdfSmartUtil(
         selectedProducts,
         (current, total, categoryName) => {
-          // 显示导出进度
-          console.log(`正在导出 ${categoryName}: ${current}/${total}`);
+          console.log(`正在处理 ${categoryName}: ${current}/${total}`);
         }
       );
 
+      // 保存ZIP对象和日历列表
+      setSharedZip(result.zip);
+      setCalendarProductsList(result.calendarProducts);
+
       // 如果有日历类型，显示重排序对话框
       if (result.calendarProducts.length > 0) {
-        setCalendarProductsList(result.calendarProducts);
         setCurrentCalendarIndex(0);
         setShowReorderDialog(true);
 
-        if (result.exported > 0) {
-          toast.success(`已导出 ${result.exported} 个非日历商品的PDF，请调整日历顺序后继续导出`);
+        if (result.nonCalendarCount > 0) {
+          toast.success(`已准备 ${result.nonCalendarCount} 个非日历商品的PDF，请调整日历顺序`);
+        } else {
+          toast.info('请调整日历图片顺序');
         }
       } else {
-        // 没有日历类型，全部导出完成
-        toast.success(`成功导出 ${result.exported} 个商品的PDF`);
+        // 没有日历类型，直接下载ZIP
+        await downloadZip(result.zip);
+        toast.success(`成功导出 ${result.nonCalendarCount} 个商品的PDF`);
         setSelectedProductIds(new Set());
       }
     } catch (error) {
@@ -400,31 +407,35 @@ export function ProductListing() {
 
   // 确认当前日历重排序后的处理
   const handleConfirmReorder = async (reorderedProducts: Product[]) => {
-    if (calendarProductsList.length === 0) return;
+    if (calendarProductsList.length === 0 || !sharedZip) return;
 
     const currentCalendar = calendarProductsList[currentCalendarIndex];
 
     setIsGeneratingPdf(true);
     try {
-      // 导出当前日历
-      await exportProductPdfUtil(reorderedProducts, currentCalendar.pageSize);
+      // 将当前日历的PDF添加到共享ZIP中
+      await addCalendarPdfsToZip(sharedZip, reorderedProducts, currentCalendar.pageSize);
 
       // 检查是否还有下一个日历
       if (currentCalendarIndex < calendarProductsList.length - 1) {
         // 还有下一个日历，切换到下一个
         setCurrentCalendarIndex(currentCalendarIndex + 1);
-        toast.success(`当前日历已导出，请调整下一个日历的顺序`);
+        toast.success(`当前日历已添加，请调整下一个日历的顺序`);
       } else {
-        // 所有日历都已导出完成
+        // 所有日历都已添加，下载ZIP
+        await downloadZip(sharedZip);
         toast.success(`所有商品PDF导出完成！`);
+
+        // 清理状态
         setShowReorderDialog(false);
         setCalendarProductsList([]);
         setCurrentCalendarIndex(0);
+        setSharedZip(null);
         setSelectedProductIds(new Set());
       }
     } catch (error) {
-      console.error('导出日历PDF失败:', error);
-      toast.error(error instanceof Error ? error.message : '导出日历PDF失败，请重试');
+      console.error('添加日历PDF失败:', error);
+      toast.error(error instanceof Error ? error.message : '添加日历PDF失败，请重试');
     } finally {
       setIsGeneratingPdf(false);
     }

@@ -800,27 +800,137 @@ export function exportLogisticsInfo(
 }
 
 /**
- * 智能批量导出产品PDF
+ * 生成单个产品的PDF Blob（不下载）
+ * @param product 产品
+ * @param pageSize PDF页面尺寸
+ * @returns PDF Blob
+ */
+async function generateProductPdfBlob(product: Product, pageSize: PageSizeType): Promise<Blob> {
+  const productImages = product.productImages || [];
+
+  if (productImages.length === 0) {
+    throw new Error(`产品 ${product.newProductCode || product.id} 没有产品图`);
+  }
+
+  const pageSizeConfig = PAGE_SIZES[pageSize];
+  const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
+  const bleed = 6;
+  const actualPageWidth = pageSizeConfig.width + bleed;
+  const actualPageHeight = pageSizeConfig.height + bleed;
+  const orientation = actualPageWidth > actualPageHeight ? 'landscape' : 'portrait';
+
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'mm',
+    format: [actualPageWidth, actualPageHeight]
+  });
+
+  const pageWidth = actualPageWidth;
+  const pageHeight = actualPageHeight;
+
+  // 非日历模式: 第一页是货号页
+  if (!isCalendar) {
+    pdf.setFontSize(40);
+    pdf.setTextColor(0, 0, 0);
+    const productCode = product.newProductCode || product.id;
+    const textWidth = pdf.getTextWidth(productCode);
+    const textX = (pageWidth - textWidth) / 2;
+    const textY = pageHeight / 2;
+    pdf.text(productCode, textX, textY);
+
+    const blackMarkWidth = 10;
+    const blackMarkHeight = 5;
+    const blackMarkX = pageWidth - blackMarkWidth;
+    const blackMarkY = pageHeight - blackMarkHeight - 5;
+    pdf.setFillColor(0, 0, 0);
+    pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
+  }
+
+  // 产品图页面
+  let isFirstImage = true;
+  for (const imageUrl of productImages) {
+    try {
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        headers: { 'Accept': 'image/*' }
+      });
+
+      if (!response.ok) {
+        console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
+        continue;
+      }
+
+      const blob = await response.blob();
+      const imageDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(blob);
+      });
+
+      if (!isCalendar || !isFirstImage) {
+        pdf.addPage();
+      }
+
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageDataUrl;
+      });
+
+      const displayWidth = pageWidth;
+      const displayHeight = pageHeight;
+      const x = 0;
+      const y = 0;
+
+      pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
+
+      if (isCalendar && isFirstImage) {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(50, 50, 50);
+        const productCode = product.newProductCode || product.id;
+        const textWidth = pdf.getTextWidth(productCode);
+        const textX = pageWidth - textWidth - 8;
+        const textY = pageHeight - 8;
+        pdf.text(productCode, textX, textY);
+      }
+
+      isFirstImage = false;
+    } catch (error) {
+      console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+    }
+  }
+
+  return pdf.output('blob');
+}
+
+/**
+ * 智能批量导出产品PDF（新版 - 统一打包）
  * - 自动根据产品分类识别页面尺寸
- * - 支持同时导出不同分类的产品（按分类分组）
+ * - 所有产品打包到一个ZIP文件中
  * - 日历类型需要逐个调整月份顺序
  *
  * @param products 要导出的产品列表
  * @param onProgress 导出进度回调
- * @returns 返回导出结果，包括需要调整顺序的日历产品列表
+ * @returns 返回导出结果，包括需要调整顺序的日历产品列表和非日历产品的ZIP
  */
 export async function exportProductPdfSmart(
   products: Product[],
   onProgress?: (current: number, total: number, categoryName: string) => void
 ): Promise<{
-  exported: number;
-  calendarProducts: { products: Product[]; pageSize: PageSizeType }[];
+  zip: JSZip; // 共享的ZIP对象
+  nonCalendarCount: number; // 已添加到ZIP的非日历产品数量
+  calendarProducts: { products: Product[]; pageSize: PageSizeType }[]; // 待调整顺序的日历产品
 }> {
   const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
 
   if (productsWithImages.length === 0) {
     throw new Error('所选商品没有产品图');
   }
+
+  // 创建共享的ZIP对象
+  const zip = new JSZip();
 
   // 按分类ID分组
   const productsByCategory = new Map<string, { products: Product[]; pageSize: PageSizeType | null }>();
@@ -836,10 +946,10 @@ export async function exportProductPdfSmart(
     productsByCategory.get(categoryKey)!.products.push(product);
   }
 
-  let exportedCount = 0;
+  let processedCount = 0;
   const calendarProductsList: { products: Product[]; pageSize: PageSizeType }[] = [];
 
-  // 遍历每个分类，分别导出
+  // 遍历每个分类
   for (const [categoryId, { products: categoryProducts, pageSize }] of productsByCategory) {
     if (!pageSize) {
       console.warn(`产品分类 ${categoryId} 无法识别页面尺寸，跳过导出`);
@@ -847,8 +957,6 @@ export async function exportProductPdfSmart(
     }
 
     const categoryName = categoryProducts[0].productCategoryName || `分类${categoryId}`;
-
-    // 判断是否为日历类型
     const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
 
     if (isCalendar) {
@@ -856,36 +964,74 @@ export async function exportProductPdfSmart(
       calendarProductsList.push({ products: categoryProducts, pageSize });
 
       if (onProgress) {
-        onProgress(exportedCount, productsWithImages.length, `${categoryName}(待调整顺序)`);
+        onProgress(processedCount, productsWithImages.length, `${categoryName}(待调整顺序)`);
       }
     } else {
-      // 非日历类型：直接批量导出
-      if (pageSize === 'PAPER_BAG') {
-        // 手提纸袋使用专门的导出函数
-        await exportPaperBagPdf(categoryProducts, (current) => {
-          if (onProgress) {
-            onProgress(exportedCount + current, productsWithImages.length, categoryName);
-          }
-        });
-      } else {
-        // 其他类型使用通用PDF导出
-        await exportProductPdf(categoryProducts, pageSize, (current) => {
-          if (onProgress) {
-            onProgress(exportedCount + current, productsWithImages.length, categoryName);
-          }
-        });
+      // 非日历类型：生成PDF并添加到ZIP
+      for (let i = 0; i < categoryProducts.length; i++) {
+        const product = categoryProducts[i];
+
+        if (onProgress) {
+          onProgress(processedCount + i, productsWithImages.length, categoryName);
+        }
+
+        try {
+          const pdfBlob = await generateProductPdfBlob(product, pageSize);
+          const pdfFileName = `${product.newProductCode || product.id}.pdf`;
+          zip.file(pdfFileName, pdfBlob);
+        } catch (error) {
+          console.error(`生成PDF失败: ${product.newProductCode || product.id}`, error);
+        }
       }
 
-      exportedCount += categoryProducts.length;
+      processedCount += categoryProducts.length;
 
       if (onProgress) {
-        onProgress(exportedCount, productsWithImages.length, categoryName);
+        onProgress(processedCount, productsWithImages.length, categoryName);
       }
     }
   }
 
   return {
-    exported: exportedCount,
+    zip,
+    nonCalendarCount: processedCount,
     calendarProducts: calendarProductsList
   };
+}
+
+/**
+ * 添加日历PDF到现有ZIP
+ * @param zip 现有的ZIP对象
+ * @param products 日历产品列表
+ * @param pageSize PDF页面尺寸
+ */
+export async function addCalendarPdfsToZip(
+  zip: JSZip,
+  products: Product[],
+  pageSize: PageSizeType
+): Promise<void> {
+  for (const product of products) {
+    const pdfBlob = await generateProductPdfBlob(product, pageSize);
+    const pdfFileName = `${product.newProductCode || product.id}.pdf`;
+    zip.file(pdfFileName, pdfBlob);
+  }
+}
+
+/**
+ * 下载ZIP文件
+ * @param zip ZIP对象
+ * @param filename 文件名
+ */
+export async function downloadZip(zip: JSZip, filename?: string): Promise<void> {
+  const zipContent = await zip.generateAsync({ type: 'blob' });
+  const defaultFilename = `产品图PDF_${getDateTimeString()}.zip`;
+
+  const url = window.URL.createObjectURL(zipContent);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename || defaultFilename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 }
