@@ -117,10 +117,10 @@ export function ImageReorderDialog({
     }
   };
 
-  // 确认并关闭
+  // 确认（不关闭对话框，由父组件控制）
   const handleConfirm = () => {
     onConfirm(reorderedProducts);
-    onOpenChange(false);
+    // 注意：不在这里关闭对话框，由父组件根据是否是最后一个日历来决定是否关闭
   };
 
   return (
@@ -283,7 +283,7 @@ export function ImageReorderDialog({
               </Button>
               <Button onClick={handleConfirm}>
                 {totalCount && totalCount > 1 && (currentIndex ?? 0) < totalCount - 1
-                  ? '导出并继续下一个'
+                  ? '保存并继续下一个'
                   : '确认并导出'}
               </Button>
               {/* 仅预览下一个日历（不导出） */}
