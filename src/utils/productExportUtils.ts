@@ -184,11 +184,41 @@ export async function exportPaperBagPdf(
 }
 
 /**
+ * 根据产品分类ID获取PDF页面尺寸类型
+ *
+ * 分类ID映射关系：
+ * 1 = 手账纸 (15.2x15.2cm) -> JOURNAL_PAPER
+ * 2 = 包装纸 (30x30cm) -> DECORATIVE_PAPER
+ * 3 = 竖版日历 (21x29.7cm) -> CALENDAR_PORTRAIT
+ * 4 = 横版日历 (29.7x21cm) -> CALENDAR_LANDSCAPE
+ * 5 = 手提纸袋 (66x34cm) -> PAPER_BAG
+ */
+function getPageSizeFromProduct(product: Product): PageSizeType | null {
+  if (!product.productCategoryId) {
+    return null;
+  }
+
+  // 分类ID到PDF页面尺寸的映射
+  const categoryPageSizeMap: Record<string, PageSizeType> = {
+    '1': 'JOURNAL_PAPER',      // 手账纸
+    '2': 'DECORATIVE_PAPER',    // 包装纸
+    '3': 'CALENDAR_PORTRAIT',   // 竖版日历
+    '4': 'CALENDAR_LANDSCAPE',  // 横版日历
+    '5': 'PAPER_BAG'            // 手提纸袋
+  };
+
+  return categoryPageSizeMap[product.productCategoryId] || null;
+}
+
+/**
  * 导出产品图PDF
+ * @param products 要导出的产品列表
+ * @param pageSize 页面尺寸类型（可选，如果不提供则从产品信息自动推断）
+ * @param onProgress 进度回调
  */
 export async function exportProductPdf(
   products: Product[],
-  pageSize: PageSizeType,
+  pageSize?: PageSizeType,
   onProgress?: (current: number, total: number) => void
 ): Promise<void> {
   const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
@@ -198,10 +228,23 @@ export async function exportProductPdf(
   }
 
   const zip = new JSZip();
-  const pageSizeConfig = PAGE_SIZES[pageSize];
+
+  // 如果没有提供pageSize，尝试从第一个产品推断（假设同批次产品类型相同）
+  let actualPageSize: PageSizeType;
+  if (!pageSize) {
+    const inferredSize = getPageSizeFromProduct(productsWithImages[0]);
+    if (!inferredSize) {
+      throw new Error('无法自动识别产品类型，请手动选择PDF页面尺寸');
+    }
+    actualPageSize = inferredSize;
+  } else {
+    actualPageSize = pageSize;
+  }
+
+  const pageSizeConfig = PAGE_SIZES[actualPageSize];
 
   // 判断是否为日历类型
-  const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
+  const isCalendar = actualPageSize === 'CALENDAR_PORTRAIT' || actualPageSize === 'CALENDAR_LANDSCAPE';
 
   // 计算实际页面尺寸（所有类型都加6mm出血）
   const bleed = 6;
@@ -214,8 +257,11 @@ export async function exportProductPdf(
 
     if (!productImages || productImages.length === 0) continue;
 
+    // 根据页面尺寸自动判断方向
+    const orientation = actualPageWidth > actualPageHeight ? 'landscape' : 'portrait';
+
     const pdf = new jsPDF({
-      orientation: 'portrait',
+      orientation,
       unit: 'mm',
       format: [actualPageWidth, actualPageHeight]
     });
@@ -769,4 +815,97 @@ export function exportLogisticsInfo(
     bookType: 'xls',
     bookSST: true  // 使用共享字符串表（Shared String Table）
   });
+}
+
+/**
+ * 智能批量导出产品PDF
+ * - 自动根据产品分类识别页面尺寸
+ * - 支持同时导出不同分类的产品（按分类分组）
+ * - 日历类型需要逐个调整月份顺序
+ *
+ * @param products 要导出的产品列表
+ * @param onNeedReorder 当遇到日历类型时的回调，返回需要调整顺序的日历产品
+ * @param onProgress 导出进度回调
+ * @returns 返回导出结果，包括需要调整顺序的日历产品列表
+ */
+export async function exportProductPdfSmart(
+  products: Product[],
+  onNeedReorder?: (calendarProducts: Product[], pageSize: PageSizeType) => Promise<Product[]>,
+  onProgress?: (current: number, total: number, categoryName: string) => void
+): Promise<{
+  exported: number;
+  calendarProducts: { products: Product[]; pageSize: PageSizeType }[];
+}> {
+  const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
+
+  if (productsWithImages.length === 0) {
+    throw new Error('所选商品没有产品图');
+  }
+
+  // 按分类ID分组
+  const productsByCategory = new Map<string, { products: Product[]; pageSize: PageSizeType | null }>();
+
+  for (const product of productsWithImages) {
+    const pageSize = getPageSizeFromProduct(product);
+    const categoryKey = product.productCategoryId || 'unknown';
+
+    if (!productsByCategory.has(categoryKey)) {
+      productsByCategory.set(categoryKey, { products: [], pageSize });
+    }
+
+    productsByCategory.get(categoryKey)!.products.push(product);
+  }
+
+  let exportedCount = 0;
+  const calendarProductsList: { products: Product[]; pageSize: PageSizeType }[] = [];
+
+  // 遍历每个分类，分别导出
+  for (const [categoryId, { products: categoryProducts, pageSize }] of productsByCategory) {
+    if (!pageSize) {
+      console.warn(`产品分类 ${categoryId} 无法识别页面尺寸，跳过导出`);
+      continue;
+    }
+
+    const categoryName = categoryProducts[0].productCategoryName || `分类${categoryId}`;
+
+    // 判断是否为日历类型
+    const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
+
+    if (isCalendar) {
+      // 日历类型：收集起来，等待用户调整顺序
+      calendarProductsList.push({ products: categoryProducts, pageSize });
+
+      if (onProgress) {
+        onProgress(exportedCount, productsWithImages.length, `${categoryName}(待调整顺序)`);
+      }
+    } else {
+      // 非日历类型：直接批量导出
+      if (pageSize === 'PAPER_BAG') {
+        // 手提纸袋使用专门的导出函数
+        await exportPaperBagPdf(categoryProducts, (current, total) => {
+          if (onProgress) {
+            onProgress(exportedCount + current, productsWithImages.length, categoryName);
+          }
+        });
+      } else {
+        // 其他类型使用通用PDF导出
+        await exportProductPdf(categoryProducts, pageSize, (current, total) => {
+          if (onProgress) {
+            onProgress(exportedCount + current, productsWithImages.length, categoryName);
+          }
+        });
+      }
+
+      exportedCount += categoryProducts.length;
+
+      if (onProgress) {
+        onProgress(exportedCount, productsWithImages.length, categoryName);
+      }
+    }
+  }
+
+  return {
+    exported: exportedCount,
+    calendarProducts: calendarProductsList
+  };
 }
