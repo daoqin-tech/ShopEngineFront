@@ -17,6 +17,11 @@ interface ImageReorderDialogProps {
   products: Product[];
   onConfirm: (reorderedProducts: Product[]) => void;
   isCalendar?: boolean; // 是否为日历模式
+  // 多日历切换支持
+  currentIndex?: number; // 当前日历索引
+  totalCount?: number;   // 总日历数量
+  onPrevious?: () => void; // 切换到上一个日历
+  onNext?: () => void;     // 切换到下一个日历
 }
 
 // 月份对照表
@@ -41,6 +46,10 @@ export function ImageReorderDialog({
   products,
   onConfirm,
   isCalendar = false,
+  currentIndex,
+  totalCount,
+  onPrevious,
+  onNext,
 }: ImageReorderDialogProps) {
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [reorderedProducts, setReorderedProducts] = useState<Product[]>([]);
@@ -118,9 +127,21 @@ export function ImageReorderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[85vw] sm:max-w-[85vw] max-w-[1400px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>调整图片顺序</DialogTitle>
+          <DialogTitle>
+            调整图片顺序
+            {totalCount && totalCount > 1 && (
+              <span className="ml-2 text-sm font-normal text-gray-600">
+                ({(currentIndex ?? 0) + 1} / {totalCount})
+              </span>
+            )}
+          </DialogTitle>
           <DialogDescription>
             拖拽图片调整日历页面的顺序
+            {totalCount && totalCount > 1 && (
+              <span className="ml-2 text-blue-600">
+                · 还有 {totalCount - (currentIndex ?? 0) - 1} 个日历待调整
+              </span>
+            )}
           </DialogDescription>
           {/* 日历模式：月份说明 */}
           {isCalendar && (
@@ -243,6 +264,17 @@ export function ImageReorderDialog({
               产品 {currentProductIndex + 1} / {reorderedProducts.length}
             </span>
             <div className="flex gap-2">
+              {/* 多日历切换按钮（仅在有多个日历时显示） */}
+              {totalCount && totalCount > 1 && onPrevious && (
+                <Button
+                  variant="outline"
+                  onClick={onPrevious}
+                  disabled={(currentIndex ?? 0) === 0}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  上一个日历
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
@@ -250,8 +282,20 @@ export function ImageReorderDialog({
                 取消
               </Button>
               <Button onClick={handleConfirm}>
-                确认并导出
+                {totalCount && totalCount > 1 && (currentIndex ?? 0) < totalCount - 1
+                  ? '导出并继续下一个'
+                  : '确认并导出'}
               </Button>
+              {/* 仅预览下一个日历（不导出） */}
+              {totalCount && totalCount > 1 && onNext && (currentIndex ?? 0) < totalCount - 1 && (
+                <Button
+                  variant="outline"
+                  onClick={onNext}
+                >
+                  预览下一个
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              )}
             </div>
           </div>
         </DialogFooter>

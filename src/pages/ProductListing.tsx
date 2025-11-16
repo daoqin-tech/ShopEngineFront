@@ -15,8 +15,8 @@ import {
   exportProductImages as exportProductImagesUtil,
   exportToExcel as exportToExcelUtil,
   exportProductPdf as exportProductPdfUtil,
-  exportPaperBagPdf as exportPaperBagPdfUtil,
   exportLogisticsInfo as exportLogisticsInfoUtil,
+  exportProductPdfSmart as exportProductPdfSmartUtil,
   type PageSizeType
 } from '@/utils/productExportUtils';
 
@@ -41,11 +41,10 @@ export function ProductListing() {
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
 
   // PDF导出相关状态
-  const [showPdfDialog, setShowPdfDialog] = useState(false);
-  const [pdfPageSize, setPdfPageSize] = useState<'JOURNAL_PAPER' | 'DECORATIVE_PAPER' | 'CALENDAR_PORTRAIT' | 'CALENDAR_LANDSCAPE' | 'PAPER_BAG'>('JOURNAL_PAPER');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
-  const [productsToExport, setProductsToExport] = useState<Product[]>([]);
+  const [calendarProductsList, setCalendarProductsList] = useState<{ products: Product[]; pageSize: PageSizeType }[]>([]);
+  const [currentCalendarIndex, setCurrentCalendarIndex] = useState(0);
 
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
@@ -184,45 +183,6 @@ export function ProductListing() {
     }
   };
 
-  // PDF页面尺寸配置（单位：mm）
-  // 所有类型: 实际PDF尺寸 = 规格尺寸 + 6mm(打印出血)
-  const PAGE_SIZE_CONFIG = {
-    JOURNAL_PAPER: {
-      width: 152,   // 15.2cm
-      height: 152,
-      label: '15.2 × 15.2 cm',
-      displayLabel: '15.2 × 15.2 cm',
-      type: '手账纸'
-    },
-    DECORATIVE_PAPER: {
-      width: 300,   // 30cm
-      height: 300,
-      label: '30 × 30 cm',
-      displayLabel: '30 × 30 cm',
-      type: '包装纸'
-    },
-    CALENDAR_PORTRAIT: {
-      width: 210,   // 21cm
-      height: 297,  // 29.7cm
-      label: '21 × 29.7 cm',
-      displayLabel: '21 × 29.7 cm',
-      type: '竖版日历'
-    },
-    CALENDAR_LANDSCAPE: {
-      width: 297,   // 29.7cm
-      height: 210,  // 21cm
-      label: '29.7 × 21 cm',
-      displayLabel: '29.7 × 21 cm',
-      type: '横版日历'
-    },
-    PAPER_BAG: {
-      width: 660,   // 66cm
-      height: 340,  // 34cm
-      label: '66 × 34 cm',
-      displayLabel: '66 × 34 cm',
-      type: '手提纸袋'
-    }
-  };
 
   // 导出产品图PDF - 旧版本(双面打印,保留备用)
   // const handleExportProductPdf_DoubleSided = async () => {
@@ -395,7 +355,7 @@ export function ProductListing() {
   //   }
   // };
 
-  // 导出产品图PDF - 点击开始导出按钮
+  // 导出产品图PDF - 使用智能导出
   const handleExportProductPdf = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
@@ -404,58 +364,83 @@ export function ProductListing() {
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
 
-    // 如果是手提纸袋模式，使用专门的导出函数
-    if (pdfPageSize === 'PAPER_BAG') {
-      setIsGeneratingPdf(true);
-      try {
-        await exportPaperBagPdfUtil(selectedProducts);
-        toast.success(`成功导出手提纸袋PDF`);
-        setSelectedProductIds(new Set());
-        setShowPdfDialog(false);
-      } catch (error) {
-        console.error('导出手提纸袋PDF失败:', error);
-        toast.error(error instanceof Error ? error.message : '导出手提纸袋PDF失败，请重试');
-      } finally {
-        setIsGeneratingPdf(false);
-      }
-      return;
-    }
-
-    // 如果是日历模式，先显示重排序对话框
-    if (pdfPageSize.startsWith('CALENDAR')) {
-      setProductsToExport(selectedProducts);
-      setShowPdfDialog(false);
-      setShowReorderDialog(true);
-    } else {
-      // 非日历模式直接导出
-      setIsGeneratingPdf(true);
-      try {
-        await exportProductPdfUtil(selectedProducts, pdfPageSize as PageSizeType);
-        toast.success(`成功导出 PDF`);
-        setSelectedProductIds(new Set());
-        setShowPdfDialog(false);
-      } catch (error) {
-        console.error('导出PDF失败:', error);
-        toast.error(error instanceof Error ? error.message : '导出PDF失败，请重试');
-      } finally {
-        setIsGeneratingPdf(false);
-      }
-    }
-  };
-
-  // 确认重排序后导出
-  const handleConfirmReorder = async (reorderedProducts: Product[]) => {
     setIsGeneratingPdf(true);
+
     try {
-      await exportProductPdfUtil(reorderedProducts, pdfPageSize as PageSizeType);
-      toast.success(`成功导出 PDF`);
-      setSelectedProductIds(new Set());
-      setShowReorderDialog(false);
+      // 使用智能导出函数，自动识别分类
+      const result = await exportProductPdfSmartUtil(
+        selectedProducts,
+        (current, total, categoryName) => {
+          // 显示导出进度
+          console.log(`正在导出 ${categoryName}: ${current}/${total}`);
+        }
+      );
+
+      // 如果有日历类型，显示重排序对话框
+      if (result.calendarProducts.length > 0) {
+        setCalendarProductsList(result.calendarProducts);
+        setCurrentCalendarIndex(0);
+        setShowReorderDialog(true);
+
+        if (result.exported > 0) {
+          toast.success(`已导出 ${result.exported} 个非日历商品的PDF，请调整日历顺序后继续导出`);
+        }
+      } else {
+        // 没有日历类型，全部导出完成
+        toast.success(`成功导出 ${result.exported} 个商品的PDF`);
+        setSelectedProductIds(new Set());
+      }
     } catch (error) {
       console.error('导出PDF失败:', error);
       toast.error(error instanceof Error ? error.message : '导出PDF失败，请重试');
     } finally {
       setIsGeneratingPdf(false);
+    }
+  };
+
+  // 确认当前日历重排序后的处理
+  const handleConfirmReorder = async (reorderedProducts: Product[]) => {
+    if (calendarProductsList.length === 0) return;
+
+    const currentCalendar = calendarProductsList[currentCalendarIndex];
+
+    setIsGeneratingPdf(true);
+    try {
+      // 导出当前日历
+      await exportProductPdfUtil(reorderedProducts, currentCalendar.pageSize);
+
+      // 检查是否还有下一个日历
+      if (currentCalendarIndex < calendarProductsList.length - 1) {
+        // 还有下一个日历，切换到下一个
+        setCurrentCalendarIndex(currentCalendarIndex + 1);
+        toast.success(`当前日历已导出，请调整下一个日历的顺序`);
+      } else {
+        // 所有日历都已导出完成
+        toast.success(`所有商品PDF导出完成！`);
+        setShowReorderDialog(false);
+        setCalendarProductsList([]);
+        setCurrentCalendarIndex(0);
+        setSelectedProductIds(new Set());
+      }
+    } catch (error) {
+      console.error('导出日历PDF失败:', error);
+      toast.error(error instanceof Error ? error.message : '导出日历PDF失败，请重试');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // 切换到上一个日历
+  const handlePreviousCalendar = () => {
+    if (currentCalendarIndex > 0) {
+      setCurrentCalendarIndex(currentCalendarIndex - 1);
+    }
+  };
+
+  // 切换到下一个日历（不导出，仅预览）
+  const handleNextCalendar = () => {
+    if (currentCalendarIndex < calendarProductsList.length - 1) {
+      setCurrentCalendarIndex(currentCalendarIndex + 1);
     }
   };
 
@@ -728,13 +713,22 @@ export function ProductListing() {
             导出物流信息 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
-            onClick={() => setShowPdfDialog(true)}
+            onClick={handleExportProductPdf}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0}
+            disabled={selectedProductIds.size === 0 || isGeneratingPdf}
           >
-            <FileText className="w-4 h-4" />
-            导出产品图PDF {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+            {isGeneratingPdf ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                导出中...
+              </>
+            ) : (
+              <>
+                <FileText className="w-4 h-4" />
+                导出产品图PDF {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+              </>
+            )}
           </Button>
           <Button
             onClick={handleOpenRegenerateDialog}
@@ -1156,110 +1150,6 @@ export function ProductListing() {
       </div>
 
       {/* PDF导出弹窗 */}
-      {showPdfDialog && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowPdfDialog(false)}
-        >
-          <div
-            className="bg-white rounded-lg max-w-md w-full overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">导出产品图PDF</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPdfDialog(false)}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* 内容区域 */}
-            <div className="p-6">
-              <div className="space-y-4">
-                <div className="text-sm text-gray-600">
-                  已选择 <span className="font-semibold text-gray-900">{selectedProductIds.size}</span> 个商品
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    选择规格
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(PAGE_SIZE_CONFIG).map(([key, config]) => (
-                      <button
-                        key={key}
-                        onClick={() => setPdfPageSize(key as any)}
-                        className={`
-                          relative p-4 border-2 rounded-lg text-left transition-all
-                          ${pdfPageSize === key
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300 bg-white'
-                          }
-                        `}
-                      >
-                        <div className="font-semibold text-gray-900 mb-1">
-                          {config.type}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {config.displayLabel}
-                        </div>
-                        {pdfPageSize === key && (
-                          <div className="absolute top-2 right-2">
-                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-                                <path d="M5 13l4 4L19 7"></path>
-                              </svg>
-                            </div>
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-3 text-xs text-gray-500">
-                    {pdfPageSize.startsWith('CALENDAR')
-                      ? '日历模式会自动添加 6mm 出血，货号显示在页面右下角'
-                      : pdfPageSize === 'PAPER_BAG'
-                      ? '手提纸袋模式：使用前2张产品图并排平铺，图像区域 64.6cm × 27.6cm'
-                      : '手账纸和包装纸会添加 6mm 打印预留空间，货号居中显示'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 底部按钮 */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-              <Button
-                variant="outline"
-                onClick={() => setShowPdfDialog(false)}
-                disabled={isGeneratingPdf}
-              >
-                取消
-              </Button>
-              <Button
-                onClick={handleExportProductPdf}
-                disabled={isGeneratingPdf || selectedProductIds.size === 0}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isGeneratingPdf ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4 mr-2" />
-                    开始导出
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 图片预览弹窗 */}
       {previewImages && (
@@ -1314,14 +1204,20 @@ export function ProductListing() {
         </div>
       )}
 
-      {/* 图片重排序对话框 */}
-      <ImageReorderDialog
-        open={showReorderDialog}
-        onOpenChange={setShowReorderDialog}
-        products={productsToExport}
-        onConfirm={handleConfirmReorder}
-        isCalendar={pdfPageSize.startsWith('CALENDAR')}
-      />
+      {/* 图片重排序对话框 - 支持多个日历切换 */}
+      {showReorderDialog && calendarProductsList.length > 0 && (
+        <ImageReorderDialog
+          open={showReorderDialog}
+          onOpenChange={setShowReorderDialog}
+          products={calendarProductsList[currentCalendarIndex].products}
+          onConfirm={handleConfirmReorder}
+          isCalendar={true}
+          currentIndex={currentCalendarIndex}
+          totalCount={calendarProductsList.length}
+          onPrevious={handlePreviousCalendar}
+          onNext={handleNextCalendar}
+        />
+      )}
 
       {/* 重新生成标题对话框 */}
       <RegenerateTitleDialog
