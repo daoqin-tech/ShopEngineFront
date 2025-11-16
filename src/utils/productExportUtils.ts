@@ -324,29 +324,11 @@ export async function exportProductPdf(
           img.src = imageDataUrl;
         });
 
-        // 手账纸和包装纸：直接拉伸铺满整个页面
-        // 日历：保持比例并居中显示
-        let displayWidth: number;
-        let displayHeight: number;
-        let x: number;
-        let y: number;
-
-        if (isCalendar) {
-          // 日历模式：保持图片比例，居中显示
-          const imgWidth = img.naturalWidth;
-          const imgHeight = img.naturalHeight;
-          const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-          displayWidth = imgWidth * ratio;
-          displayHeight = imgHeight * ratio;
-          x = (pageWidth - displayWidth) / 2;
-          y = (pageHeight - displayHeight) / 2;
-        } else {
-          // 手账纸/包装纸模式：拉伸铺满整个页面
-          displayWidth = pageWidth;
-          displayHeight = pageHeight;
-          x = 0;
-          y = 0;
-        }
+        // 所有类型都直接拉伸铺满整个页面（包含出血）
+        const displayWidth = pageWidth;
+        const displayHeight = pageHeight;
+        const x = 0;
+        const y = 0;
 
         pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
 
