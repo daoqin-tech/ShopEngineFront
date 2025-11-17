@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import api from "@/lib/api";
+import { apiClient } from "@/lib/api";
 
 // 定义微信登录所需的接口
 interface WxLoginOptions {
@@ -142,7 +142,7 @@ export function Login() {
 
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/dev-login', {
+      const response = await apiClient.post('/auth/dev-login', {
         username,
         password
       });
