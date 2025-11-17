@@ -147,7 +147,9 @@ export function Login() {
         password
       });
 
-      const { token } = response.data.data;
+      // apiClient响应拦截器已经返回了response.data
+      // 后端返回格式: { code: 0, message: "...", data: "token字符串" }
+      const token = response.data;
 
       // 调用AuthContext的login方法存储token
       login(token);
