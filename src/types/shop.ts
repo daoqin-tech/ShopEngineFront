@@ -299,9 +299,9 @@ export const JOURNAL_PAPER_CATEGORIES: ProductCategory[] = [
   },
   {
     id: 'kaleidowrap-designs-category',
-    name: '卡片纸',
-    categoryName: '艺术品、工艺品和缝纫用品/工艺工具和用品/纸艺/工艺纸张/卡片纸',
-    categoryId: '39721',
+    name: '卡纸',
+    categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/卡纸',
+    categoryId: '39490',
     productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":952989,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]'
   },
   {
