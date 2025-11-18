@@ -44,6 +44,7 @@ export function ProductCategories() {
   const [currentCategoryForSpec, setCurrentCategoryForSpec] = useState<ProductCategory | null>(null);
   const [specs, setSpecs] = useState<ProductCategorySpec[]>([]);
   const [editingSpec, setEditingSpec] = useState<ProductCategorySpec | null>(null);
+  const [isAddingSpec, setIsAddingSpec] = useState(false);
   const [specFormData, setSpecFormData] = useState({
     name: '',
     aspectRatio: '',
@@ -178,6 +179,7 @@ export function ProductCategories() {
   // 添加规格
   const handleAddSpec = () => {
     setEditingSpec(null);
+    setIsAddingSpec(true);
     setSpecFormData({
       name: '',
       aspectRatio: '',
@@ -192,6 +194,7 @@ export function ProductCategories() {
   // 编辑规格
   const handleEditSpec = (spec: ProductCategorySpec) => {
     setEditingSpec(spec);
+    setIsAddingSpec(false);
     setSpecFormData({
       name: spec.name,
       aspectRatio: spec.aspectRatio,
@@ -246,6 +249,7 @@ export function ProductCategories() {
         toast.success('创建成功');
       }
       setEditingSpec(null);
+      setIsAddingSpec(false);
       await loadSpecs(currentCategoryForSpec.id);
     } catch (error: any) {
       console.error('Failed to save spec:', error);
@@ -553,7 +557,7 @@ export function ProductCategories() {
             </div>
 
             {/* 规格表单 */}
-            {(editingSpec || specFormData.name !== '' || specFormData.aspectRatio !== '') && (
+            {(editingSpec || isAddingSpec) && (
               <div className="border rounded-lg p-4 bg-muted/20">
                 <h4 className="font-medium mb-3">
                   {editingSpec ? '编辑规格' : '新增规格'}
@@ -648,6 +652,7 @@ export function ProductCategories() {
                     variant="outline"
                     onClick={() => {
                       setEditingSpec(null);
+                      setIsAddingSpec(false);
                       setSpecFormData({
                         name: '',
                         aspectRatio: '',
