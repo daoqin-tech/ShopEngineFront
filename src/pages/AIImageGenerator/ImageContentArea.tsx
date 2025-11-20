@@ -583,7 +583,8 @@ export function ImageContentArea({
                   </Button>
                 )}
 
-                <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                {/* 复制图片功能已注释 */}
+                {/* <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                   onClick={() => setShowCopyDialog(true)} disabled={selectedImageIds.size === 0 || isCopying}>
                   {isCopying ? (
                     <>
@@ -596,7 +597,7 @@ export function ImageContentArea({
                       复制图片
                     </>
                   )}
-                </Button>
+                </Button> */}
 
                 <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
                   onClick={() => {

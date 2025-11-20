@@ -61,6 +61,9 @@ export interface ShopInfo {
 
   // 经营站点
   operatingSite?: string;       // 经营站点
+
+  // 新店铺标识
+  isNew?: boolean;              // 是否为新店铺
 }
 
 // 手账纸商品规格数据
@@ -159,6 +162,32 @@ export const PAPER_BAG_SPECS: ProductSpec[] = [
   },
 ];
 
+// 计划本商品规格数据
+export const PLANNER_SPECS: ProductSpec[] = [
+  {
+    id: 'planner-28x21',
+    name: '1本 28cm×21cm×1cm',
+    sheets: 1,  // 1本
+    size: '28cm×21cm×1cm',
+    length: 28.0,
+    width: 21.0,
+    height: 1.0,
+    weight: 90,  // 200g
+    actualLength: 28.0,
+    actualWidth: 21.0,
+    actualHeight: 1.0,
+    declaredPrice: 70,  // 70元
+    suggestedRetailPrice: 10,  // 8美元
+    variantName: '白色',
+    variantAttributeName1: '颜色',
+    variantAttributeValue1: '白色',
+    stock: 6666,
+    shippingTime: 9,
+    productSpec: '1本 28cm×21cm×1cm 计划本',
+    productUsage: '适用于日常计划管理、目标设定与追踪、时间安排、任务规划、项目管理、学习计划、工作计划、生活规划等各类计划用途'
+  },
+];
+
 // 兼容性：保留原有的 PRODUCT_SPECS 导出，默认为手账纸规格
 export const PRODUCT_SPECS = JOURNAL_PAPER_SPECS;
 
@@ -185,17 +214,6 @@ export const TEMU_SHOPS: ShopInfo[] = [
     businessCode: '5270B',
     account: '18071105270',
     freightTemplateId: 'HFT-16191270999941411888',
-    freightTemplateName: '运费模板',
-    operatingSite: '美国'
-  },
-  {
-    id: 'jolly-wrappings',
-    name: 'Jolly Wrappings',
-    shopId: '634418226370462',
-    type: '半托',
-    businessCode: '5270C',
-    account: '18071105270',
-    freightTemplateId: 'HFT-16501331439862061950',
     freightTemplateName: '运费模板',
     operatingSite: '美国'
   },
@@ -243,6 +261,19 @@ export const TEMU_SHOPS: ShopInfo[] = [
     freightTemplateName: '运费模板',
     operatingSite: '美国'
   },
+  // 新店铺
+  {
+    id: 'jolly-wrappings',
+    name: 'Jolly Wrappings',
+    shopId: '634418226370462',
+    type: '半托',
+    businessCode: '5270C',
+    account: '18071105270',
+    freightTemplateId: 'HFT-16501331439862061950',
+    freightTemplateName: '运费模板',
+    operatingSite: '美国',
+    isNew: true
+  },
   {
     id: 'artisan-wrap-depot',
     name: 'Artisan Wrap Depot',
@@ -252,7 +283,8 @@ export const TEMU_SHOPS: ShopInfo[] = [
     account: '18986183395',
     freightTemplateId: 'HFT-16501225659514980642',
     freightTemplateName: '运费模板',
-    operatingSite: '美国'
+    operatingSite: '美国',
+    isNew: true
   }
 ];
 
@@ -302,7 +334,7 @@ export const JOURNAL_PAPER_CATEGORIES: ProductCategory[] = [
     name: '卡纸',
     categoryName: '艺术品、工艺品和缝纫用品/剪贴、压印/纸张和卡片/卡纸',
     categoryId: '39490',
-    productAttributes: '[{"propName":"材质","refPid":12,"pid":1,"templatePid":952989,"numberInputValue":"","valueUnit":"","vid":"413","propValue":"纸张"}]'
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":447684,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"主题","refPid":130,"pid":126,"templatePid":447685,"numberInputValue":"","valueUnit":"","vid":"4393","propValue":"风景"}]'
   },
   {
     id: 'merry-measure-paper-co-category',
@@ -346,6 +378,17 @@ export const PAPER_BAG_CATEGORIES: ProductCategory[] = [
     categoryName: '艺术品、工艺品和缝纫用品/礼品包装用品/礼品包装袋',
     categoryId: '39879',
     productAttributes: '[{"propName":"是否有提手","refPid":7228,"pid":2197,"templatePid":1410540,"numberInputValue":"","valueUnit":"","vid":"210452","propValue":"是"},{"propName":"是否纸质提手","refPid":7229,"pid":2198,"templatePid":1410668,"numberInputValue":"","valueUnit":"","vid":"210457","propValue":"是"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909806,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"},{"propName":"包含的组件","refPid":125,"pid":91,"templatePid":447663,"numberInputValue":"","valueUnit":"","vid":"12608","propValue":"皱纹纸"},{"propName":"颜色","refPid":63,"pid":13,"templatePid":447662,"numberInputValue":"","valueUnit":"","vid":"433","propValue":"米白色"}]'
+  }
+];
+
+// 计划本商品分类数据
+export const PLANNER_CATEGORIES: ProductCategory[] = [
+  {
+    id: 'planner-stationery-category',
+    name: '文具记事本',
+    categoryName: '健康和家居用品/文具和礼品包装用品/文具/文具记事本',
+    categoryId: '17346',
+    productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":1243924,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"是否有羽毛","refPid":2232,"pid":1614,"templatePid":919584,"numberInputValue":"","valueUnit":"","vid":"57227","propValue":"否"},{"propName":"适用年龄段","refPid":1117,"pid":1141,"templatePid":917529,"numberInputValue":"","valueUnit":"","vid":"73673","propValue":"6+"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909852,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909852,"numberInputValue":"","valueUnit":"","vid":"11783","propValue":"无铅水晶"},{"propName":"主题","refPid":130,"pid":126,"templatePid":210071,"numberInputValue":"","valueUnit":"","vid":"29361","propValue":"其他主题"},{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":210065,"numberInputValue":"","valueUnit":"","vid":"12686","propValue":"普通"}]'
   }
 ];
 

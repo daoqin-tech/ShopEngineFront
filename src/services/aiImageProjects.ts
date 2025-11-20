@@ -114,4 +114,16 @@ export class AIImageProjectsAPI {
     });
     return response.data;
   }
+
+  // 填充项目（为多个项目填充图片到指定数量）
+  static async fillProjects(
+    projectIds: string[],
+    targetCount: number
+  ): Promise<null> {
+    const response = await apiClient.post('/projects/fill', {
+      projectIds,
+      targetCount
+    });
+    return response.data;
+  }
 }

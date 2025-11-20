@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Check, Search, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -54,6 +54,11 @@ export function AIImageProjects() {
   const [dynamicCopying, setDynamicCopying] = useState(false);
   const [copyMode, setCopyMode] = useState<'dynamic' | 'static'>('dynamic'); // 复制模式：动态复制、静态复制
   const [variationMode, setVariationMode] = useState<'minor' | 'subject' | 'background' | 'style'>('minor'); // 变化模式
+
+  // 填充项目对话框状态
+  const [fillDialogOpen, setFillDialogOpen] = useState(false);
+  const [targetImageCount, setTargetImageCount] = useState<number>(12);
+  const [filling, setFilling] = useState(false);
 
   // 模板替换统一对话框状态
   const [templateReplaceDialogOpen, setTemplateReplaceDialogOpen] = useState(false);
@@ -400,6 +405,47 @@ export function AIImageProjects() {
       console.error('Error dynamic copying projects:', err);
     } finally {
       setDynamicCopying(false);
+    }
+  };
+
+  // 打开填充项目对话框
+  const handleOpenFillDialog = () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要填充的项目');
+      return;
+    }
+    setTargetImageCount(12);
+    setFillDialogOpen(true);
+  };
+
+  // 确认填充项目
+  const handleConfirmFill = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要填充的项目');
+      return;
+    }
+
+    if (targetImageCount < 1 || targetImageCount > 50) {
+      toast.error('请输入有效的目标图片数量（1-50）');
+      return;
+    }
+
+    try {
+      setFilling(true);
+      const projectIdsArray = Array.from(selectedProjectIds);
+
+      await AIImageProjectsAPI.fillProjects(projectIdsArray, targetImageCount);
+      setFillDialogOpen(false);
+      setSelectedProjectIds(new Set());
+      setTargetImageCount(targetImageCount);
+      fetchProjects(currentPage); // 刷新列表
+    } catch (err: any) {
+      toast.error('项目填充失败', {
+        description: err.response?.data?.message || '请稍后再试'
+      });
+      console.error('Error filling projects:', err);
+    } finally {
+      setFilling(false);
     }
   };
 
@@ -773,6 +819,15 @@ export function AIImageProjects() {
           >
             <Copy className="w-4 h-4" />
             复制项目
+          </Button>
+          <Button
+            onClick={handleOpenFillDialog}
+            disabled={selectedProjectIds.size === 0}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Images className="w-4 h-4" />
+            填充项目
           </Button>
           <Button
             onClick={handleOpenTemplateReplaceDialog}
@@ -1425,6 +1480,91 @@ export function AIImageProjects() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {dynamicCopying ? '复制中...' : '确认复制'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 填充项目对话框 */}
+      <Dialog open={fillDialogOpen} onOpenChange={setFillDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Images className="w-5 h-5 text-blue-600" />
+              填充项目
+            </DialogTitle>
+            <DialogDescription>
+              为选中的项目填充图片到指定数量
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="text-sm text-gray-600">
+              已选择 <span className="font-semibold text-gray-900">{selectedProjectIds.size}</span> 个项目
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+              <p className="text-sm text-blue-800">
+                <strong>填充功能：</strong>为每个项目复制现有图片，直到达到目标数量
+              </p>
+              <p className="text-xs text-blue-700">
+                <strong>适用场景：</strong>批量将多个项目的图片数量补充到相同数量
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">目标图片数量</label>
+              <Input
+                type="number"
+                value={targetImageCount}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value) && value >= 1 && value <= 50) {
+                    setTargetImageCount(value);
+                  }
+                }}
+                min={1}
+                max={50}
+                className="w-full"
+                placeholder="输入目标数量 (1-50)"
+              />
+              <p className="text-xs text-gray-500 mt-1">每个项目最多可填充到 50 张图片</p>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="text-sm text-gray-600">
+                将为 <span className="font-semibold text-gray-900">{selectedProjectIds.size}</span> 个项目填充图片到 <span className="font-semibold text-gray-900">{targetImageCount}</span> 张
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFillDialogOpen(false);
+                setTargetImageCount(12);
+              }}
+              disabled={filling}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleConfirmFill}
+              disabled={filling || targetImageCount < 1 || targetImageCount > 50}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {filling ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  填充中...
+                </>
+              ) : (
+                <>
+                  <Images className="w-4 h-4 mr-2" />
+                  确认填充
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

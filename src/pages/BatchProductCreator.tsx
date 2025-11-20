@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, DECORATIVE_PAPER_SPECS, DECORATIVE_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES, PAPER_BAG_SPECS, PAPER_BAG_CATEGORIES } from '@/types/shop';
+import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, DECORATIVE_PAPER_SPECS, DECORATIVE_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES, PAPER_BAG_SPECS, PAPER_BAG_CATEGORIES, PLANNER_SPECS, PLANNER_CATEGORIES } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
+import { productCategoryService } from '@/services/productCategoryService';
+import type { ProductCategory } from '@/types/productCategory';
 import { toast } from 'sonner';
 import {
   Select,
@@ -54,20 +55,20 @@ interface BatchProductCreatorProps {}
 
 
 export function BatchProductCreator({}: BatchProductCreatorProps) {
-  const navigate = useNavigate();
-
-  // 产品类型：手账纸、装饰纸、日历 或 手提纸袋
-  const [productType, setProductType] = useState<'journal' | 'decorative' | 'calendar' | 'paper-bag'>('journal');
+  // 产品类型：手账纸、装饰纸、日历、手提纸袋 或 计划本
+  const [productType, setProductType] = useState<'journal' | 'decorative' | 'calendar' | 'paper-bag' | 'planner'>('journal');
 
   // 根据产品类型获取对应的规格和分类
   const currentSpecs = productType === 'journal' ? JOURNAL_PAPER_SPECS :
                        productType === 'decorative' ? DECORATIVE_PAPER_SPECS :
                        productType === 'calendar' ? CALENDAR_SPECS :
-                       PAPER_BAG_SPECS;
+                       productType === 'paper-bag' ? PAPER_BAG_SPECS :
+                       PLANNER_SPECS;
   const currentCategories = productType === 'journal' ? JOURNAL_PAPER_CATEGORIES :
                            productType === 'decorative' ? DECORATIVE_PAPER_CATEGORIES :
                            productType === 'calendar' ? CALENDAR_CATEGORIES :
-                           PAPER_BAG_CATEGORIES;
+                           productType === 'paper-bag' ? PAPER_BAG_CATEGORIES :
+                           PLANNER_CATEGORIES;
 
   const [formData, setFormData] = useState<ProductFormData>({
     shopAccount: '',
@@ -97,6 +98,24 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 模板搜索选项状态
   const [templatesForSearch, setTemplatesForSearch] = useState<TemplateSearchItem[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // 产品分类数据（从后端获取）
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
+
+  // 获取产品分类数据
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categories = await productCategoryService.getAllCategories(true); // 只获取激活的分类
+        setProductCategories(categories);
+      } catch (error) {
+        console.error('获取产品分类失败:', error);
+        toast.error('获取产品分类失败');
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // 获取可用的商品图（来自CoverGeneration）
   const fetchAvailableImages = async (page: number = currentPage) => {
@@ -305,20 +324,39 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   // 获取所有已选任务的唯一taskId列表
                   const taskIds = Array.from(new Set(selectedProducts.map(p => p.taskId)));
 
-                  // 产品类型到数据库分类ID的映射
-                  const productCategoryIdMap: Record<string, string> = {
-                    'journal': '1',      // 手账纸
-                    'decorative': '2',   // 包装纸
-                    'calendar': '3',     // 日历 (注: 竖版和横版可能需要区分，暂时统一为3)
-                    'paper-bag': '5',    // 手提纸袋
+                  // 产品类型到中文名称的映射
+                  const productTypeNameMap: Record<string, string> = {
+                    'journal': '手账纸',
+                    'decorative': '包装纸',
+                    'calendar': '日历',      // 注：日历可能是竖版或横版，需要进一步匹配
+                    'paper-bag': '手提纸袋',
+                    'planner': '笔记本',
                   };
+
+                  // 从后端分类数据中查找对应的分类
+                  const typeName = productTypeNameMap[productType];
+                  let productCategory: ProductCategory | undefined;
+
+                  if (productType === 'calendar') {
+                    // 日历类型：需要根据规格判断是竖版还是横版
+                    // 可以通过宽高比或其他规格特征判断，这里暂时使用第一个匹配的日历分类
+                    productCategory = productCategories.find(cat => cat.name.includes('日历'));
+                  } else {
+                    // 其他类型：直接根据中文名称匹配
+                    productCategory = productCategories.find(cat => cat.name === typeName);
+                  }
+
+                  if (!productCategory) {
+                    toast.error(`未找到产品类型 ${typeName} 对应的分类数据`);
+                    return;
+                  }
 
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
                     categoryId: selectedCategory.categoryId,  // TEMU平台分类ID
                     categoryName: selectedCategory.categoryName,
-                    productCategoryId: productCategoryIdMap[productType],  // 自定义产品分类ID (1-5)
+                    productCategoryId: productCategory.id,  // 从后端获取的产品分类ID
                     productAttributes: selectedCategory.productAttributes,
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
@@ -345,7 +383,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     setCreating(true);
                     await productService.batchCreate(submitData);
 
-                    // 任务已提交，立即跳转到商品列表页
+                    // 任务已提交成功，停留在当前页面
                     toast.success(
                       `已提交 ${taskIds.length} 个商品的创建任务，正在后台处理中...`,
                       {
@@ -354,11 +392,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                       }
                     );
 
-                    // 立即跳转，不等待任务完成
-                    navigate('/workspace/batch-upload');
+                    // 成功后恢复按钮状态
+                    setCreating(false);
                   } catch (error: any) {
                     console.error('批量创建商品失败:', error);
                     toast.error(error.response?.data?.message || '提交任务失败，请重试');
+                    // 失败后恢复按钮状态
                     setCreating(false);
                   }
                 }}
@@ -393,36 +432,39 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             <div className="space-y-3">
               <Label className="text-sm font-medium">店铺账号 *</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {TEMU_SHOPS
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((shop) => (
-                    <button
-                      key={shop.id}
-                      type="button"
-                      onClick={() => {
-                        updateFormData('shopAccount', shop.id);
-                        // 切换店铺时清空规格和分类选择
-                        updateFormData('productSpec', '');
-                        updateFormData('productCategory', '');
-                      }}
-                      className={`
-                        relative p-4 rounded-md border-2 text-left transition-colors
-                        ${formData.shopAccount === shop.id
-                          ? 'border-primary bg-background'
-                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                        }
-                      `}
-                    >
-                      <div className="space-y-1.5">
-                        <div className="font-medium text-sm">
-                          {shop.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {shop.businessCode}
-                        </div>
+                {TEMU_SHOPS.map((shop) => (
+                  <button
+                    key={shop.id}
+                    type="button"
+                    onClick={() => {
+                      updateFormData('shopAccount', shop.id);
+                      // 切换店铺时清空规格和分类选择
+                      updateFormData('productSpec', '');
+                      updateFormData('productCategory', '');
+                    }}
+                    className={`
+                      relative p-4 rounded-md border-2 text-left transition-colors
+                      ${formData.shopAccount === shop.id
+                        ? 'border-primary bg-background'
+                        : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                      }
+                    `}
+                  >
+                    {shop.isNew && (
+                      <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded">
+                        新
+                      </span>
+                    )}
+                    <div className="space-y-1.5">
+                      <div className="font-medium text-sm">
+                        {shop.name}
                       </div>
-                    </button>
-                  ))}
+                      <div className="text-xs text-muted-foreground">
+                        {shop.businessCode}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -440,11 +482,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   }}
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+                  <TabsList className="grid w-full grid-cols-5 max-w-2xl">
                     <TabsTrigger value="journal">手账纸</TabsTrigger>
                     <TabsTrigger value="decorative">装饰纸</TabsTrigger>
                     <TabsTrigger value="calendar">日历</TabsTrigger>
                     <TabsTrigger value="paper-bag">手提纸袋</TabsTrigger>
+                    <TabsTrigger value="planner">计划本</TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
