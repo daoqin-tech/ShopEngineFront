@@ -1476,7 +1476,7 @@ export function AIImageProjects() {
             </Button>
             <Button
               onClick={handleConfirmDynamicCopy}
-              disabled={dynamicCopying || copyCount < 1 || copyCount > 10}
+              disabled={dynamicCopying || copyCount < 1 || copyCount > 100}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {dynamicCopying ? '复制中...' : '确认复制'}
