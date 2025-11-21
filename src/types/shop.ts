@@ -85,7 +85,7 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     stock: 6666,
     shippingTime: 9,
     productSpec: '40张15.2cmx15.2cm 拼贴纸',
-    productUsage: '适用于手账拼贴、剪贴本装饰、DIY手工、贺卡制作及创意拼贴等用途'
+    productUsage: 'DIY手工、拼贴手账纸'
   }
 ];
 

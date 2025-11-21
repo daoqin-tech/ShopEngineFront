@@ -377,8 +377,8 @@ export function AIImageProjects() {
       return;
     }
 
-    if (copyCount < 1 || copyCount > 10) {
-      toast.error('请输入有效的复制数量（1-10）');
+    if (copyCount < 1 || copyCount > 100) {
+      toast.error('请输入有效的复制数量（1-100）');
       return;
     }
 
@@ -1369,7 +1369,7 @@ export function AIImageProjects() {
                     id="copyCount"
                     type="number"
                     min={1}
-                    max={10}
+                    max={100}
                     value={copyCount}
                     onChange={(e) => {
                       const value = parseInt(e.target.value);
@@ -1379,7 +1379,7 @@ export function AIImageProjects() {
                         setCopyCount(1);
                       }
                     }}
-                    placeholder="输入复制数量（1-10）"
+                    placeholder="输入复制数量（1-100）"
                     className="w-full"
                   />
                   <p className="text-sm text-gray-500">
