@@ -172,12 +172,12 @@ export const PLANNER_SPECS: ProductSpec[] = [
     length: 28.0,
     width: 21.0,
     height: 1.0,
-    weight: 90,  // 200g
+    weight: 250,  // 250g
     actualLength: 28.0,
     actualWidth: 21.0,
     actualHeight: 1.0,
-    declaredPrice: 70,  // 70元
-    suggestedRetailPrice: 10,  // 8美元
+    declaredPrice: 100,  // 100元
+    suggestedRetailPrice: 14,  // 100元/7汇率
     variantName: '白色',
     variantAttributeName1: '颜色',
     variantAttributeValue1: '白色',

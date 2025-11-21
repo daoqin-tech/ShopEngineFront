@@ -1395,6 +1395,7 @@ export function AIImageProjects() {
                       { value: 'subject', label: '主体变化', desc: '替换主要物体，保持场景' },
                       { value: 'background', label: '背景变化', desc: '保持主体，改变背景' },
                       { value: 'style', label: '风格变化', desc: '改变艺术表现风格' },
+                      { value: 'notebook', label: '笔记本专用', desc: '保持文字和主题不变，风格和元素多样化' },
                     ].map((option) => (
                       <label
                         key={option.value}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
@@ -88,7 +89,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageSize] = useState(100);
+  const [pageSize, setPageSize] = useState<number | ''>(100);
+  const [jumpPage, setJumpPage] = useState('');
 
   // 筛选状态
   const [templateFilter, setTemplateFilter] = useState('');
@@ -124,7 +126,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
       const params: any = {
         page,
-        limit: pageSize
+        limit: pageSize || 100
       };
 
       // 添加模板筛选
@@ -792,12 +794,52 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             {total > 0 && (
               <div className="border-t bg-white p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    共 {total} 个任务，第 {currentPage} 页，共 {Math.ceil(total / pageSize)} 页
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-gray-500">
+                      共 {total} 个任务
+                    </div>
+
+                    {/* 每页显示数量输入 */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">每页</span>
+                      <Input
+                        type="text"
+                        value={pageSize}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, ''); // 只保留数字
+                          if (value === '' || parseInt(value) > 0) {
+                            setPageSize(value === '' ? '' : parseInt(value));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!pageSize || pageSize < 1) {
+                            setPageSize(20);
+                          } else if (pageSize > 500) {
+                            setPageSize(500);
+                          }
+                          setCurrentPage(1);
+                          fetchAvailableImages(1);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            if (!pageSize || pageSize < 1) {
+                              setPageSize(20);
+                            } else if (pageSize > 500) {
+                              setPageSize(500);
+                            }
+                            setCurrentPage(1);
+                            fetchAvailableImages(1);
+                          }
+                        }}
+                        className="w-20 h-8 text-center"
+                        placeholder="20"
+                      />
+                      <span className="text-sm text-gray-600">条</span>
+                    </div>
                   </div>
 
-                  {total > pageSize && (
-                    <div className="flex items-center gap-2">
+                  {total > (pageSize || 100) && (
+                    <div className="flex items-center gap-3">
                       <Button
                         variant="outline"
                         size="sm"
@@ -809,18 +851,64 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                       </Button>
 
                       <div className="text-sm text-gray-600">
-                        {currentPage} / {Math.ceil(total / pageSize)}
+                        {currentPage} / {Math.ceil(total / (pageSize || 100))}
                       </div>
 
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => fetchAvailableImages(currentPage + 1)}
-                        disabled={currentPage >= Math.ceil(total / pageSize) || loading}
+                        disabled={currentPage >= Math.ceil(total / (pageSize || 100)) || loading}
                       >
                         下一页
                         <ChevronRight className="w-4 h-4" />
                       </Button>
+
+                      {/* 跳转到指定页 */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <span className="text-sm text-gray-600">跳转到</span>
+                        <Input
+                          type="text"
+                          value={jumpPage}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, ''); // 只保留数字
+                            setJumpPage(value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const page = parseInt(jumpPage);
+                              const maxPage = Math.ceil(total / (pageSize || 100));
+                              if (page >= 1 && page <= maxPage) {
+                                setCurrentPage(page);
+                                fetchAvailableImages(page);
+                                setJumpPage('');
+                              } else {
+                                toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
+                              }
+                            }
+                          }}
+                          className="w-16 h-8 text-center"
+                          placeholder="页"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const page = parseInt(jumpPage);
+                            const maxPage = Math.ceil(total / (pageSize || 100));
+                            if (page >= 1 && page <= maxPage) {
+                              setCurrentPage(page);
+                              fetchAvailableImages(page);
+                              setJumpPage('');
+                            } else {
+                              toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
+                            }
+                          }}
+                          disabled={!jumpPage || loading}
+                        >
+                          跳转
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
