@@ -13,6 +13,7 @@ import {
 import { Plus, Pencil, Trash2, Settings } from 'lucide-react';
 import { productCategoryService } from '@/services/productCategoryService';
 import { productCategorySpecService } from '@/services/productCategorySpecService';
+import { formatManufacturingSize } from '@/utils/formatUtils';
 import type {
   ProductCategory,
   CreateProductCategoryRequest,
@@ -37,6 +38,9 @@ export function ProductCategories() {
     isActive: true,
     typeCode: '',
     sizeCode: '',
+    manufacturingLength: undefined as number | undefined,
+    manufacturingWidth: undefined as number | undefined,
+    manufacturingHeight: undefined as number | undefined,
   });
 
   // 规格配置相关状态
@@ -83,6 +87,9 @@ export function ProductCategories() {
       isActive: true,
       typeCode: '',
       sizeCode: '',
+      manufacturingLength: undefined,
+      manufacturingWidth: undefined,
+      manufacturingHeight: undefined,
     });
     setIsDialogOpen(true);
   };
@@ -97,6 +104,9 @@ export function ProductCategories() {
       isActive: category.isActive,
       typeCode: category.typeCode || '',
       sizeCode: category.sizeCode || '',
+      manufacturingLength: category.manufacturingLength,
+      manufacturingWidth: category.manufacturingWidth,
+      manufacturingHeight: category.manufacturingHeight,
     });
     setIsDialogOpen(true);
   };
@@ -118,6 +128,9 @@ export function ProductCategories() {
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
           sizeCode: formData.sizeCode.trim() || undefined,
+          manufacturingLength: formData.manufacturingLength,
+          manufacturingWidth: formData.manufacturingWidth,
+          manufacturingHeight: formData.manufacturingHeight,
         };
         await productCategoryService.updateCategory(editingCategory.id, updateData);
         toast.success('更新成功');
@@ -130,6 +143,9 @@ export function ProductCategories() {
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
           sizeCode: formData.sizeCode.trim() || undefined,
+          manufacturingLength: formData.manufacturingLength,
+          manufacturingWidth: formData.manufacturingWidth,
+          manufacturingHeight: formData.manufacturingHeight,
         };
         await productCategoryService.createCategory(createData);
         toast.success('创建成功');
@@ -303,6 +319,7 @@ export function ProductCategories() {
                 <th className="text-left p-4 font-medium">英文名称</th>
                 <th className="text-center p-4 font-medium w-24">类型码</th>
                 <th className="text-center p-4 font-medium w-24">尺寸码</th>
+                <th className="text-center p-4 font-medium">生产尺寸(cm)</th>
                 <th className="text-center p-4 font-medium w-24">排序</th>
                 <th className="text-center p-4 font-medium w-24">状态</th>
                 <th className="text-left p-4 font-medium w-40">创建时间</th>
@@ -312,7 +329,7 @@ export function ProductCategories() {
             <tbody>
               {!categories || categories.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     暂无数据
                   </td>
                 </tr>
@@ -329,6 +346,15 @@ export function ProductCategories() {
                     <td className="p-4 text-center">
                       <span className="font-mono text-sm">
                         {category.sizeCode || '-'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="font-mono text-sm">
+                        {formatManufacturingSize(
+                          category.manufacturingLength,
+                          category.manufacturingWidth,
+                          category.manufacturingHeight
+                        )}
                       </span>
                     </td>
                     <td className="p-4 text-center">{category.sortOrder}</td>
@@ -437,6 +463,53 @@ export function ProductCategories() {
                   用于生成货号（15-15cm, 21-21cm, 30-30cm, 66-66cm）
                 </p>
               </div>
+            </div>
+            <div>
+              <Label className="mb-2 block">生产尺寸 (cm)</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manufacturingLength" className="text-xs text-muted-foreground">长度</Label>
+                  <Input
+                    id="manufacturingLength"
+                    type="number"
+                    step="0.1"
+                    value={formData.manufacturingLength || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, manufacturingLength: e.target.value ? parseFloat(e.target.value) : undefined })
+                    }
+                    placeholder="如: 29.7"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manufacturingWidth" className="text-xs text-muted-foreground">宽度</Label>
+                  <Input
+                    id="manufacturingWidth"
+                    type="number"
+                    step="0.1"
+                    value={formData.manufacturingWidth || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, manufacturingWidth: e.target.value ? parseFloat(e.target.value) : undefined })
+                    }
+                    placeholder="如: 21"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manufacturingHeight" className="text-xs text-muted-foreground">高度</Label>
+                  <Input
+                    id="manufacturingHeight"
+                    type="number"
+                    step="0.1"
+                    value={formData.manufacturingHeight || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, manufacturingHeight: e.target.value ? parseFloat(e.target.value) : undefined })
+                    }
+                    placeholder="如: 0"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                用于PDF导出尺寸（纸类产品高度通常为0）
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="sortOrder">排序顺序</Label>

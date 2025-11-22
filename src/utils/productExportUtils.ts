@@ -3,19 +3,8 @@ import * as XLSXNative from 'xlsx'; // 导入原生xlsx库用于物流信息导�
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import { Product } from '@/services/productService';
+import { ProductCategory } from '@/types/productCategory';
 import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES } from '@/types/shop';
-
-// PDF页面尺寸配置（单位：mm）
-// 所有类型在导出时会自动添加 6mm 出血
-export const PAGE_SIZES = {
-  JOURNAL_PAPER: { width: 152, height: 152 },       // 手账纸 15.2cm x 15.2cm
-  DECORATIVE_PAPER: { width: 300, height: 300 },    // 包装纸 30cm x 30cm
-  CALENDAR_PORTRAIT: { width: 210, height: 297 },   // 竖版日历 21cm x 29.7cm
-  CALENDAR_LANDSCAPE: { width: 297, height: 210 },  // 横版日历 29.7cm x 21cm
-  PAPER_BAG: { width: 660, height: 340 }            // 手提纸袋 66cm x 34cm
-} as const;
-
-export type PageSizeType = keyof typeof PAGE_SIZES;
 
 /**
  * 生成日期时间字符串（用于文件名）
@@ -184,204 +173,364 @@ export async function exportPaperBagPdf(
 }
 
 /**
- * 根据产品分类ID和尺寸获取PDF页面尺寸类型
- *
- * 分类ID映射关系：
- * 1 = 手账纸 (15.2x15.2cm) -> JOURNAL_PAPER
- * 2 = 包装纸 (30x30cm) -> DECORATIVE_PAPER
- * 3 = 日历 -> 根据width和length自动判断横竖版
- * 4 = 日历 -> 根据width和length自动判断横竖版
- * 5 = 手提纸袋 (66x34cm) -> PAPER_BAG
+ * 从产品分类获取PDF页面尺寸
+ * @param category 产品分类
+ * @returns PDF页面尺寸 {width, height}，单位mm
  */
-function getPageSizeFromProduct(product: Product): PageSizeType | null {
-  if (!product.productCategoryId) {
+function getPageSizeFromCategory(category: ProductCategory): { width: number; height: number } | null {
+  if (!category.manufacturingLength || !category.manufacturingWidth) {
     return null;
   }
 
-  // 分类ID到PDF页面尺寸的映射
-  const categoryPageSizeMap: Record<string, PageSizeType> = {
-    '1': 'JOURNAL_PAPER',      // 手账纸
-    '2': 'DECORATIVE_PAPER',    // 包装纸
-    '5': 'PAPER_BAG'            // 手提纸袋
-  };
+  // 生产尺寸是cm，转换为mm
+  const length = category.manufacturingLength * 10;
+  const width = category.manufacturingWidth * 10;
 
-  // 对于日历类型（分类ID为3或4），根据产品的width和length智能判断横竖版
-  if (product.productCategoryId === '3' || product.productCategoryId === '4') {
-    // 如果有width和length信息，根据尺寸判断
-    if (product.width && product.length) {
-      // length > width 说明是横版（29.7 x 21）
-      // width > length 说明是竖版（21 x 29.7）
-      if (product.length > product.width) {
-        return 'CALENDAR_LANDSCAPE';
-      } else {
-        return 'CALENDAR_PORTRAIT';
-      }
-    }
+  // manufacturingLength 对应 PDF 的高度，manufacturingWidth 对应 PDF 的宽度
+  return { width: width, height: length };
+}
 
-    // 如果没有尺寸信息，按照原分类ID判断
-    return product.productCategoryId === '4' ? 'CALENDAR_LANDSCAPE' : 'CALENDAR_PORTRAIT';
+/**
+ * 通用PDF生成方法（手账纸、包装纸等）
+ * 第一页是货号页，后续页是产品图
+ */
+async function generateGenericProductPdf(
+  product: Product,
+  category: ProductCategory
+): Promise<Blob> {
+  const pageSizeConfig = getPageSizeFromCategory(category);
+  if (!pageSizeConfig) {
+    throw new Error(`分类 ${category.name} 缺少生产尺寸信息`);
   }
 
-  return categoryPageSizeMap[product.productCategoryId] || null;
+  const bleed = 6;
+  const actualPageWidth = pageSizeConfig.width + bleed;
+  const actualPageHeight = pageSizeConfig.height + bleed;
+  const orientation = actualPageWidth > actualPageHeight ? 'landscape' : 'portrait';
+
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'mm',
+    format: [actualPageWidth, actualPageHeight]
+  });
+
+  const pageWidth = actualPageWidth;
+  const pageHeight = actualPageHeight;
+
+  // 第一页：货号页
+  pdf.setFontSize(40);
+  pdf.setTextColor(0, 0, 0);
+  const productCode = product.newProductCode || product.id;
+  const textWidth = pdf.getTextWidth(productCode);
+  const textX = (pageWidth - textWidth) / 2;
+  const textY = pageHeight / 2;
+  pdf.text(productCode, textX, textY);
+
+  // 添加右下角黑色标记（用于分本）
+  const blackMarkWidth = 10;
+  const blackMarkHeight = 5;
+  const blackMarkX = pageWidth - blackMarkWidth;
+  const blackMarkY = pageHeight - blackMarkHeight - 5;
+  pdf.setFillColor(0, 0, 0);
+  pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
+
+  // 产品图页面
+  const productImages = product.productImages || [];
+  for (const imageUrl of productImages) {
+    try {
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        headers: { 'Accept': 'image/*' }
+      });
+
+      if (!response.ok) {
+        console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
+        continue;
+      }
+
+      const blob = await response.blob();
+      const imageDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(blob);
+      });
+
+      pdf.addPage();
+
+      // 拉伸铺满整个页面（包含出血）
+      pdf.addImage(imageDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+    } catch (error) {
+      console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+    }
+  }
+
+  return pdf.output('blob');
+}
+
+/**
+ * 日历PDF生成方法
+ * 第一页直接是产品图（右下角显示货号），无货号页
+ */
+async function generateCalendarProductPdf(
+  product: Product,
+  category: ProductCategory
+): Promise<Blob> {
+  const pageSizeConfig = getPageSizeFromCategory(category);
+  if (!pageSizeConfig) {
+    throw new Error(`分类 ${category.name} 缺少生产尺寸信息`);
+  }
+
+  const bleed = 6;
+  const actualPageWidth = pageSizeConfig.width + bleed;
+  const actualPageHeight = pageSizeConfig.height + bleed;
+  const orientation = actualPageWidth > actualPageHeight ? 'landscape' : 'portrait';
+
+  const pdf = new jsPDF({
+    orientation,
+    unit: 'mm',
+    format: [actualPageWidth, actualPageHeight]
+  });
+
+  const pageWidth = actualPageWidth;
+  const pageHeight = actualPageHeight;
+
+  // 产品图页面（无货号页）
+  const productImages = product.productImages || [];
+  let isFirstImage = true;
+
+  for (const imageUrl of productImages) {
+    try {
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        headers: { 'Accept': 'image/*' }
+      });
+
+      if (!response.ok) {
+        console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
+        continue;
+      }
+
+      const blob = await response.blob();
+      const imageDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(blob);
+      });
+
+      // 第一张图片不需要添加新页
+      if (!isFirstImage) {
+        pdf.addPage();
+      }
+
+      // 拉伸铺满整个页面（包含出血）
+      pdf.addImage(imageDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight);
+
+      // 在第一张图片的右下角添加货号
+      if (isFirstImage) {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(50, 50, 50);
+        const productCode = product.newProductCode || product.id;
+        const textWidth = pdf.getTextWidth(productCode);
+        const textX = pageWidth - textWidth - 8;
+        const textY = pageHeight - 8;
+        pdf.text(productCode, textX, textY);
+      }
+
+      isFirstImage = false;
+    } catch (error) {
+      console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+    }
+  }
+
+  return pdf.output('blob');
+}
+
+/**
+ * 手提纸袋PDF生成方法
+ * 使用前两张图片，左右分布
+ */
+async function generatePaperBagProductPdf(
+  product: Product,
+  category: ProductCategory
+): Promise<Blob> {
+  const productImages = product.productImages || [];
+  if (productImages.length < 2) {
+    throw new Error(`纸袋产品 ${product.newProductCode || product.id} 需要至少2张产品图`);
+  }
+
+  const pageSizeConfig = getPageSizeFromCategory(category);
+  if (!pageSizeConfig) {
+    throw new Error(`分类 ${category.name} 缺少生产尺寸信息`);
+  }
+
+  const bleed = 6;
+  const pageWidth = pageSizeConfig.width + bleed;
+  const pageHeight = pageSizeConfig.height + bleed;
+
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: [pageWidth, pageHeight]
+  });
+
+  // 图像填充区域（64.6cm x 27.6cm）
+  const imageWidth = 646;
+  const imageHeight = 276;
+  const halfWidth = imageWidth / 2;
+
+  // 获取前两张图片
+  const image1Url = productImages[0];
+  const image2Url = productImages[1];
+
+  // 加载第一张图片
+  const response1 = await fetch(image1Url, {
+    mode: 'cors',
+    headers: { 'Accept': 'image/*' }
+  });
+  const blob1 = await response1.blob();
+  const imageDataUrl1 = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.readAsDataURL(blob1);
+  });
+
+  // 加载第二张图片
+  const response2 = await fetch(image2Url, {
+    mode: 'cors',
+    headers: { 'Accept': 'image/*' }
+  });
+  const blob2 = await response2.blob();
+  const imageDataUrl2 = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.readAsDataURL(blob2);
+  });
+
+  // 获取图片原始尺寸
+  const img1 = new Image();
+  await new Promise((resolve, reject) => {
+    img1.onload = resolve;
+    img1.onerror = reject;
+    img1.src = imageDataUrl1;
+  });
+
+  const img2 = new Image();
+  await new Promise((resolve, reject) => {
+    img2.onload = resolve;
+    img2.onerror = reject;
+    img2.src = imageDataUrl2;
+  });
+
+  // 计算图片实际显示尺寸（保持原始比例）
+  const img1Ratio = img1.naturalWidth / img1.naturalHeight;
+  const img1DisplayHeight = imageHeight;
+  const img1DisplayWidth = img1DisplayHeight * img1Ratio;
+
+  const img2Ratio = img2.naturalWidth / img2.naturalHeight;
+  const img2DisplayHeight = imageHeight;
+  const img2DisplayWidth = img2DisplayHeight * img2Ratio;
+
+  // 第一张图片：左半部分
+  pdf.saveGraphicsState();
+  pdf.rect(0, 0, halfWidth, imageHeight);
+  pdf.clip();
+  pdf.addImage(imageDataUrl1, 'JPEG', 0, 0, img1DisplayWidth, img1DisplayHeight, undefined, 'NONE');
+  pdf.restoreGraphicsState();
+
+  // 第二张图片：右半部分
+  pdf.saveGraphicsState();
+  pdf.rect(halfWidth, 0, halfWidth, imageHeight);
+  pdf.clip();
+  pdf.addImage(imageDataUrl2, 'JPEG', halfWidth, 0, img2DisplayWidth, img2DisplayHeight, undefined, 'NONE');
+  pdf.restoreGraphicsState();
+
+  return pdf.output('blob');
 }
 
 /**
  * 导出产品图PDF
  * @param products 要导出的产品列表
- * @param pageSize 页面尺寸类型（可选，如果不提供则从产品信息自动推断）
+ * @param categories 产品分类列表（用于获取生产尺寸）
  * @param onProgress 进度回调
  */
 export async function exportProductPdf(
   products: Product[],
-  pageSize?: PageSizeType,
+  categories: ProductCategory[],
   onProgress?: (current: number, total: number) => void
 ): Promise<void> {
-  const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
-
-  if (productsWithImages.length === 0) {
-    throw new Error('所选商品没有产品图');
+  if (products.length === 0) {
+    throw new Error('没有可导出的商品');
   }
 
   const zip = new JSZip();
 
-  // 如果没有提供pageSize，尝试从第一个产品推断（假设同批次产品类型相同）
-  let actualPageSize: PageSizeType;
-  if (!pageSize) {
-    const inferredSize = getPageSizeFromProduct(productsWithImages[0]);
-    if (!inferredSize) {
-      throw new Error('无法自动识别产品类型，请手动选择PDF页面尺寸');
-    }
-    actualPageSize = inferredSize;
-  } else {
-    actualPageSize = pageSize;
+  // 创建分类ID到分类对象的映射
+  const categoryMap = new Map<string, ProductCategory>();
+  for (const category of categories) {
+    categoryMap.set(category.id, category);
   }
 
-  const pageSizeConfig = PAGE_SIZES[actualPageSize];
-
-  // 判断是否为日历类型
-  const isCalendar = actualPageSize === 'CALENDAR_PORTRAIT' || actualPageSize === 'CALENDAR_LANDSCAPE';
-
-  // 计算实际页面尺寸（所有类型都加6mm出血）
-  const bleed = 6;
-  const actualPageWidth = pageSizeConfig.width + bleed;
-  const actualPageHeight = pageSizeConfig.height + bleed;
-
-  for (let index = 0; index < productsWithImages.length; index++) {
-    const product = productsWithImages[index];
-    const productImages = product.productImages;
-
-    if (!productImages || productImages.length === 0) continue;
-
-    // 根据页面尺寸自动判断方向
-    const orientation = actualPageWidth > actualPageHeight ? 'landscape' : 'portrait';
-
-    const pdf = new jsPDF({
-      orientation,
-      unit: 'mm',
-      format: [actualPageWidth, actualPageHeight]
-    });
-
-    const pageWidth = actualPageWidth;
-    const pageHeight = actualPageHeight;
-
-    // 非日历模式: 第一页是货号页
-    if (!isCalendar) {
-      pdf.setFontSize(40);
-      pdf.setTextColor(0, 0, 0);
-      const productCode = product.newProductCode || product.id;
-      const textWidth = pdf.getTextWidth(productCode);
-      const textX = (pageWidth - textWidth) / 2;
-      const textY = pageHeight / 2;
-      pdf.text(productCode, textX, textY);
-
-      // 添加右下角黑色标记 (用于分本)
-      const blackMarkWidth = 10;  // 1cm
-      const blackMarkHeight = 5;  // 0.5cm
-      const blackMarkX = pageWidth - blackMarkWidth;
-      const blackMarkY = pageHeight - blackMarkHeight - 5;
-      pdf.setFillColor(0, 0, 0);
-      pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');
+  // 按分类分组
+  const productsByCategory = new Map<string, Product[]>();
+  for (const product of products) {
+    if (!product.productCategoryId) {
+      console.warn(`产品 ${product.newProductCode || product.id} 缺少分类信息，跳过`);
+      continue;
     }
 
-    // 产品图页面
-    let isFirstImage = true;
-    for (const imageUrl of productImages) {
+    const categoryId = product.productCategoryId;
+    if (!productsByCategory.has(categoryId)) {
+      productsByCategory.set(categoryId, []);
+    }
+    productsByCategory.get(categoryId)!.push(product);
+  }
+
+  let processedCount = 0;
+
+  // 遍历每个分类
+  for (const [categoryId, categoryProducts] of productsByCategory) {
+    const category = categoryMap.get(categoryId);
+    if (!category) {
+      console.warn(`分类 ${categoryId} 不存在，跳过`);
+      continue;
+    }
+
+    // 根据分类ID选择不同的导出方法
+    let generatePdfMethod: (product: Product, category: ProductCategory) => Promise<Blob>;
+
+    if (categoryId === '3' || categoryId === '4') {
+      // 日历类型
+      generatePdfMethod = generateCalendarProductPdf;
+    } else if (categoryId === '5') {
+      // 手提纸袋
+      generatePdfMethod = generatePaperBagProductPdf;
+    } else {
+      // 通用类型（手账纸、包装纸等）
+      generatePdfMethod = generateGenericProductPdf;
+    }
+
+    // 处理该分类下的所有产品
+    for (const product of categoryProducts) {
       try {
-        const response = await fetch(imageUrl, {
-          mode: 'cors',
-          headers: {
-            'Accept': 'image/*',
-          }
-        });
+        const pdfBlob = await generatePdfMethod(product, category);
+        const pdfFileName = `${product.newProductCode || product.id}.pdf`;
+        zip.file(pdfFileName, pdfBlob);
 
-        if (!response.ok) {
-          console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
-          continue;
+        processedCount++;
+        if (onProgress) {
+          onProgress(processedCount, products.length);
         }
-
-        const blob = await response.blob();
-        const imageDataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(blob);
-        });
-
-        // 添加新页 (日历模式且第一张图片时不添加，因为没有货号页)
-        if (!isCalendar || !isFirstImage) {
-          pdf.addPage();
-        }
-
-        // 获取图片尺寸
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = imageDataUrl;
-        });
-
-        // 所有类型都直接拉伸铺满整个页面（包含出血）
-        const displayWidth = pageWidth;
-        const displayHeight = pageHeight;
-        const x = 0;
-        const y = 0;
-
-        pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
-
-        // 日历模式：在第一张图片的右下角添加货号
-        if (isCalendar && isFirstImage) {
-          pdf.setFontSize(12);
-          pdf.setFont('helvetica', 'bold'); // 设置粗体
-          pdf.setTextColor(50, 50, 50); // 深灰色
-          const productCode = product.newProductCode || product.id;
-          const textWidth = pdf.getTextWidth(productCode);
-          const textX = pageWidth - textWidth - 8; // 距离右边缘8mm
-          const textY = pageHeight - 8; // 距离底部8mm
-          pdf.text(productCode, textX, textY);
-        }
-
-        isFirstImage = false;
-
       } catch (error) {
-        console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
+        console.error(`生成PDF失败: ${product.newProductCode || product.id}`, error);
       }
     }
-
-    // 生成PDF blob并添加到压缩包
-    const pdfBlob = pdf.output('blob');
-    const pdfFileName = `${product.newProductCode || product.id}.pdf`;
-    zip.file(pdfFileName, pdfBlob);
-
-    // 更新进度
-    if (onProgress) {
-      onProgress(index + 1, productsWithImages.length);
-    }
   }
 
-  // 生成压缩包
+  // 生成压缩包并下载
   const zipContent = await zip.generateAsync({ type: 'blob' });
   const filename = `产品图PDF_${getDateTimeString()}.zip`;
 
-  // 下载压缩包
   const url = window.URL.createObjectURL(zipContent);
   const link = document.createElement('a');
   link.href = url;
@@ -817,18 +966,22 @@ export function exportLogisticsInfo(
 /**
  * 生成单个产品的PDF Blob（不下载）
  * @param product 产品
- * @param pageSize PDF页面尺寸
+ * @param category 产品分类（用于获取生产尺寸）
  * @returns PDF Blob
  */
-async function generateProductPdfBlob(product: Product, pageSize: PageSizeType): Promise<Blob> {
+async function generateProductPdfBlob(product: Product, category: ProductCategory): Promise<Blob> {
   const productImages = product.productImages || [];
 
   if (productImages.length === 0) {
     throw new Error(`产品 ${product.newProductCode || product.id} 没有产品图`);
   }
 
-  const pageSizeConfig = PAGE_SIZES[pageSize];
-  const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
+  const pageSizeConfig = getPageSizeFromCategory(category);
+  if (!pageSizeConfig) {
+    throw new Error(`产品分类 ${category.name} 缺少生产尺寸信息`);
+  }
+
+  const isCalendar = category.id === '3' || category.id === '4';
   const bleed = 6;
   const actualPageWidth = pageSizeConfig.width + bleed;
   const actualPageHeight = pageSizeConfig.height + bleed;
@@ -927,16 +1080,18 @@ async function generateProductPdfBlob(product: Product, pageSize: PageSizeType):
  * - 日历类型需要逐个调整月份顺序
  *
  * @param products 要导出的产品列表
+ * @param categories 产品分类列表（用于获取生产尺寸）
  * @param onProgress 导出进度回调
  * @returns 返回导出结果，包括需要调整顺序的日历产品列表和非日历产品的ZIP
  */
 export async function exportProductPdfSmart(
   products: Product[],
+  categories: ProductCategory[],
   onProgress?: (current: number, total: number, categoryName: string) => void
 ): Promise<{
   zip: JSZip; // 共享的ZIP对象
   nonCalendarCount: number; // 已添加到ZIP的非日历产品数量
-  calendarProducts: { products: Product[]; pageSize: PageSizeType }[]; // 待调整顺序的日历产品
+  calendarProducts: { products: Product[]; category: ProductCategory }[]; // 待调整顺序的日历产品
 }> {
   const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
 
@@ -947,36 +1102,42 @@ export async function exportProductPdfSmart(
   // 创建共享的ZIP对象
   const zip = new JSZip();
 
+  // 创建分类ID到分类对象的映射
+  const categoryMap = new Map<string, ProductCategory>();
+  for (const category of categories) {
+    categoryMap.set(category.id, category);
+  }
+
   // 按分类ID分组
-  const productsByCategory = new Map<string, { products: Product[]; pageSize: PageSizeType | null }>();
+  const productsByCategory = new Map<string, { products: Product[]; category: ProductCategory | null }>();
 
   for (const product of productsWithImages) {
-    const pageSize = getPageSizeFromProduct(product);
     const categoryKey = product.productCategoryId || 'unknown';
+    const category = categoryMap.get(categoryKey) || null;
 
     if (!productsByCategory.has(categoryKey)) {
-      productsByCategory.set(categoryKey, { products: [], pageSize });
+      productsByCategory.set(categoryKey, { products: [], category });
     }
 
     productsByCategory.get(categoryKey)!.products.push(product);
   }
 
   let processedCount = 0;
-  const calendarProductsList: { products: Product[]; pageSize: PageSizeType }[] = [];
+  const calendarProductsList: { products: Product[]; category: ProductCategory }[] = [];
 
   // 遍历每个分类
-  for (const [categoryId, { products: categoryProducts, pageSize }] of productsByCategory) {
-    if (!pageSize) {
-      console.warn(`产品分类 ${categoryId} 无法识别页面尺寸，跳过导出`);
+  for (const [categoryId, { products: categoryProducts, category }] of productsByCategory) {
+    if (!category) {
+      console.warn(`产品分类 ${categoryId} 无法找到分类信息，跳过导出`);
       continue;
     }
 
     const categoryName = categoryProducts[0].productCategoryName || `分类${categoryId}`;
-    const isCalendar = pageSize === 'CALENDAR_PORTRAIT' || pageSize === 'CALENDAR_LANDSCAPE';
+    const isCalendar = category.id === '3' || category.id === '4';
 
     if (isCalendar) {
       // 日历类型：收集起来，等待用户调整顺序
-      calendarProductsList.push({ products: categoryProducts, pageSize });
+      calendarProductsList.push({ products: categoryProducts, category });
 
       if (onProgress) {
         onProgress(processedCount, productsWithImages.length, `${categoryName}(待调整顺序)`);
@@ -991,7 +1152,7 @@ export async function exportProductPdfSmart(
         }
 
         try {
-          const pdfBlob = await generateProductPdfBlob(product, pageSize);
+          const pdfBlob = await generateProductPdfBlob(product, category);
           const pdfFileName = `${product.newProductCode || product.id}.pdf`;
           zip.file(pdfFileName, pdfBlob);
         } catch (error) {
@@ -1018,15 +1179,15 @@ export async function exportProductPdfSmart(
  * 添加日历PDF到现有ZIP
  * @param zip 现有的ZIP对象
  * @param products 日历产品列表
- * @param pageSize PDF页面尺寸
+ * @param category 产品分类（用于获取生产尺寸）
  */
 export async function addCalendarPdfsToZip(
   zip: JSZip,
   products: Product[],
-  pageSize: PageSizeType
+  category: ProductCategory
 ): Promise<void> {
   for (const product of products) {
-    const pdfBlob = await generateProductPdfBlob(product, pageSize);
+    const pdfBlob = await generateProductPdfBlob(product, category);
     const pdfFileName = `${product.newProductCode || product.id}.pdf`;
     zip.file(pdfFileName, pdfBlob);
   }

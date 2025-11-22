@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
+import { productCategoryService } from '@/services/productCategoryService';
+import { type ProductCategory } from '@/types/productCategory';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
 import { ImageReorderDialog } from '@/components/ImageReorderDialog';
@@ -17,13 +19,13 @@ import {
   exportLogisticsInfo as exportLogisticsInfoUtil,
   exportProductPdfSmart as exportProductPdfSmartUtil,
   addCalendarPdfsToZip,
-  downloadZip,
-  type PageSizeType
+  downloadZip
 } from '@/utils/productExportUtils';
 
 export function ProductListing() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 选择状态
@@ -44,7 +46,7 @@ export function ProductListing() {
   // PDF导出相关状态
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
-  const [calendarProductsList, setCalendarProductsList] = useState<{ products: Product[]; pageSize: PageSizeType }[]>([]);
+  const [calendarProductsList, setCalendarProductsList] = useState<{ products: Product[]; category: ProductCategory }[]>([]);
   const [currentCalendarIndex, setCurrentCalendarIndex] = useState(0);
   const [sharedZip, setSharedZip] = useState<any>(null); // 共享的ZIP对象
 
@@ -101,9 +103,21 @@ export function ProductListing() {
     }
   };
 
+  // 加载产品分类
+  const fetchCategories = async () => {
+    try {
+      const categoriesData = await productCategoryService.getAllCategories();
+      setCategories(categoriesData);
+    } catch (error: any) {
+      console.error('获取产品分类失败:', error);
+      toast.error(error.response?.data?.message || '获取产品分类失败');
+    }
+  };
+
   // 初始加载
   useEffect(() => {
     fetchProducts(1);
+    fetchCategories();
   }, []);
 
   // 应用筛选
@@ -372,6 +386,7 @@ export function ProductListing() {
       // 使用智能导出函数，自动识别分类并生成非日历PDF
       const result = await exportProductPdfSmartUtil(
         selectedProducts,
+        categories,
         (current, total, categoryName) => {
           console.log(`正在处理 ${categoryName}: ${current}/${total}`);
         }
@@ -414,7 +429,7 @@ export function ProductListing() {
     setIsGeneratingPdf(true);
     try {
       // 将当前日历的PDF添加到共享ZIP中
-      await addCalendarPdfsToZip(sharedZip, reorderedProducts, currentCalendar.pageSize);
+      await addCalendarPdfsToZip(sharedZip, reorderedProducts, currentCalendar.category);
 
       // 检查是否还有下一个日历
       if (currentCalendarIndex < calendarProductsList.length - 1) {
