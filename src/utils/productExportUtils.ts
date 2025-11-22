@@ -184,13 +184,13 @@ export async function exportPaperBagPdf(
 }
 
 /**
- * 根据产品分类ID获取PDF页面尺寸类型
+ * 根据产品分类ID和尺寸获取PDF页面尺寸类型
  *
  * 分类ID映射关系：
  * 1 = 手账纸 (15.2x15.2cm) -> JOURNAL_PAPER
  * 2 = 包装纸 (30x30cm) -> DECORATIVE_PAPER
- * 3 = 竖版日历 (21x29.7cm) -> CALENDAR_PORTRAIT
- * 4 = 横版日历 (29.7x21cm) -> CALENDAR_LANDSCAPE
+ * 3 = 日历 -> 根据width和length自动判断横竖版
+ * 4 = 日历 -> 根据width和length自动判断横竖版
  * 5 = 手提纸袋 (66x34cm) -> PAPER_BAG
  */
 function getPageSizeFromProduct(product: Product): PageSizeType | null {
@@ -202,10 +202,25 @@ function getPageSizeFromProduct(product: Product): PageSizeType | null {
   const categoryPageSizeMap: Record<string, PageSizeType> = {
     '1': 'JOURNAL_PAPER',      // 手账纸
     '2': 'DECORATIVE_PAPER',    // 包装纸
-    '3': 'CALENDAR_PORTRAIT',   // 竖版日历
-    '4': 'CALENDAR_LANDSCAPE',  // 横版日历
     '5': 'PAPER_BAG'            // 手提纸袋
   };
+
+  // 对于日历类型（分类ID为3或4），根据产品的width和length智能判断横竖版
+  if (product.productCategoryId === '3' || product.productCategoryId === '4') {
+    // 如果有width和length信息，根据尺寸判断
+    if (product.width && product.length) {
+      // length > width 说明是横版（29.7 x 21）
+      // width > length 说明是竖版（21 x 29.7）
+      if (product.length > product.width) {
+        return 'CALENDAR_LANDSCAPE';
+      } else {
+        return 'CALENDAR_PORTRAIT';
+      }
+    }
+
+    // 如果没有尺寸信息，按照原分类ID判断
+    return product.productCategoryId === '4' ? 'CALENDAR_LANDSCAPE' : 'CALENDAR_PORTRAIT';
+  }
 
   return categoryPageSizeMap[product.productCategoryId] || null;
 }
