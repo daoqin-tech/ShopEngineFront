@@ -340,9 +340,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   let productCategory: ProductCategory | undefined;
 
                   if (productType === 'calendar') {
-                    // 日历类型：需要根据规格判断是竖版还是横版
-                    // 可以通过宽高比或其他规格特征判断，这里暂时使用第一个匹配的日历分类
-                    productCategory = productCategories.find(cat => cat.name.includes('日历'));
+                    // 日历类型：根据规格的 length 和 width 判断横竖版
+                    // length > width: 横版日历 (sizeCode = 30, 基于length约等于30)
+                    // width > length: 竖版日历 (sizeCode = 21, 基于width=21)
+                    const targetSizeCode = selectedSpec.length > selectedSpec.width ? '30' : '21';
+                    productCategory = productCategories.find(cat =>
+                      cat.name.includes('日历') && cat.sizeCode === targetSizeCode
+                    );
                   } else {
                     // 其他类型：直接根据中文名称匹配
                     productCategory = productCategories.find(cat => cat.name === typeName);
