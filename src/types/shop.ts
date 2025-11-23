@@ -389,6 +389,55 @@ export const PLANNER_CATEGORIES: ProductCategory[] = [
     categoryName: '健康和家居用品/文具和礼品包装用品/文具/文具记事本',
     categoryId: '17346',
     productAttributes: '[{"propName":"颜色","refPid":63,"pid":13,"templatePid":1243924,"numberInputValue":"","valueUnit":"","vid":"376","propValue":"白色"},{"propName":"是否有羽毛","refPid":2232,"pid":1614,"templatePid":919584,"numberInputValue":"","valueUnit":"","vid":"57227","propValue":"否"},{"propName":"适用年龄段","refPid":1117,"pid":1141,"templatePid":917529,"numberInputValue":"","valueUnit":"","vid":"73673","propValue":"6+"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909852,"numberInputValue":"","valueUnit":"","vid":"3333","propValue":"纸张"},{"propName":"材料","refPid":121,"pid":89,"templatePid":909852,"numberInputValue":"","valueUnit":"","vid":"11783","propValue":"无铅水晶"},{"propName":"主题","refPid":130,"pid":126,"templatePid":210071,"numberInputValue":"","valueUnit":"","vid":"29361","propValue":"其他主题"},{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":210065,"numberInputValue":"","valueUnit":"","vid":"12686","propValue":"普通"}]'
+  },
+  {
+    id: 'spiral-notebook-category',
+    name: '螺旋线圈笔记本',
+    categoryName: '办公用品/日常办公用品/办公用纸张/笔记本便签/螺旋线圈笔记本',
+    categoryId: '1127',
+    productAttributes: '[{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":369458,"numberInputValue":"","valueUnit":"","vid":"333001","propValue":"横线"},{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496265,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495455,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]'
+  },
+  {
+    id: 'subject-notebook-category',
+    name: '学科笔记本',
+    categoryName: '办公用品/日常办公用品/办公用纸张/笔记本便签/学科笔记本',
+    categoryId: '1126',
+    productAttributes: '[{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496264,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495451,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"完成类型","refPid":132,"pid":98,"templatePid":913907,"numberInputValue":"","valueUnit":"","vid":"2982","propValue":"哑光"},{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":370168,"numberInputValue":"","valueUnit":"","vid":"333005","propValue":"计划页"}]'
+  },
+  {
+    id: 'hardcover-executive-notebook-category',
+    name: '硬皮行政笔记本',
+    categoryName: '办公用品/日常办公用品/办公用纸张/笔记本便签/硬皮行政笔记本',
+    categoryId: '1125',
+    productAttributes: '[{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496257,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495446,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":370270,"numberInputValue":"","valueUnit":"","vid":"333005","propValue":"计划页"}]'
+  },
+  {
+    id: 'stenography-notebook-category',
+    name: '速记本',
+    categoryName: '办公用品/日常办公用品/办公用纸张/笔记本便签/速记本',
+    categoryId: '1123',
+    productAttributes: '[{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":1497803,"numberInputValue":"","valueUnit":"","vid":"333005","propValue":"计划页"},{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496258,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1493247,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"}]'
+  },
+  {
+    id: 'universal-notebook-category',
+    name: '万用手册',
+    categoryName: '办公用品/日常办公用品/办公用纸张/笔记本便签/万用手册',
+    categoryId: '1124',
+    productAttributes: '[{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496256,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1495447,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"裁决类型","refPid":518,"pid":453,"templatePid":370063,"numberInputValue":"","valueUnit":"","vid":"333005","propValue":"计划页"}]'
+  },
+  {
+    id: 'planner-book-category',
+    name: '计划本',
+    categoryName: '办公用品/日常办公用品/日历及个人规划用品/计划本',
+    categoryId: '984',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1582387,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"页面线型","refPid":7574,"pid":2353,"templatePid":1497805,"numberInputValue":"","valueUnit":"","vid":"332996","propValue":"计划页"},{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496266,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"是否印刷日期","refPid":7424,"pid":2287,"templatePid":1483868,"numberInputValue":"","valueUnit":"","vid":"246628","propValue":"dated"},{"propName":"起始年份","refPid":7465,"pid":2294,"templatePid":1485842,"numberInputValue":"","valueUnit":"","vid":"278025","propValue":"2026"},{"propName":"起始月份","refPid":7475,"pid":2299,"templatePid":1488058,"numberInputValue":"","valueUnit":"","vid":"280351","propValue":"1月"},{"propName":"结束年份","refPid":7503,"pid":2309,"templatePid":1492272,"numberInputValue":"","valueUnit":"","vid":"326008","propValue":"2026"},{"propName":"结束月份","refPid":7527,"pid":2325,"templatePid":1495473,"numberInputValue":"","valueUnit":"","vid":"327909","propValue":"12月"},{"propName":"计划本类型","refPid":7423,"pid":2286,"templatePid":1483030,"numberInputValue":"","valueUnit":"","vid":"246620","propValue":"周计划"},{"propName":"目标听众","refPid":434,"pid":437,"templatePid":369250,"numberInputValue":"","valueUnit":"","vid":"21454","propValue":"青少年"}]'
+  },
+  {
+    id: 'diary-book-category',
+    name: '日程表本',
+    categoryName: '办公用品/日常办公用品/日历及个人规划用品/记事簿、替换芯和封皮/日程表本',
+    categoryId: '995',
+    productAttributes: '[{"propName":"主体材质","refPid":1920,"pid":1,"templatePid":1582371,"numberInputValue":"","valueUnit":"","vid":"1350","propValue":"纸"},{"propName":"页面线型","refPid":7574,"pid":2353,"templatePid":1497807,"numberInputValue":"","valueUnit":"","vid":"332997","propValue":"日程表"},{"propName":"较短边是否小于6英寸","refPid":7561,"pid":2349,"templatePid":1496262,"numberInputValue":"","valueUnit":"","vid":"330483","propValue":"否"},{"propName":"是否印刷日期","refPid":7424,"pid":2287,"templatePid":1483034,"numberInputValue":"","valueUnit":"","vid":"246628","propValue":"dated"},{"propName":"起始年份","refPid":7465,"pid":2294,"templatePid":1485841,"numberInputValue":"","valueUnit":"","vid":"278025","propValue":"2026"},{"propName":"起始月份","refPid":7475,"pid":2299,"templatePid":1488059,"numberInputValue":"","valueUnit":"","vid":"280351","propValue":"1月"},{"propName":"结束年份","refPid":7503,"pid":2309,"templatePid":1492275,"numberInputValue":"","valueUnit":"","vid":"326008","propValue":"2026"},{"propName":"结束月份","refPid":7527,"pid":2325,"templatePid":1495474,"numberInputValue":"","valueUnit":"","vid":"327909","propValue":"12月"},{"propName":"捆绑","refPid":955,"pid":743,"templatePid":369757,"numberInputValue":"","valueUnit":"","vid":"21444","propValue":"环装订"},{"propName":"封面材料","refPid":267,"pid":130,"templatePid":369758,"numberInputValue":"","valueUnit":"","vid":"21450","propValue":"纸"},{"propName":"格式","refPid":208,"pid":395,"templatePid":369754,"numberInputValue":"","valueUnit":"","vid":"22142","propValue":"笔记本"},{"propName":"看法","refPid":704,"pid":813,"templatePid":369756,"numberInputValue":"","valueUnit":"","vid":"22131","propValue":"每年"},{"propName":"年份类型","refPid":702,"pid":814,"templatePid":369753,"numberInputValue":"","valueUnit":"","vid":"22133","propValue":"未注明日期"}]'
   }
 ];
 
