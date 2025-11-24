@@ -711,21 +711,40 @@ export function ImageContentArea({
       {/* 图片预览模态框 */}
       {previewImage && previewImage.imageUrl && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setPreviewImage(null)}>
-          <div className="relative max-w-4xl max-h-full bg-white rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="relative max-w-7xl w-full max-h-[90vh] bg-white rounded-lg overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
               <div className="flex-1">
-                <h3 className="text-lg font-medium text-gray-900">图片预览</h3>
-                <p className="text-sm text-gray-500 mt-1">{previewImage.width}×{previewImage.height}</p>
+                <h3 className="text-lg font-medium text-gray-900">项目图片 ({completedImages.length} 张)</h3>
+                <p className="text-sm text-gray-500 mt-1">{projectName || '未命名项目'}</p>
               </div>
               <Button size="sm" variant="ghost" onClick={() => setPreviewImage(null)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            <div className="p-4">
-              <div className="flex justify-center">
-                <img src={previewImage.imageUrl} alt="图片预览" className="max-w-full max-h-[70vh] object-contain rounded-lg" />
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {completedImages.map((image) => (
+                  <div key={image.id} className="group relative bg-gray-100 rounded-lg overflow-hidden aspect-square">
+                    <img
+                      src={image.imageUrl}
+                      alt={`图片 ${image.id}`}
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => window.open(image.imageUrl, '_blank')}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-white text-xs truncate">{image.width}×{image.height}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
+
+              {completedImages.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <ImageIcon className="w-12 h-12 mb-2" />
+                  <p>暂无图片</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
