@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy, Calendar } from 'lucide-react';
+import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy, Calendar, X } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -136,6 +136,12 @@ export function AIImageProjects() {
 
   // 多选状态
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+
+  // 查看图片对话框状态
+  const [viewImagesDialogOpen, setViewImagesDialogOpen] = useState(false);
+  const [viewingProject, setViewingProject] = useState<AIImageProject | null>(null);
+  const [viewingImages, setViewingImages] = useState<any[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -294,6 +300,24 @@ export function AIImageProjects() {
 
   const handleOpenProject = (projectId: string) => {
     navigate(`/workspace/project/${projectId}/image-generation`);
+  };
+
+  // 打开查看图片对话框
+  const handleViewImages = async (project: AIImageProject) => {
+    setViewingProject(project);
+    setViewImagesDialogOpen(true);
+    setLoadingImages(true);
+
+    try {
+      const images = await AIImageSessionsAPI.loadImages(project.id);
+      setViewingImages(images || []);
+    } catch (error) {
+      console.error('加载图片失败:', error);
+      toast.error('加载图片失败');
+      setViewingImages([]);
+    } finally {
+      setLoadingImages(false);
+    }
   };
 
   const handleStartEditName = (project: AIImageProject) => {
@@ -1412,7 +1436,7 @@ export function AIImageProjects() {
                         className="h-7 px-2 text-green-500 hover:text-green-700 text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/workspace/project/${project.id}/image-generation`, '_blank');
+                          handleViewImages(project);
                         }}
                       >
                         查看
@@ -2316,6 +2340,58 @@ export function AIImageProjects() {
               {creating ? '创建中...' : '确定'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 查看图片对话框 */}
+      <Dialog open={viewImagesDialogOpen} onOpenChange={setViewImagesDialogOpen}>
+        <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">
+                  {viewingProject?.name || '项目图片'}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  共 {viewingImages.filter(img => img.status === 'completed').length} 张图片
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setViewImagesDialogOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {loadingImages ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-gray-500">加载中...</div>
+              </div>
+            ) : viewingImages.filter(img => img.status === 'completed').length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {viewingImages
+                  .filter(img => img.status === 'completed')
+                  .map((image) => (
+                    <div key={image.id} className="group relative bg-gray-100 rounded-lg overflow-hidden aspect-square">
+                      <img
+                        src={image.imageUrl}
+                        alt={`图片 ${image.id}`}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(image.imageUrl, '_blank')}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white text-xs truncate">{image.width}×{image.height}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                <Images className="w-12 h-12 mb-2" />
+                <p>暂无图片</p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
