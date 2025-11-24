@@ -975,10 +975,12 @@ export function AIImageProjects() {
       let successCount = 0;
       let failedCount = 0;
 
-      // 统计总图片数
+      // 统计总图片数（排除封面图片）
       for (const projectId of projectsArray) {
         const images = await AIImageSessionsAPI.loadImages(projectId);
-        totalImages += images.length;
+        // 只统计日历内页（排除 generated-images 路径的封面图片）
+        const calendarImages = images.filter(img => !img.imageUrl.includes('generated-images'));
+        totalImages += calendarImages.length;
       }
 
       setFixCalendarProgress({
@@ -1001,10 +1003,13 @@ export function AIImageProjects() {
         const images = await AIImageSessionsAPI.loadImages(projectId);
         images.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-        console.log(`处理项目 [${projIndex + 1}/${projectsArray.length}]: ${project?.name}, 共 ${images.length} 张图片`);
+        // 过滤掉封面图片（包含 generated-images 路径的是原始生成图片，通常是封面）
+        const calendarImages = images.filter(img => !img.imageUrl.includes('generated-images'));
 
-        for (let i = 0; i < images.length; i++) {
-          const image = images[i];
+        console.log(`处理项目 [${projIndex + 1}/${projectsArray.length}]: ${project?.name}, 共 ${images.length} 张图片，其中 ${calendarImages.length} 张日历内页`);
+
+        for (let i = 0; i < calendarImages.length; i++) {
+          const image = calendarImages[i];
           const monthIndex = i % 12; // 循环使用12个月份 (0-11)
 
           try {
