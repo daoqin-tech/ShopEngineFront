@@ -8,8 +8,6 @@ import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, Chevro
 import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, DECORATIVE_PAPER_SPECS, DECORATIVE_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES, PAPER_BAG_SPECS, PAPER_BAG_CATEGORIES, PLANNER_SPECS, PLANNER_CATEGORIES } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
-import { productCategoryService } from '@/services/productCategoryService';
-import type { ProductCategory } from '@/types/productCategory';
 import { toast } from 'sonner';
 import {
   Select,
@@ -100,24 +98,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 模板搜索选项状态
   const [templatesForSearch, setTemplatesForSearch] = useState<TemplateSearchItem[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-
-  // 产品分类数据（从后端获取）
-  const [productCategories, setProductCategories] = useState<ProductCategory[]>([]);
-
-  // 获取产品分类数据
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const categories = await productCategoryService.getAllCategories(true); // 只获取激活的分类
-        setProductCategories(categories);
-      } catch (error) {
-        console.error('获取产品分类失败:', error);
-        toast.error('获取产品分类失败');
-      }
-    };
-
-    fetchCategories();
-  }, []);
 
   // 获取可用的商品图（来自CoverGeneration）
   const fetchAvailableImages = async (page: number = currentPage) => {
@@ -326,43 +306,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   // 获取所有已选任务的唯一taskId列表
                   const taskIds = Array.from(new Set(selectedProducts.map(p => p.taskId)));
 
-                  // 产品类型到中文名称的映射
-                  const productTypeNameMap: Record<string, string> = {
-                    'journal': '手账纸',
-                    'decorative': '包装纸',
-                    'calendar': '日历',      // 注：日历可能是竖版或横版，需要进一步匹配
-                    'paper-bag': '手提纸袋',
-                    'planner': '笔记本',
-                  };
-
-                  // 从后端分类数据中查找对应的分类
-                  const typeName = productTypeNameMap[productType];
-                  let productCategory: ProductCategory | undefined;
-
-                  if (productType === 'calendar') {
-                    // 日历类型：根据规格的 length 和 width 判断横竖版
-                    // length > width: 横版日历 (sizeCode = 30, 基于length约等于30)
-                    // width > length: 竖版日历 (sizeCode = 21, 基于width=21)
-                    const targetSizeCode = selectedSpec.length > selectedSpec.width ? '30' : '21';
-                    productCategory = productCategories.find(cat =>
-                      cat.name.includes('日历') && cat.sizeCode === targetSizeCode
-                    );
-                  } else {
-                    // 其他类型：直接根据中文名称匹配
-                    productCategory = productCategories.find(cat => cat.name === typeName);
-                  }
-
-                  if (!productCategory) {
-                    toast.error(`未找到产品类型 ${typeName} 对应的分类数据`);
-                    return;
-                  }
-
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
                     categoryId: selectedCategory.categoryId,  // TEMU平台分类ID
                     categoryName: selectedCategory.categoryName,
-                    productCategoryId: productCategory.id,  // 从后端获取的产品分类ID
+                    // productCategoryId 不传，让后端从AI项目自动获取
                     productAttributes: selectedCategory.productAttributes,
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
