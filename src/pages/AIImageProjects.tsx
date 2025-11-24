@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy, Calendar } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -33,6 +33,38 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+
+// 竖版日历月份图片（下半部分 1024×720）
+const VERTICAL_CALENDAR_PARTS = [
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/01.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/02.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/03.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/04.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/05.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/06.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/07.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/08.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/09.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/10.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/11.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/vertical_bottom/12.jpg",
+];
+
+// 横版日历月份图片（右半部分 720×1120）
+const HORIZONTAL_CALENDAR_PARTS = [
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/01.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/02.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/03.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/04.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/05.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/06.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/07.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/08.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/09.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/10.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/11.jpg",
+  "https://shopengine-1256301913.cos.ap-guangzhou.myqcloud.com/calendar_parts/horizontal_right/12.jpg",
+];
 
 export function AIImageProjects() {
   const navigate = useNavigate();
@@ -80,6 +112,25 @@ export function AIImageProjects() {
     successCount: 0,
     failedCount: 0,
     isPaused: false,
+    isCompleted: false,
+  });
+
+  // 修改日历对话框状态
+  const [fixCalendarDialogOpen, setFixCalendarDialogOpen] = useState(false);
+  const [fixCalendarProcessing, setFixCalendarProcessing] = useState(false);
+  const [fixCalendarProgress, setFixCalendarProgress] = useState<{
+    current: number;
+    total: number;
+    currentImage: string;
+    successCount: number;
+    failedCount: number;
+    isCompleted: boolean;
+  }>({
+    current: 0,
+    total: 0,
+    currentImage: '',
+    successCount: 0,
+    failedCount: 0,
     isCompleted: false,
   });
 
@@ -780,6 +831,272 @@ export function AIImageProjects() {
     });
   };
 
+  // ========== 修改日历功能 ==========
+
+  // 打开修改日历对话框
+  const handleOpenFixCalendarDialog = async () => {
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要修改的项目');
+      return;
+    }
+
+    try {
+      // 重置状态
+      setFixCalendarProgress({
+        current: 0,
+        total: 0,
+        currentImage: '',
+        successCount: 0,
+        failedCount: 0,
+        isCompleted: false,
+      });
+
+      setFixCalendarDialogOpen(true);
+    } catch (err) {
+      toast.error('打开修改日历对话框失败');
+      console.error('Error opening fix calendar dialog:', err);
+    }
+  };
+
+  // Canvas合成：竖版日历（1024×1440）
+  const compositeVerticalCalendar = async (
+    existingImageUrl: string,
+    monthIndex: number
+  ): Promise<Blob> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1440;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('无法创建canvas上下文');
+    }
+
+    // 1. 加载现有成品图
+    const existingImg = await loadImage(existingImageUrl);
+
+    // 2. 绘制上半部分（保留原图的产品内容）
+    ctx.drawImage(
+      existingImg,
+      0, 0, 1024, 720,  // 源：上半部分
+      0, 0, 1024, 720   // 目标：上半部分
+    );
+
+    // 3. 加载对应月份的日历图片
+    const monthImg = await loadImage(VERTICAL_CALENDAR_PARTS[monthIndex]);
+
+    // 4. 绘制下半部分（新的月份日历）
+    ctx.drawImage(
+      monthImg,
+      0, 0, 1024, 720,  // 源：整张月份图（已经是下半部分）
+      0, 720, 1024, 720 // 目标：下半部分
+    );
+
+    // 5. 转换为blob
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('图片转换失败'));
+          }
+        },
+        'image/jpeg',
+        0.98
+      );
+    });
+  };
+
+  // Canvas合成：横版日历（1440×1120）
+  const compositeHorizontalCalendar = async (
+    existingImageUrl: string,
+    monthIndex: number
+  ): Promise<Blob> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1440;
+    canvas.height = 1120;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('无法创建canvas上下文');
+    }
+
+    // 1. 加载现有成品图
+    const existingImg = await loadImage(existingImageUrl);
+
+    // 2. 绘制左半部分（保留原图的产品内容）
+    ctx.drawImage(
+      existingImg,
+      0, 0, 720, 1120,  // 源：左半部分
+      0, 0, 720, 1120   // 目标：左半部分
+    );
+
+    // 3. 加载对应月份的日历图片
+    const monthImg = await loadImage(HORIZONTAL_CALENDAR_PARTS[monthIndex]);
+
+    // 4. 绘制右半部分（新的月份日历）
+    ctx.drawImage(
+      monthImg,
+      0, 0, 720, 1120,   // 源：整张月份图（已经是右半部分）
+      720, 0, 720, 1120  // 目标：右半部分
+    );
+
+    // 5. 转换为blob
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('图片转换失败'));
+          }
+        },
+        'image/jpeg',
+        0.98
+      );
+    });
+  };
+
+  // 开始修改日历
+  const handleStartFixCalendar = async () => {
+    if (fixCalendarProcessing) return;
+
+    if (selectedProjectIds.size === 0) {
+      toast.error('请选择要修改的项目');
+      return;
+    }
+
+    setFixCalendarProcessing(true);
+
+    try {
+      const projectsArray = Array.from(selectedProjectIds);
+      let totalImages = 0;
+      let successCount = 0;
+      let failedCount = 0;
+
+      // 统计总图片数
+      for (const projectId of projectsArray) {
+        const images = await AIImageSessionsAPI.loadImages(projectId);
+        totalImages += images.length;
+      }
+
+      setFixCalendarProgress({
+        current: 0,
+        total: totalImages,
+        currentImage: '',
+        successCount: 0,
+        failedCount: 0,
+        isCompleted: false,
+      });
+
+      let processedCount = 0;
+
+      // 逐个项目处理
+      for (let projIndex = 0; projIndex < projectsArray.length; projIndex++) {
+        const projectId = projectsArray[projIndex];
+        const project = projects.find(p => p.id === projectId);
+
+        // 获取项目的所有图片并按创建时间排序
+        const images = await AIImageSessionsAPI.loadImages(projectId);
+        images.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+        console.log(`处理项目 [${projIndex + 1}/${projectsArray.length}]: ${project?.name}, 共 ${images.length} 张图片`);
+
+        for (let i = 0; i < images.length; i++) {
+          const image = images[i];
+          const monthIndex = i % 12; // 循环使用12个月份 (0-11)
+
+          try {
+            processedCount++;
+            setFixCalendarProgress(prev => ({
+              ...prev,
+              current: processedCount,
+              currentImage: `正在处理第 ${processedCount}/${totalImages} 张图片...`,
+            }));
+
+            // 根据图片尺寸判断类型并合成
+            let blob: Blob;
+            if (image.width === 1024 && image.height === 1440) {
+              // 竖版日历
+              blob = await compositeVerticalCalendar(image.imageUrl, monthIndex);
+            } else if (image.width === 1440 && image.height === 1120) {
+              // 横版日历
+              blob = await compositeHorizontalCalendar(image.imageUrl, monthIndex);
+            } else {
+              throw new Error(`不支持的图片尺寸: ${image.width}x${image.height}`);
+            }
+
+            // 上传
+            const fileName = `calendar-fixed-${Date.now()}-${image.id}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            const uploadedUrl = await FileUploadAPI.uploadFile(file);
+
+            // 更新数据库
+            await AIImageSessionsAPI.batchUpdateImages([{
+              imageId: image.id,
+              imageUrl: uploadedUrl,
+              width: image.width,
+              height: image.height,
+            }]);
+
+            successCount++;
+            setFixCalendarProgress(prev => ({ ...prev, successCount }));
+            console.log(`图片 ${image.id} 修改成功（${monthIndex + 1}月）`);
+
+          } catch (error) {
+            console.error(`图片 ${image.id} 修改失败:`, error);
+            failedCount++;
+            setFixCalendarProgress(prev => ({ ...prev, failedCount }));
+          }
+        }
+      }
+
+      // 完成
+      setFixCalendarProgress(prev => ({
+        ...prev,
+        current: totalImages,
+        isCompleted: true,
+        currentImage: '所有图片处理完成',
+      }));
+
+      if (failedCount === 0) {
+        toast.success(`成功修改 ${successCount} 张图片`);
+      } else {
+        toast.warning(`完成处理：成功 ${successCount} 张，失败 ${failedCount} 张`);
+      }
+
+      fetchProjects(currentPage);
+
+    } catch (err: any) {
+      toast.error('修改日历失败', {
+        description: err.message || '请稍后再试'
+      });
+      console.error('Error fixing calendar:', err);
+    } finally {
+      setFixCalendarProcessing(false);
+    }
+  };
+
+  // 关闭修改日历对话框
+  const handleCloseFixCalendarDialog = () => {
+    if (fixCalendarProcessing && !fixCalendarProgress.isCompleted) {
+      const confirm = window.confirm('任务正在处理中，关闭对话框会中断处理，确定要关闭吗？');
+      if (!confirm) return;
+    }
+
+    setFixCalendarDialogOpen(false);
+    setFixCalendarProcessing(false);
+    setFixCalendarProgress({
+      current: 0,
+      total: 0,
+      currentImage: '',
+      successCount: 0,
+      failedCount: 0,
+      isCompleted: false,
+    });
+  };
+
 
   return (
     <div className="h-full flex flex-col">
@@ -837,6 +1154,15 @@ export function AIImageProjects() {
           >
             <Image className="w-4 h-4" />
             {isProcessing ? '替换中...' : '模板替换'}
+          </Button>
+          <Button
+            onClick={handleOpenFixCalendarDialog}
+            disabled={selectedProjectIds.size === 0 || fixCalendarProcessing}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            {fixCalendarProcessing ? '修改中...' : '修改日历'}
           </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -1765,6 +2091,157 @@ export function AIImageProjects() {
                 className={queueProgress.isCompleted ? '' : 'opacity-50 cursor-not-allowed'}
               >
                 {queueProgress.isCompleted ? '关闭' : '处理中...'}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 修改日历对话框 */}
+      <Dialog open={fixCalendarDialogOpen} onOpenChange={() => handleCloseFixCalendarDialog()}>
+        <DialogContent
+          className="sm:max-w-4xl max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => fixCalendarProcessing && e.preventDefault()}
+          onEscapeKeyDown={(e) => fixCalendarProcessing && e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              修改日历月份
+            </DialogTitle>
+            <DialogDescription>
+              {!fixCalendarProcessing ? '为图片选择正确的月份，系统会自动合成' : '正在处理图片，请勿关闭此对话框'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {!fixCalendarProcessing ? (
+              <>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-semibold text-blue-900 mb-2">使用说明：</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• 已选择 {selectedProjectIds.size} 个项目</li>
+                    <li>• 系统会自动按顺序分配月份（第1张=1月，第2张=2月...）</li>
+                    <li>• 超过12张时会循环使用月份（第13张=1月，第14张=2月...）</li>
+                    <li>• 系统会自动识别图片类型（竖版/横版日历）并合成</li>
+                    <li>• 竖版日历（1024×1440）替换下半部分</li>
+                    <li>• 横版日历（1440×1120）替换右半部分</li>
+                  </ul>
+                </div>
+
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <h4 className="font-semibold text-amber-900 mb-2">⚠️ 重要提示：</h4>
+                  <ul className="text-sm text-amber-800 space-y-1">
+                    <li>• 此功能用于修复已生成的成品图，不会影响封面图</li>
+                    <li>• 请确保图片是已经过模板替换的成品图</li>
+                    <li>• 处理过程会直接更新数据库中的图片URL</li>
+                    <li>• 建议先小批量测试，确认效果后再批量处理</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* 进度条 */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">总进度</span>
+                    <span className="font-medium">
+                      {fixCalendarProgress.current} / {fixCalendarProgress.total}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${fixCalendarProgress.total > 0 ? (fixCalendarProgress.current / fixCalendarProgress.total) * 100 : 0}%`
+                      }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>
+                      {fixCalendarProgress.total > 0
+                        ? `${Math.round((fixCalendarProgress.current / fixCalendarProgress.total) * 100)}%`
+                        : '0%'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 当前处理信息 */}
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  <p className="text-sm text-gray-600 mb-1">当前处理:</p>
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {fixCalendarProgress.currentImage || '准备中...'}
+                  </p>
+                </div>
+
+                {/* 统计信息 */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
+                    <p className="text-xs text-blue-600 mb-1">已处理</p>
+                    <p className="text-lg font-bold text-blue-700">{fixCalendarProgress.current}</p>
+                  </div>
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md text-center">
+                    <p className="text-xs text-green-600 mb-1">成功</p>
+                    <p className="text-lg font-bold text-green-700">{fixCalendarProgress.successCount}</p>
+                  </div>
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-center">
+                    <p className="text-xs text-red-600 mb-1">失败</p>
+                    <p className="text-lg font-bold text-red-700">{fixCalendarProgress.failedCount}</p>
+                  </div>
+                </div>
+
+                {/* 处理中动画 */}
+                {!fixCalendarProgress.isCompleted && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>正在处理中，请稍候...</span>
+                  </div>
+                )}
+
+                {/* 完成提示 */}
+                {fixCalendarProgress.isCompleted && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-800 text-center font-medium">
+                      ✓ 所有任务处理完成！
+                    </p>
+                  </div>
+                )}
+
+                {/* 警告提示 */}
+                {!fixCalendarProgress.isCompleted && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-xs text-amber-800">
+                      ⚠️ 请勿关闭此对话框或刷新页面，否则会中断处理进度
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            {!fixCalendarProcessing ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleCloseFixCalendarDialog}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleStartFixCalendar}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  开始处理
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleCloseFixCalendarDialog}
+                disabled={!fixCalendarProgress.isCompleted}
+                className={fixCalendarProgress.isCompleted ? '' : 'opacity-50 cursor-not-allowed'}
+              >
+                {fixCalendarProgress.isCompleted ? '关闭' : '处理中...'}
               </Button>
             )}
           </DialogFooter>
