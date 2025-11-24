@@ -1409,13 +1409,24 @@ export function AIImageProjects() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        className="h-7 px-2 text-green-500 hover:text-green-700 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/workspace/project/${project.id}/image-generation`, '_blank');
+                        }}
+                      >
+                        查看
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenProject(project.id);
                         }}
                       >
-                        查看
+                        编辑
                       </Button>
                       <Button
                         variant="ghost"
