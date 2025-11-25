@@ -84,8 +84,8 @@ export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '40张15.2cmx15.2cm 拼贴纸',
-    productUsage: 'DIY手工、拼贴手账纸'
+    productSpec: '40张剪贴簿纸,装饰纸,素材纸,材料纸,手帐纸',
+    productUsage: '适用于手工制作、贺卡制作、礼品包装、背景卡垫、纪念相册、背景装饰、复古日记等场景'
   }
 ];
 
@@ -107,7 +107,7 @@ export const DECORATIVE_PAPER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '礼品包装纸-Gift Wrap Paper 20张30cmx30cm 装饰纸',
+    productSpec: '20张装饰纸,手工纸,礼品包装纸,手工材料纸',
     productUsage: '适用于礼品包装、生日礼物包装、节日礼物装饰、婚礼礼品包装等场合'
   }
 ];
@@ -157,7 +157,7 @@ export const PAPER_BAG_SPECS: ProductSpec[] = [
     variantAttributeValue1: '纸',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '20个 27cm×21cm×11cm 手提纸袋',
+    productSpec: '20个手提纸袋',
     productUsage: '适用于礼品包装、购物携带、生日派对、节日庆典、婚礼伴手礼、商品打包、展会赠品等多种场合'
   },
 ];
@@ -183,8 +183,8 @@ export const PLANNER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '白色',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '1本 28cm×21cm×1cm 计划本',
-    productUsage: '适用于日常计划管理、目标设定与追踪、时间安排、任务规划、项目管理、学习计划、工作计划、生活规划等各类计划用途'
+    productSpec: '1本终身计划本/目标规划本/日程时间管理本',
+    productUsage: '适用于生命计划、日常计划管理、目标设定与追踪、时间安排、任务规划、项目管理、学习计划、工作计划、生活规划等各类计划用途'
   },
 ];
 
