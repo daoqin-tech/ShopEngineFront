@@ -183,7 +183,7 @@ export const PLANNER_SPECS: ProductSpec[] = [
     variantAttributeValue1: '白色',
     stock: 6666,
     shippingTime: 9,
-    productSpec: '1本终身计划本/目标规划本/日程时间管理本',
+    productSpec: '1本终身计划本',
     productUsage: '适用于生命计划、日常计划管理、目标设定与追踪、时间安排、任务规划、项目管理、学习计划、工作计划、生活规划等各类计划用途'
   },
 ];

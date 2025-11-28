@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import { Product } from '@/services/productService';
 import { ProductCategory } from '@/types/productCategory';
-import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES } from '@/types/shop';
+import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES, PLANNER_CATEGORIES, PAPER_BAG_CATEGORIES } from '@/types/shop';
 
 /**
  * 生成日期时间字符串（用于文件名）
@@ -653,7 +653,7 @@ export function exportToExcel(
   }
 
   // 准备导出数据 - 按照模板格式（59列）
-  const allCategories = [...JOURNAL_PAPER_CATEGORIES, ...DECORATIVE_PAPER_CATEGORIES, ...CALENDAR_CATEGORIES];
+  const allCategories = [...JOURNAL_PAPER_CATEGORIES, ...DECORATIVE_PAPER_CATEGORIES, ...CALENDAR_CATEGORIES, ...PLANNER_CATEGORIES, ...PAPER_BAG_CATEGORIES];
 
   const exportData = products.map(product => {
     const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
