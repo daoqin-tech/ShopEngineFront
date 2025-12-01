@@ -33,6 +33,93 @@ function getPageSizeFromCategory(category: ProductCategory): { width: number; he
 }
 
 /**
+ * 加载图片并获取其DataURL和原始尺寸
+ * @param imageUrl 图片URL
+ * @returns 包含DataURL和Image对象的对象
+ */
+async function loadImageWithSize(imageUrl: string): Promise<{ dataUrl: string; img: HTMLImageElement }> {
+  const response = await fetch(imageUrl, {
+    mode: 'cors',
+    headers: { 'Accept': 'image/*' }
+  });
+  const blob = await response.blob();
+  const dataUrl = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.readAsDataURL(blob);
+  });
+
+  const img = new Image();
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+
+  return { dataUrl, img };
+}
+
+/**
+ * 生成手提纸袋PDF
+ * @param product 产品信息
+ * @param pdf jsPDF实例
+ * @param pageWidth 页面宽度
+ * @param pageHeight 页面高度
+ * @returns PDF Blob
+ */
+async function generatePaperBagPdf(
+  product: Product,
+  pdf: jsPDF,
+  pageWidth: number,
+  pageHeight: number
+): Promise<Blob> {
+  const productImages = product.productImages || [];
+
+  if (productImages.length < 1) {
+    throw new Error(`纸袋产品 ${product.newProductCode || product.id} 需要至少1张产品图`);
+  }
+
+  // 图像填充区域 (66cm x 29cm)
+  const imageWidth = 660;
+  const imageHeight = 290;
+  const halfWidth = imageWidth / 2;
+
+  // 加载第一张图片
+  const { dataUrl: imageDataUrl, img } = await loadImageWithSize(productImages[0]);
+
+  // 计算图片实际显示尺寸（保持原始比例）
+  const imgRatio = img.naturalWidth / img.naturalHeight;
+  const imgDisplayHeight = imageHeight;
+  const imgDisplayWidth = imgDisplayHeight * imgRatio;
+
+  // 左半部分：显示同一张图
+  pdf.saveGraphicsState();
+  pdf.rect(0, 0, halfWidth, imageHeight);
+  pdf.clip();
+  pdf.addImage(imageDataUrl, 'JPEG', 0, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
+  pdf.restoreGraphicsState();
+
+  // 右半部分：显示同一张图
+  pdf.saveGraphicsState();
+  pdf.rect(halfWidth, 0, halfWidth, imageHeight);
+  pdf.clip();
+  pdf.addImage(imageDataUrl, 'JPEG', halfWidth, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
+  pdf.restoreGraphicsState();
+
+  // 在底部中心位置添加货号
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0, 0, 0);
+  const productCode = product.newProductCode || product.id;
+  const textWidth = pdf.getTextWidth(productCode);
+  const textX = (pageWidth - textWidth) / 2;
+  const textY = pageHeight - 8; // 距离底部8mm
+  pdf.text(productCode, textX, textY);
+
+  return pdf.output('blob');
+}
+
+/**
  * 通用PDF生成方法（手账纸、包装纸等）
  * 第一页是货号页，后续页是产品图
  */
@@ -646,68 +733,7 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
 
   // 手提纸袋特殊处理: 只用第1张图,左右并排显示同一张图,不要货号页
   if (isPaperBag) {
-    if (productImages.length < 1) {
-      throw new Error(`纸袋产品 ${product.newProductCode || product.id} 需要至少1张产品图`);
-    }
-
-    // 图像填充区域 (66cm x 29cm)
-    const imageWidth = 660;
-    const imageHeight = 290;
-    const halfWidth = imageWidth / 2;
-
-    // 获取第一张图片
-    const imageUrl = productImages[0];
-
-    // 加载图片
-    const response = await fetch(imageUrl, {
-      mode: 'cors',
-      headers: { 'Accept': 'image/*' }
-    });
-    const blob = await response.blob();
-    const imageDataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.readAsDataURL(blob);
-    });
-
-    // 获取图片原始尺寸
-    const img = new Image();
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = imageDataUrl;
-    });
-
-    // 计算图片实际显示尺寸（保持原始比例）
-    const imgRatio = img.naturalWidth / img.naturalHeight;
-    const imgDisplayHeight = imageHeight;
-    const imgDisplayWidth = imgDisplayHeight * imgRatio;
-
-    // 左半部分：显示同一张图
-    pdf.saveGraphicsState();
-    pdf.rect(0, 0, halfWidth, imageHeight);
-    pdf.clip();
-    pdf.addImage(imageDataUrl, 'JPEG', 0, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
-    pdf.restoreGraphicsState();
-
-    // 右半部分：显示同一张图
-    pdf.saveGraphicsState();
-    pdf.rect(halfWidth, 0, halfWidth, imageHeight);
-    pdf.clip();
-    pdf.addImage(imageDataUrl, 'JPEG', halfWidth, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
-    pdf.restoreGraphicsState();
-
-    // 在底部中心位置添加货号
-    pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 0, 0);
-    const productCode = product.newProductCode || product.id;
-    const textWidth = pdf.getTextWidth(productCode);
-    const textX = (pageWidth - textWidth) / 2;
-    const textY = pageHeight - 8; // 距离底部8mm
-    pdf.text(productCode, textX, textY);
-
-    return pdf.output('blob');
+    return await generatePaperBagPdf(product, pdf, pageWidth, pageHeight);
   }
 
   // 非日历、非纸袋模式: 第一页是货号页
