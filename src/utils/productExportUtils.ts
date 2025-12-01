@@ -3,6 +3,7 @@ import * as XLSXNative from 'xlsx'; // 导入原生xlsx库用于物流信息导�
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import convert from 'color-convert';
+import { PDFDocument, rgb, cmyk } from 'pdf-lib';
 import { Product } from '@/services/productService';
 import { ProductCategory } from '@/types/productCategory';
 import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES, PLANNER_CATEGORIES, PAPER_BAG_CATEGORIES } from '@/types/shop';
@@ -115,16 +116,14 @@ async function convertImageToCMYK(img: HTMLImageElement): Promise<string> {
 }
 
 /**
- * 生成手提纸袋PDF
+ * 生成手提纸袋PDF (使用pdf-lib生成CMYK PDF)
  * @param product 产品信息
- * @param pdf jsPDF实例
- * @param pageWidth 页面宽度
- * @param pageHeight 页面高度
+ * @param pageWidth 页面宽度 (mm)
+ * @param pageHeight 页面高度 (mm)
  * @returns PDF Blob
  */
-async function generatePaperBagPdf(
+async function generatePaperBagPdfWithCMYK(
   product: Product,
-  pdf: jsPDF,
   pageWidth: number,
   pageHeight: number
 ): Promise<Blob> {
@@ -134,47 +133,84 @@ async function generatePaperBagPdf(
     throw new Error(`纸袋产品 ${product.newProductCode || product.id} 需要至少1张产品图`);
   }
 
-  // 图像填充区域 (64cm x 27cm)
+  // 创建新的PDF文档
+  const pdfDoc = await PDFDocument.create();
+
+  // 图像填充区域 (64cm x 27cm = 640mm x 270mm)
+  // pdf-lib使用点(points)作为单位: 1mm ≈ 2.83465 points
+  const mmToPoints = 2.83465;
+  const pageWidthPt = pageWidth * mmToPoints;
+  const pageHeightPt = pageHeight * mmToPoints;
+
   const imageWidth = 640;
   const imageHeight = 270;
-  const halfWidth = imageWidth / 2;
+  const imageWidthPt = imageWidth * mmToPoints;
+  const imageHeightPt = imageHeight * mmToPoints;
+  const halfWidthPt = imageWidthPt / 2;
+
+  // 添加页面
+  const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
 
   // 加载第一张图片
-  const { dataUrl: originalDataUrl, img } = await loadImageWithSize(productImages[0]);
+  const response = await fetch(productImages[0], {
+    mode: 'cors',
+    headers: { 'Accept': 'image/*' }
+  });
+  const imageBytes = await response.arrayBuffer();
 
-  // 将图片转换为CMYK模式
-  const imageDataUrl = await convertImageToCMYK(img);
+  // 根据图片类型嵌入图片
+  let image;
+  const contentType = response.headers.get('content-type');
+  if (contentType?.includes('png')) {
+    image = await pdfDoc.embedPng(imageBytes);
+  } else {
+    image = await pdfDoc.embedJpg(imageBytes);
+  }
+
+  const imgDims = image.scale(1);
+  const imgRatio = imgDims.width / imgDims.height;
 
   // 计算图片实际显示尺寸（保持原始比例）
-  const imgRatio = img.naturalWidth / img.naturalHeight;
-  const imgDisplayHeight = imageHeight;
-  const imgDisplayWidth = imgDisplayHeight * imgRatio;
+  const imgDisplayHeightPt = imageHeightPt;
+  const imgDisplayWidthPt = imgDisplayHeightPt * imgRatio;
 
-  // 左半部分：显示同一张图（左半边）
-  pdf.saveGraphicsState();
-  pdf.rect(0, 0, halfWidth, imageHeight);
-  pdf.clip();
-  pdf.addImage(imageDataUrl, 'JPEG', 0, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
-  pdf.restoreGraphicsState();
+  // 左半部分：显示同一张图
+  page.drawImage(image, {
+    x: 0,
+    y: pageHeightPt - imageHeightPt, // pdf-lib坐标系是从底部开始
+    width: Math.min(imgDisplayWidthPt, halfWidthPt),
+    height: imgDisplayHeightPt,
+  });
 
-  // 右半部分：显示同一张图（右半边）
-  pdf.saveGraphicsState();
-  pdf.rect(halfWidth, 0, halfWidth, imageHeight);
-  pdf.clip();
-  pdf.addImage(imageDataUrl, 'JPEG', halfWidth, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
-  pdf.restoreGraphicsState();
+  // 右半部分：显示同一张图
+  page.drawImage(image, {
+    x: halfWidthPt,
+    y: pageHeightPt - imageHeightPt,
+    width: Math.min(imgDisplayWidthPt, halfWidthPt),
+    height: imgDisplayHeightPt,
+  });
 
-  // 在底部中心位置添加货号
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(0, 0, 0);
+  // 在底部中心位置添加货号 (使用CMYK黑色)
   const productCode = product.newProductCode || product.id;
-  const textWidth = pdf.getTextWidth(productCode);
-  const textX = (pageWidth - textWidth) / 2;
-  const textY = pageHeight - 8; // 距离底部8mm
-  pdf.text(productCode, textX, textY);
+  const fontSize = 12;
 
-  return pdf.output('blob');
+  // 获取文本宽度
+  const font = await pdfDoc.embedFont('Helvetica-Bold');
+  const textWidth = font.widthOfTextAtSize(productCode, fontSize);
+  const textX = (pageWidthPt - textWidth) / 2;
+  const textY = 8 * mmToPoints; // 距离底部8mm
+
+  page.drawText(productCode, {
+    x: textX,
+    y: textY,
+    size: fontSize,
+    font: font,
+    color: cmyk(0, 0, 0, 1), // CMYK黑色 (100% K)
+  });
+
+  // 生成PDF并返回Blob
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
 }
 
 /**
@@ -789,9 +825,9 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
   const pageWidth = actualPageWidth;
   const pageHeight = actualPageHeight;
 
-  // 手提纸袋特殊处理: 只用第1张图,左右并排显示同一张图,不要货号页
+  // 手提纸袋特殊处理: 只用第1张图,左右并排显示同一张图,不要货号页,使用CMYK色彩空间
   if (isPaperBag) {
-    return await generatePaperBagPdf(product, pdf, pageWidth, pageHeight);
+    return await generatePaperBagPdfWithCMYK(product, pageWidth, pageHeight);
   }
 
   // 非日历、非纸袋模式: 第一页是货号页
