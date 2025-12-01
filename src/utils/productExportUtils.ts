@@ -18,8 +18,8 @@ function getDateTimeString(): string {
  * 导出手提纸袋PDF
  * 纸袋尺寸: 66cm x 34cm
  * 实际导出尺寸: 66.6cm x 34.6cm (包含6mm出血)
- * 图像区域: 64.6cm x 27.6cm
- * 每个商品使用2张图片,各占一半,从(0,0)开始平铺
+ * 图像区域: 66cm x 29cm
+ * 每个商品使用第1张图片,左右并排显示同一张图,从(0,0)开始平铺
  */
 export async function exportPaperBagPdf(
   products: Product[],
@@ -42,9 +42,9 @@ export async function exportPaperBagPdf(
   const pageWidth = bagWidth + bleed;   // 66.6cm
   const pageHeight = bagHeight + bleed; // 34.6cm
 
-  // 图像填充区域 (64.6cm x 27.6cm)
-  const imageWidth = 646;  // 64.6cm
-  const imageHeight = 276; // 27.6cm
+  // 图像填充区域 (66cm x 29cm)
+  const imageWidth = 660;  // 66cm
+  const imageHeight = 290; // 29cm
 
   // 图像区域起始位置 (从x=0, y=0开始)
   const imageX = 0;
@@ -374,9 +374,9 @@ async function generatePaperBagProductPdf(
     format: [pageWidth, pageHeight]
   });
 
-  // 图像填充区域（64.6cm x 27.6cm）
-  const imageWidth = 646;
-  const imageHeight = 276;
+  // 图像填充区域（66cm x 29cm）
+  const imageWidth = 660;
+  const imageHeight = 290;
   const halfWidth = imageWidth / 2;
 
   // 获取前两张图片
@@ -982,6 +982,7 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
   }
 
   const isCalendar = category.id === '3' || category.id === '4';
+  const isPaperBag = category.id === '5'; // 手提纸袋
   const bleed = 6;
   const actualPageWidth = pageSizeConfig.width + bleed;
   const actualPageHeight = pageSizeConfig.height + bleed;
@@ -996,7 +997,73 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
   const pageWidth = actualPageWidth;
   const pageHeight = actualPageHeight;
 
-  // 非日历模式: 第一页是货号页
+  // 手提纸袋特殊处理: 只用第1张图,左右并排显示同一张图,不要货号页
+  if (isPaperBag) {
+    if (productImages.length < 1) {
+      throw new Error(`纸袋产品 ${product.newProductCode || product.id} 需要至少1张产品图`);
+    }
+
+    // 图像填充区域 (66cm x 29cm)
+    const imageWidth = 660;
+    const imageHeight = 290;
+    const halfWidth = imageWidth / 2;
+
+    // 获取第一张图片
+    const imageUrl = productImages[0];
+
+    // 加载图片
+    const response = await fetch(imageUrl, {
+      mode: 'cors',
+      headers: { 'Accept': 'image/*' }
+    });
+    const blob = await response.blob();
+    const imageDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.readAsDataURL(blob);
+    });
+
+    // 获取图片原始尺寸
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageDataUrl;
+    });
+
+    // 计算图片实际显示尺寸（保持原始比例）
+    const imgRatio = img.naturalWidth / img.naturalHeight;
+    const imgDisplayHeight = imageHeight;
+    const imgDisplayWidth = imgDisplayHeight * imgRatio;
+
+    // 左半部分：显示同一张图
+    pdf.saveGraphicsState();
+    pdf.rect(0, 0, halfWidth, imageHeight);
+    pdf.clip();
+    pdf.addImage(imageDataUrl, 'JPEG', 0, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
+    pdf.restoreGraphicsState();
+
+    // 右半部分：显示同一张图
+    pdf.saveGraphicsState();
+    pdf.rect(halfWidth, 0, halfWidth, imageHeight);
+    pdf.clip();
+    pdf.addImage(imageDataUrl, 'JPEG', halfWidth, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
+    pdf.restoreGraphicsState();
+
+    // 在底部中心位置添加货号
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
+    const productCode = product.newProductCode || product.id;
+    const textWidth = pdf.getTextWidth(productCode);
+    const textX = (pageWidth - textWidth) / 2;
+    const textY = pageHeight - 8; // 距离底部8mm
+    pdf.text(productCode, textX, textY);
+
+    return pdf.output('blob');
+  }
+
+  // 非日历、非纸袋模式: 第一页是货号页
   if (!isCalendar) {
     pdf.setFontSize(40);
     pdf.setTextColor(0, 0, 0);
