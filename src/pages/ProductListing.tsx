@@ -386,10 +386,7 @@ export function ProductListing() {
       // 使用智能导出函数，自动识别分类并生成非日历PDF
       const result = await exportProductPdfSmartUtil(
         selectedProducts,
-        categories,
-        (current, total, categoryName) => {
-          console.log(`正在处理 ${categoryName}: ${current}/${total}`);
-        }
+        categories
       );
 
       // 保存ZIP对象和日历列表
