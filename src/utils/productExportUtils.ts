@@ -870,7 +870,6 @@ export async function exportProductPdfSmart(
       continue;
     }
 
-    const categoryName = categoryProducts[0].productCategoryName || `分类${categoryId}`;
     const isCalendar = category.id === '3' || category.id === '4';
 
     if (isCalendar) {
