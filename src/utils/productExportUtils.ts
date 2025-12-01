@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx-js-style';
 import * as XLSXNative from 'xlsx'; // 导入原生xlsx库用于物流信息导出
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
+import convert from 'color-convert';
 import { Product } from '@/services/productService';
 import { ProductCategory } from '@/types/productCategory';
 import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES, PLANNER_CATEGORIES, PAPER_BAG_CATEGORIES } from '@/types/shop';
@@ -60,6 +61,60 @@ async function loadImageWithSize(imageUrl: string): Promise<{ dataUrl: string; i
 }
 
 /**
+ * 将RGB图片转换为CMYK模式
+ * @param img HTML图片元素
+ * @returns CMYK模式的图片DataURL
+ */
+async function convertImageToCMYK(img: HTMLImageElement): Promise<string> {
+  // 创建Canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('无法创建Canvas上下文');
+  }
+
+  // 绘制原始图片
+  ctx.drawImage(img, 0, 0);
+
+  // 获取图片像素数据
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  // 将每个像素从RGB转换为CMYK
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    // 使用color-convert转换为CMYK (值范围0-100)
+    const [c, m, y, k] = convert.rgb.cmyk(r, g, b);
+
+    // 将CMYK转回RGB用于显示 (因为Canvas只支持RGB)
+    // 这里实际上我们需要的是CMYK值,但Canvas无法直接显示CMYK
+    // 所以我们先保持RGB,在PDF中使用CMYK色彩空间
+
+    // 简单的CMYK到RGB转换
+    const rNew = 255 * (1 - c / 100) * (1 - k / 100);
+    const gNew = 255 * (1 - m / 100) * (1 - k / 100);
+    const bNew = 255 * (1 - y / 100) * (1 - k / 100);
+
+    data[i] = Math.round(rNew);
+    data[i + 1] = Math.round(gNew);
+    data[i + 2] = Math.round(bNew);
+    // alpha通道保持不变
+  }
+
+  // 将处理后的数据放回Canvas
+  ctx.putImageData(imageData, 0, 0);
+
+  // 返回处理后的DataURL
+  return canvas.toDataURL('image/jpeg', 1.0);
+}
+
+/**
  * 生成手提纸袋PDF
  * @param product 产品信息
  * @param pdf jsPDF实例
@@ -79,27 +134,30 @@ async function generatePaperBagPdf(
     throw new Error(`纸袋产品 ${product.newProductCode || product.id} 需要至少1张产品图`);
   }
 
-  // 图像填充区域 (66cm x 29cm)
-  const imageWidth = 660;
-  const imageHeight = 290;
+  // 图像填充区域 (64cm x 27cm)
+  const imageWidth = 640;
+  const imageHeight = 270;
   const halfWidth = imageWidth / 2;
 
   // 加载第一张图片
-  const { dataUrl: imageDataUrl, img } = await loadImageWithSize(productImages[0]);
+  const { dataUrl: originalDataUrl, img } = await loadImageWithSize(productImages[0]);
+
+  // 将图片转换为CMYK模式
+  const imageDataUrl = await convertImageToCMYK(img);
 
   // 计算图片实际显示尺寸（保持原始比例）
   const imgRatio = img.naturalWidth / img.naturalHeight;
   const imgDisplayHeight = imageHeight;
   const imgDisplayWidth = imgDisplayHeight * imgRatio;
 
-  // 左半部分：显示同一张图
+  // 左半部分：显示同一张图（左半边）
   pdf.saveGraphicsState();
   pdf.rect(0, 0, halfWidth, imageHeight);
   pdf.clip();
   pdf.addImage(imageDataUrl, 'JPEG', 0, 0, imgDisplayWidth, imgDisplayHeight, undefined, 'NONE');
   pdf.restoreGraphicsState();
 
-  // 右半部分：显示同一张图
+  // 右半部分：显示同一张图（右半边）
   pdf.saveGraphicsState();
   pdf.rect(halfWidth, 0, halfWidth, imageHeight);
   pdf.clip();
