@@ -821,13 +821,11 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
  *
  * @param products 要导出的产品列表
  * @param categories 产品分类列表（用于获取生产尺寸）
- * @param onProgress 导出进度回调
  * @returns 返回导出结果，包括需要调整顺序的日历产品列表和非日历产品的ZIP
  */
 export async function exportProductPdfSmart(
   products: Product[],
-  categories: ProductCategory[],
-  onProgress?: (current: number, total: number, categoryName: string) => void
+  categories: ProductCategory[]
 ): Promise<{
   zip: JSZip; // 共享的ZIP对象
   nonCalendarCount: number; // 已添加到ZIP的非日历产品数量
@@ -878,18 +876,10 @@ export async function exportProductPdfSmart(
     if (isCalendar) {
       // 日历类型：收集起来，等待用户调整顺序
       calendarProductsList.push({ products: categoryProducts, category });
-
-      if (onProgress) {
-        onProgress(processedCount, productsWithImages.length, `${categoryName}(待调整顺序)`);
-      }
     } else {
       // 非日历类型：生成PDF并添加到ZIP
       for (let i = 0; i < categoryProducts.length; i++) {
         const product = categoryProducts[i];
-
-        if (onProgress) {
-          onProgress(processedCount + i, productsWithImages.length, categoryName);
-        }
 
         try {
           const pdfBlob = await generateProductPdfBlob(product, category);
@@ -901,10 +891,6 @@ export async function exportProductPdfSmart(
       }
 
       processedCount += categoryProducts.length;
-
-      if (onProgress) {
-        onProgress(processedCount, productsWithImages.length, categoryName);
-      }
     }
   }
 
