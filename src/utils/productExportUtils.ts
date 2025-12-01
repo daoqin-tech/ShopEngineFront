@@ -167,62 +167,81 @@ async function generatePaperBagPdfWithCMYK(
     image = await pdfDoc.embedJpg(imageBytes);
   }
 
+  // 使用Canvas裁剪图片为目标尺寸
+  const targetWidthPx = 320 * 10; // 320mm转为像素 (假设10px/mm)
+  const targetHeightPx = 270 * 10; // 270mm转为像素
+  const targetRatio = targetWidthPx / targetHeightPx;
+
   const imgDims = image.scale(1);
   const imgRatio = imgDims.width / imgDims.height;
-  const targetRatio = halfWidthPt / imageHeightPt; // 目标区域的宽高比 (320mm / 270mm)
 
-  // 计算铺满区域的尺寸（保持图片比例，确保完全覆盖目标区域）
-  let imgDisplayWidthPt, imgDisplayHeightPt, offsetX, offsetY;
+  // 创建Canvas来裁剪图片
+  const canvas = document.createElement('canvas');
+  canvas.width = targetWidthPx;
+  canvas.height = targetHeightPx;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('无法创建Canvas上下文');
+  }
+
+  // 创建临时Image用于Canvas绘制
+  const tempImg = new Image();
+  await new Promise((resolve, reject) => {
+    tempImg.onload = resolve;
+    tempImg.onerror = reject;
+    tempImg.src = productImages[0];
+  });
+
+  // 计算裁剪参数 (保持比例,居中裁剪)
+  let srcX, srcY, srcWidth, srcHeight;
 
   if (imgRatio > targetRatio) {
-    // 图片更宽 - 以高度为基准，宽度会超出，需要裁剪左右
-    imgDisplayHeightPt = imageHeightPt;
-    imgDisplayWidthPt = imgDisplayHeightPt * imgRatio;
-    offsetX = -(imgDisplayWidthPt - halfWidthPt) / 2; // 居中裁剪
-    offsetY = 0;
+    // 图片更宽 - 裁剪左右
+    srcHeight = tempImg.height;
+    srcWidth = srcHeight * targetRatio;
+    srcX = (tempImg.width - srcWidth) / 2;
+    srcY = 0;
   } else {
-    // 图片更高 - 以宽度为基准，高度会超出，需要裁剪上下
-    imgDisplayWidthPt = halfWidthPt;
-    imgDisplayHeightPt = imgDisplayWidthPt / imgRatio;
-    offsetX = 0;
-    offsetY = -(imgDisplayHeightPt - imageHeightPt) / 2; // 居中裁剪
+    // 图片更高或相等 - 裁剪上下
+    srcWidth = tempImg.width;
+    srcHeight = srcWidth / targetRatio;
+    srcX = 0;
+    srcY = (tempImg.height - srcHeight) / 2;
   }
+
+  // 在Canvas上绘制裁剪后的图片
+  ctx.drawImage(tempImg, srcX, srcY, srcWidth, srcHeight, 0, 0, targetWidthPx, targetHeightPx);
+
+  // 将Canvas转为Blob
+  const croppedImageBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Canvas转Blob失败'));
+    }, 'image/jpeg', 0.95);
+  });
+
+  // 嵌入裁剪后的图片
+  const croppedImageBytes = await croppedImageBlob.arrayBuffer();
+  const croppedImage = await pdfDoc.embedJpg(croppedImageBytes);
 
   const imageY = pageHeightPt - imageHeightPt; // pdf-lib坐标系是从底部开始
 
-  // 左半部分：裁剪居中显示
-  page.pushOperators(
-    ...pdfDoc.context.obj([
-      'q', // 保存图形状态
-      0, 0, halfWidthPt, imageHeightPt, 're', // 定义裁剪矩形 (左半边)
-      'W', // 设置裁剪路径
-      'n', // 结束路径定义
-    ])
-  );
-  page.drawImage(image, {
-    x: offsetX,
-    y: imageY + offsetY,
-    width: imgDisplayWidthPt,
-    height: imgDisplayHeightPt,
+  // 左半部分：显示裁剪后的图片
+  page.drawImage(croppedImage, {
+    x: 0,
+    y: imageY,
+    width: halfWidthPt,
+    height: imageHeightPt,
   });
-  page.pushOperators('Q'); // 恢复图形状态
 
-  // 右半部分：裁剪居中显示
-  page.pushOperators(
-    ...pdfDoc.context.obj([
-      'q', // 保存图形状态
-      halfWidthPt, 0, halfWidthPt, imageHeightPt, 're', // 定义裁剪矩形 (右半边)
-      'W', // 设置裁剪路径
-      'n', // 结束路径定义
-    ])
-  );
-  page.drawImage(image, {
-    x: halfWidthPt + offsetX,
-    y: imageY + offsetY,
-    width: imgDisplayWidthPt,
-    height: imgDisplayHeightPt,
+  // 右半部分：显示裁剪后的图片
+  page.drawImage(croppedImage, {
+    x: halfWidthPt,
+    y: imageY,
+    width: halfWidthPt,
+    height: imageHeightPt,
   });
-  page.pushOperators('Q'); // 恢复图形状态
 
   // 在底部中心位置添加货号 (使用CMYK黑色)
   const productCode = product.newProductCode || product.id;
