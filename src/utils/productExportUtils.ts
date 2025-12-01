@@ -626,6 +626,12 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
 
   const isCalendar = category.id === '3' || category.id === '4';
   const isPaperBag = category.id === '5'; // 手提纸袋
+
+  // 手提纸袋特殊处理: 只用第1张图,左右并排显示同一张图,不要货号页,使用CMYK色彩空间,不需要出血
+  if (isPaperBag) {
+    return await generatePaperBagPdfWithCMYK(product, pageSizeConfig.width, pageSizeConfig.height);
+  }
+
   const bleed = 6;
   const actualPageWidth = pageSizeConfig.width + bleed;
   const actualPageHeight = pageSizeConfig.height + bleed;
@@ -639,11 +645,6 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
 
   const pageWidth = actualPageWidth;
   const pageHeight = actualPageHeight;
-
-  // 手提纸袋特殊处理: 只用第1张图,左右并排显示同一张图,不要货号页,使用CMYK色彩空间
-  if (isPaperBag) {
-    return await generatePaperBagPdfWithCMYK(product, pageWidth, pageHeight);
-  }
 
   // 非日历、非纸袋模式: 第一页是货号页
   if (!isCalendar) {
