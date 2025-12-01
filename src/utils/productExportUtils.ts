@@ -169,26 +169,60 @@ async function generatePaperBagPdfWithCMYK(
 
   const imgDims = image.scale(1);
   const imgRatio = imgDims.width / imgDims.height;
+  const targetRatio = halfWidthPt / imageHeightPt; // 目标区域的宽高比 (320mm / 270mm)
 
-  // 计算图片实际显示尺寸（保持原始比例）
-  const imgDisplayHeightPt = imageHeightPt;
-  const imgDisplayWidthPt = imgDisplayHeightPt * imgRatio;
+  // 计算铺满区域的尺寸（保持图片比例，确保完全覆盖目标区域）
+  let imgDisplayWidthPt, imgDisplayHeightPt, offsetX, offsetY;
 
-  // 左半部分：显示同一张图
+  if (imgRatio > targetRatio) {
+    // 图片更宽 - 以高度为基准，宽度会超出，需要裁剪左右
+    imgDisplayHeightPt = imageHeightPt;
+    imgDisplayWidthPt = imgDisplayHeightPt * imgRatio;
+    offsetX = -(imgDisplayWidthPt - halfWidthPt) / 2; // 居中裁剪
+    offsetY = 0;
+  } else {
+    // 图片更高 - 以宽度为基准，高度会超出，需要裁剪上下
+    imgDisplayWidthPt = halfWidthPt;
+    imgDisplayHeightPt = imgDisplayWidthPt / imgRatio;
+    offsetX = 0;
+    offsetY = -(imgDisplayHeightPt - imageHeightPt) / 2; // 居中裁剪
+  }
+
+  const imageY = pageHeightPt - imageHeightPt; // pdf-lib坐标系是从底部开始
+
+  // 左半部分：裁剪居中显示
+  page.pushOperators(
+    ...pdfDoc.context.obj([
+      'q', // 保存图形状态
+      0, 0, halfWidthPt, imageHeightPt, 're', // 定义裁剪矩形 (左半边)
+      'W', // 设置裁剪路径
+      'n', // 结束路径定义
+    ])
+  );
   page.drawImage(image, {
-    x: 0,
-    y: pageHeightPt - imageHeightPt, // pdf-lib坐标系是从底部开始
-    width: Math.min(imgDisplayWidthPt, halfWidthPt),
+    x: offsetX,
+    y: imageY + offsetY,
+    width: imgDisplayWidthPt,
     height: imgDisplayHeightPt,
   });
+  page.pushOperators('Q'); // 恢复图形状态
 
-  // 右半部分：显示同一张图
+  // 右半部分：裁剪居中显示
+  page.pushOperators(
+    ...pdfDoc.context.obj([
+      'q', // 保存图形状态
+      halfWidthPt, 0, halfWidthPt, imageHeightPt, 're', // 定义裁剪矩形 (右半边)
+      'W', // 设置裁剪路径
+      'n', // 结束路径定义
+    ])
+  );
   page.drawImage(image, {
-    x: halfWidthPt,
-    y: pageHeightPt - imageHeightPt,
-    width: Math.min(imgDisplayWidthPt, halfWidthPt),
+    x: halfWidthPt + offsetX,
+    y: imageY + offsetY,
+    width: imgDisplayWidthPt,
     height: imgDisplayHeightPt,
   });
+  page.pushOperators('Q'); // 恢复图形状态
 
   // 在底部中心位置添加货号 (使用CMYK黑色)
   const productCode = product.newProductCode || product.id;
