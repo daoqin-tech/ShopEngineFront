@@ -70,19 +70,22 @@ async function generatePaperBagPdfWithCMYK(
   // 添加页面
   const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
 
-  // 步骤1: 调用后端接口将RGB图片转换为CMYK
+  // 步骤1: 调用后端接口将RGB图片转换为CMYK（返回base64）
   console.log('开始转换图片为CMYK:', productImages[0]);
-  const cmykImageUrl = await imageConversionService.convertToCMYK(productImages[0]);
-  console.log('CMYK图片URL:', cmykImageUrl);
+  const cmykImageBase64 = await imageConversionService.convertToCMYK(productImages[0]);
+  console.log('收到CMYK图片base64，长度:', cmykImageBase64.length);
 
-  // 步骤2: 直接从CMYK图片URL加载并嵌入（pdf-lib会保留CMYK色彩空间）
-  const cmykResponse = await fetch(cmykImageUrl, {
-    mode: 'cors',
-    headers: { 'Accept': 'image/*' }
-  });
-  const cmykImageBytes = await cmykResponse.arrayBuffer();
+  // 步骤2: 将base64转换为ArrayBuffer
+  // base64格式: data:image/jpeg;base64,/9j/4AAQ...
+  const base64Data = cmykImageBase64.split(',')[1];
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const cmykImageBytes = bytes.buffer;
 
-  // 直接嵌入CMYK JPEG（pdf-lib会保留CMYK色彩空间）
+  // 步骤3: 直接嵌入CMYK JPEG（pdf-lib会保留CMYK色彩空间）
   const cmykImage = await pdfDoc.embedJpg(cmykImageBytes);
 
   // 获取图片尺寸用于裁剪计算
