@@ -831,12 +831,6 @@ export async function exportProductPdfSmart(
   nonCalendarCount: number; // 已添加到ZIP的非日历产品数量
   calendarProducts: { products: Product[]; category: ProductCategory }[]; // 待调整顺序的日历产品
 }> {
-  const productsWithImages = products.filter(p => p.productImages && p.productImages.length > 0);
-
-  if (productsWithImages.length === 0) {
-    throw new Error('所选商品没有产品图');
-  }
-
   // 创建共享的ZIP对象
   const zip = new JSZip();
 
@@ -849,7 +843,7 @@ export async function exportProductPdfSmart(
   // 按分类ID分组
   const productsByCategory = new Map<string, { products: Product[]; category: ProductCategory | null }>();
 
-  for (const product of productsWithImages) {
+  for (const product of products) {
     const categoryKey = product.productCategoryId || 'unknown';
     const category = categoryMap.get(categoryKey) || null;
 
