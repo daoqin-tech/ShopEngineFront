@@ -251,6 +251,76 @@ export async function exportProductImages(
   window.URL.revokeObjectURL(url);
 }
 
+// Excel导出列配置类型
+type ExcelColumnConfig<T> = {
+  key: string;
+  width: number;
+  getValue: (item: T, ctx?: any) => string | number;
+};
+
+// 上架表格列配置（59列）
+const EXCEL_COLUMNS: ExcelColumnConfig<Product>[] = [
+  { key: '产品标题', width: 35, getValue: p => p.nameZh || '' },
+  { key: '英文标题', width: 35, getValue: p => p.nameEn || '' },
+  { key: '产品描述', width: 30, getValue: () => '' },
+  { key: '产品货号', width: 15, getValue: p => p.newProductCode || '' },
+  { key: '变种名称', width: 12, getValue: p => p.variantName || '' },
+  { key: '变种属性名称一', width: 18, getValue: p => p.variantAttributeName1 || '' },
+  { key: '变种属性值一', width: 12, getValue: p => p.variantAttributeValue1 || '' },
+  { key: '变种属性名称二', width: 18, getValue: () => '' },
+  { key: '变种属性值二', width: 12, getValue: () => '' },
+  { key: '预览图', width: 60, getValue: p => p.previewImage || '' },
+  { key: '申报价格', width: 12, getValue: p => p.declaredPrice || '' },
+  { key: 'SKU货号', width: 15, getValue: p => p.newProductCode || '' },
+  { key: '长', width: 8, getValue: p => p.length || '' },
+  { key: '宽', width: 8, getValue: p => p.width || '' },
+  { key: '高', width: 8, getValue: p => p.height || '' },
+  { key: '重量', width: 10, getValue: p => p.weight || '' },
+  { key: '识别码类型', width: 12, getValue: () => '' },
+  { key: '识别码', width: 20, getValue: () => '' },
+  { key: '站外产品链接', width: 40, getValue: () => '' },
+  { key: '轮播图', width: 70, getValue: p => p.carouselImages?.join('\r\n') || '' },
+  { key: '产品素材图', width: 60, getValue: p => p.materialImage || '' },
+  { key: '外包装形状', width: 12, getValue: () => '' },
+  { key: '外包装类型', width: 12, getValue: () => '' },
+  { key: '外包装图片', width: 60, getValue: () => '' },
+  { key: '建议零售价(建议零售价币种)', width: 15, getValue: p => p.suggestedRetailPrice || '' },
+  { key: '库存', width: 10, getValue: p => p.stock || '' },
+  { key: '发货时效', width: 10, getValue: p => p.shippingTime || '' },
+  { key: '分类id', width: 12, getValue: p => p.categoryId || '' },
+  { key: '产品属性', width: 40, getValue: (_p, ctx) => ctx?.categoryConfig?.productAttributes || '' },
+  { key: 'SPU属性', width: 30, getValue: () => '' },
+  { key: 'SKC属性', width: 40, getValue: () => '' },
+  { key: 'SKU属性', width: 40, getValue: () => '' },
+  { key: '站点价格', width: 15, getValue: () => '' },
+  { key: '来源url', width: 40, getValue: () => '' },
+  { key: '产地', width: 20, getValue: p => p.origin || '' },
+  { key: '敏感属性', width: 12, getValue: () => '' },
+  { key: '备注', width: 20, getValue: () => '' },
+  { key: 'SKU分类', width: 12, getValue: () => '' },
+  { key: 'SKU分类数量', width: 12, getValue: () => '' },
+  { key: 'SKU分类单位', width: 12, getValue: () => '' },
+  { key: '独立包装', width: 12, getValue: () => '' },
+  { key: '净含量数值', width: 12, getValue: () => '' },
+  { key: '净含量单位', width: 12, getValue: () => '' },
+  { key: '总净含量', width: 12, getValue: () => '' },
+  { key: '总净含量单位', width: 12, getValue: () => '' },
+  { key: '混合套装类型', width: 15, getValue: () => '' },
+  { key: 'SKU分类总数量', width: 15, getValue: () => '' },
+  { key: 'SKU分类总数量单位', width: 15, getValue: () => '' },
+  { key: '包装清单', width: 30, getValue: () => '' },
+  { key: '生命周期', width: 12, getValue: () => '' },
+  { key: '视频Url', width: 60, getValue: () => '' },
+  { key: '运费模板（模板id）', width: 30, getValue: p => p.freightTemplateId || '' },
+  { key: '经营站点', width: 12, getValue: p => p.operatingSite || '' },
+  { key: '所属店铺', width: 25, getValue: (p, ctx) => ctx?.getShopName(p.shopId) || '' },
+  { key: 'SPUID', width: 15, getValue: () => '' },
+  { key: 'SKCID', width: 15, getValue: () => '' },
+  { key: 'SKUID', width: 15, getValue: () => '' },
+  { key: '创建时间', width: 20, getValue: p => new Date(p.createdAt).toLocaleString('zh-CN') },
+  { key: '更新时间', width: 20, getValue: p => new Date(p.updatedAt).toLocaleString('zh-CN') },
+];
+
 /**
  * 导出Excel
  */
@@ -262,141 +332,24 @@ export function exportToExcel(
     throw new Error('请至少选择一个商品');
   }
 
-  // 准备导出数据 - 按照模板格式（59列）
   const allCategories = [...JOURNAL_PAPER_CATEGORIES, ...DECORATIVE_PAPER_CATEGORIES, ...CALENDAR_CATEGORIES, ...PLANNER_CATEGORIES, ...PAPER_BAG_CATEGORIES];
 
+  // 使用配置生成导出数据
   const exportData = products.map(product => {
     const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
-
-    return {
-      '产品标题': product.nameZh || '',
-      '英文标题': product.nameEn || '',
-      '产品描述': '',
-      '产品货号': product.newProductCode || '',
-      '变种名称': product.variantName || '',
-      '变种属性名称一': product.variantAttributeName1 || '',
-      '变种属性值一': product.variantAttributeValue1 || '',
-      '变种属性名称二': '',
-      '变种属性值二': '',
-      '预览图': product.previewImage || '',
-      '申报价格': product.declaredPrice || '',
-      'SKU货号': product.newProductCode || '',
-      '长': product.length || '',
-      '宽': product.width || '',
-      '高': product.height || '',
-      '重量': product.weight || '',
-      '识别码类型': '',
-      '识别码': '',
-      '站外产品链接': '',
-      '轮播图': product.carouselImages?.join('\r\n') || '',
-      '产品素材图': product.materialImage || '',
-      '外包装形状': '',
-      '外包装类型': '',
-      '外包装图片': '',
-      '建议零售价(建议零售价币种)': product.suggestedRetailPrice || '',
-      '库存': product.stock || '',
-      '发货时效': product.shippingTime || '',
-      '分类id': product.categoryId || '',
-      '产品属性': categoryConfig?.productAttributes || '',
-      'SPU属性': '',
-      'SKC属性': '',
-      'SKU属性': '',
-      '站点价格': '',
-      '来源url': '',
-      '产地': product.origin || '',
-      '敏感属性': '',
-      '备注': '',
-      'SKU分类': '',
-      'SKU分类数量': '',
-      'SKU分类单位': '',
-      '独立包装': '',
-      '净含量数值': '',
-      '净含量单位': '',
-      '总净含量': '',
-      '总净含量单位': '',
-      '混合套装类型': '',
-      'SKU分类总数量': '',
-      'SKU分类总数量单位': '',
-      '包装清单': '',
-      '生命周期': '',
-      '视频Url': '',
-      '运费模板（模板id）': product.freightTemplateId || '',
-      '经营站点': product.operatingSite || '',
-      '所属店铺': getShopName(product.shopId),
-      'SPUID': '',
-      'SKCID': '',
-      'SKUID': '',
-      '创建时间': new Date(product.createdAt).toLocaleString('zh-CN'),
-      '更新时间': new Date(product.updatedAt).toLocaleString('zh-CN')
-    };
+    const ctx = { categoryConfig, getShopName };
+    const row: Record<string, string | number> = {};
+    EXCEL_COLUMNS.forEach(col => {
+      row[col.key] = col.getValue(product, ctx);
+    });
+    return row;
   });
 
   // 创建工作簿
   const ws = XLSX.utils.json_to_sheet(exportData);
 
-  // 设置列宽
-  const colWidths = [
-    { wch: 35 },  // 1. 产品标题
-    { wch: 35 },  // 2. 英文标题
-    { wch: 30 },  // 3. 产品描述
-    { wch: 15 },  // 4. 产品货号
-    { wch: 12 },  // 5. 变种名称
-    { wch: 18 },  // 6. 变种属性名称一
-    { wch: 12 },  // 7. 变种属性值一
-    { wch: 18 },  // 8. 变种属性名称二
-    { wch: 12 },  // 9. 变种属性值二
-    { wch: 60 },  // 10. 预览图
-    { wch: 12 },  // 11. 申报价格
-    { wch: 15 },  // 12. SKU货号
-    { wch: 8 },   // 13. 长
-    { wch: 8 },   // 14. 宽
-    { wch: 8 },   // 15. 高
-    { wch: 10 },  // 16. 重量
-    { wch: 12 },  // 17. 识别码类型
-    { wch: 20 },  // 18. 识别码
-    { wch: 40 },  // 19. 站外产品链接
-    { wch: 70 },  // 20. 轮播图
-    { wch: 60 },  // 21. 产品素材图
-    { wch: 12 },  // 22. 外包装形状
-    { wch: 12 },  // 23. 外包装类型
-    { wch: 60 },  // 24. 外包装图片
-    { wch: 15 },  // 25. 建议零售价
-    { wch: 10 },  // 26. 库存
-    { wch: 10 },  // 27. 发货时效
-    { wch: 12 },  // 28. 分类id
-    { wch: 40 },  // 29. 产品属性
-    { wch: 30 },  // 30. SPU属性
-    { wch: 40 },  // 31. SKC属性
-    { wch: 40 },  // 32. SKU属性
-    { wch: 15 },  // 33. 站点价格
-    { wch: 40 },  // 34. 来源url
-    { wch: 20 },  // 35. 产地
-    { wch: 12 },  // 36. 敏感属性
-    { wch: 20 },  // 37. 备注
-    { wch: 12 },  // 38. SKU分类
-    { wch: 12 },  // 39. SKU分类数量
-    { wch: 12 },  // 40. SKU分类单位
-    { wch: 12 },  // 41. 独立包装
-    { wch: 12 },  // 42. 净含量数值
-    { wch: 12 },  // 43. 净含量单位
-    { wch: 12 },  // 44. 总净含量
-    { wch: 12 },  // 45. 总净含量单位
-    { wch: 15 },  // 46. 混合套装类型
-    { wch: 15 },  // 47. SKU分类总数量
-    { wch: 15 },  // 48. SKU分类总数量单位
-    { wch: 30 },  // 49. 包装清单
-    { wch: 12 },  // 50. 生命周期
-    { wch: 60 },  // 51. 视频Url
-    { wch: 30 },  // 52. 运费模板
-    { wch: 12 },  // 53. 经营站点
-    { wch: 25 },  // 54. 所属店铺
-    { wch: 15 },  // 55. SPUID
-    { wch: 15 },  // 56. SKCID
-    { wch: 15 },  // 57. SKUID
-    { wch: 20 },  // 58. 创建时间
-    { wch: 20 }   // 59. 更新时间
-  ];
-  ws['!cols'] = colWidths;
+  // 使用配置生成列宽
+  ws['!cols'] = EXCEL_COLUMNS.map(col => ({ wch: col.width }));
 
   // 初始化行高数组
   if (!ws['!rows']) ws['!rows'] = [];
@@ -469,6 +422,38 @@ export function exportToExcel(
   XLSX.writeFile(wb, fileName);
 }
 
+// 物流信息列配置
+const LOGISTICS_BASE_COLUMNS: ExcelColumnConfig<Product>[] = [
+  { key: 'Fnsku', width: 15, getValue: p => p.newProductCode ? String(p.newProductCode) : '' },
+  { key: 'seller sku', width: 15, getValue: p => p.newProductCode ? String(p.newProductCode) : '' },
+  { key: '产品英文名', width: 30, getValue: p => p.productCategoryNameEn || '' },
+  { key: '产品中文名', width: 20, getValue: p => p.productCategoryName || '' },
+  { key: '产品描述', width: 30, getValue: () => '' },
+  { key: '申报价值', width: 10, getValue: () => 0.99 },
+  { key: '重量', width: 10, getValue: p => p.weight ? p.weight / 1000 : '' },
+  { key: '长', width: 8, getValue: p => p.length || '' },
+  { key: '宽', width: 8, getValue: p => p.width || '' },
+  { key: '高', width: 8, getValue: p => p.height || '' },
+  { key: '海关编码', width: 15, getValue: () => '' },
+  { key: '原产地', width: 10, getValue: () => '' },
+  { key: '是否带电池', width: 12, getValue: () => '不含电池' },
+  { key: '颜色', width: 10, getValue: () => '' },
+  { key: '平台SKU(如有多个请用英文逗号隔开)', width: 30, getValue: () => '' },
+  { key: '规格型号', width: 15, getValue: () => '' },
+  { key: '图片URL', width: 60, getValue: p => p.productImages?.[0] || '' },
+  { key: '备注', width: 20, getValue: () => '' },
+  { key: '是否组合[1为组合sku]', width: 20, getValue: () => '' },
+];
+
+// 生成组合SKU列配置（1-25）
+const LOGISTICS_COMBO_COLUMNS: ExcelColumnConfig<Product>[] = Array.from({ length: 25 }, (_, i) => [
+  { key: `组合sku${i + 1}`, width: 15, getValue: () => '' },
+  { key: `组合数量${i + 1}`, width: 12, getValue: () => '' },
+]).flat();
+
+// 完整的物流信息列配置
+const LOGISTICS_COLUMNS = [...LOGISTICS_BASE_COLUMNS, ...LOGISTICS_COMBO_COLUMNS];
+
 /**
  * 导出物流信息Excel
  * 使用原生xlsx库，不添加任何自定义格式
@@ -481,78 +466,13 @@ export function exportLogisticsInfo(
     throw new Error('请至少选择一个商品');
   }
 
-  // 准备导出数据 - 不做任何格式转换，让xlsx自动处理
-  const exportData = products.map((product) => {
-    return {
-      'Fnsku': product.newProductCode ? String(product.newProductCode) : '',
-      'seller sku': product.newProductCode ? String(product.newProductCode) : '',
-      '产品英文名': product.productCategoryNameEn || '',
-      '产品中文名': product.productCategoryName || '',
-      '产品描述': '',
-      '申报价值': 0.99,
-      '重量': product.weight ? product.weight / 1000 : '',
-      '长': product.length || '',
-      '宽': product.width || '',
-      '高': product.height || '',
-      '海关编码': '',
-      '原产地': '',
-      '是否带电池': '不含电池',
-      '颜色': '',
-      '平台SKU(如有多个请用英文逗号隔开)': '',
-      '规格型号': '',
-      '图片URL': product.productImages && product.productImages.length > 0 ? product.productImages[0] : '',
-      '备注': '',
-      '是否组合[1为组合sku]': '',
-      '组合sku1': '',
-      '组合数量1': '',
-      '组合sku2': '',
-      '组合数量2': '',
-      '组合sku3': '',
-      '组合数量3': '',
-      '组合sku4': '',
-      '组合数量4': '',
-      '组合sku5': '',
-      '组合数量5': '',
-      '组合sku6': '',
-      '组合数量6': '',
-      '组合sku7': '',
-      '组合数量7': '',
-      '组合sku8': '',
-      '组合数量8': '',
-      '组合sku9': '',
-      '组合数量9': '',
-      '组合sku10': '',
-      '组合数量10': '',
-      '组合sku11': '',
-      '组合数量11': '',
-      '组合sku12': '',
-      '组合数量12': '',
-      '组合sku13': '',
-      '组合数量13': '',
-      '组合sku14': '',
-      '组合数量14': '',
-      '组合sku15': '',
-      '组合数量15': '',
-      '组合sku16': '',
-      '组合数量16': '',
-      '组合sku17': '',
-      '组合数量17': '',
-      '组合sku18': '',
-      '组合数量18': '',
-      '组合sku19': '',
-      '组合数量19': '',
-      '组合sku20': '',
-      '组合数量20': '',
-      '组合sku21': '',
-      '组合数量21': '',
-      '组合sku22': '',
-      '组合数量22': '',
-      '组合sku23': '',
-      '组合数量23': '',
-      '组合sku24': '',
-      '组合数量24': '',
-      '组合sku25': ''
-    };
+  // 使用配置生成导出数据
+  const exportData = products.map(product => {
+    const row: Record<string, string | number> = {};
+    LOGISTICS_COLUMNS.forEach(col => {
+      row[col.key] = col.getValue(product);
+    });
+    return row;
   });
 
   // 使用原生xlsx创建worksheet

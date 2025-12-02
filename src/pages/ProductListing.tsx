@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon, Sparkles, Upload } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import { type ProductCategory } from '@/types/productCategory';
@@ -12,12 +12,12 @@ import { toast } from 'sonner';
 import { ImageReorderDialog } from '@/components/ImageReorderDialog';
 import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
+import { LogisticsExportDialog } from '@/components/LogisticsExportDialog';
 import JSZip from 'jszip';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
   exportToExcel as exportToExcelUtil,
-  exportLogisticsInfo as exportLogisticsInfoUtil,
   generateSingleProductPdf,
   needsUserReorder,
   downloadZip
@@ -28,6 +28,9 @@ export function ProductListing() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 物流信息导出对话框
+  const [showLogisticsDialog, setShowLogisticsDialog] = useState(false);
 
   // 选择状态
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
@@ -41,6 +44,7 @@ export function ProductListing() {
   const [productCodes, setProductCodes] = useState(''); // 货号，包含逗号时精确查询，否则模糊查询
   const [title, setTitle] = useState(''); // 标题模糊搜索
   const [shopId, setShopId] = useState(''); // 店铺ID
+  const [productCategoryId, setProductCategoryId] = useState(''); // 产品分类ID
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
 
@@ -101,6 +105,7 @@ export function ProductListing() {
         productCodes: productCodes.trim() || undefined,
         title: title.trim() || undefined,
         shopId: shopId || undefined,
+        productCategoryId: productCategoryId || undefined,
         startTime: startTimestamp,
         endTime: endTimestamp
       });
@@ -142,6 +147,7 @@ export function ProductListing() {
     setProductCodes('');
     setTitle('');
     setShopId('');
+    setProductCategoryId('');
     setStartTime('');
     setEndTime('');
     setPageSize(100);
@@ -494,21 +500,9 @@ export function ProductListing() {
     }
   };
 
-  // 导出物流信息功能
-  const handleExportLogistics = () => {
-    try {
-      if (selectedProductIds.size === 0) {
-        toast.error('请至少选择一个商品');
-        return;
-      }
-
-      const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-      exportLogisticsInfoUtil(selectedProducts, getShopName);
-      setSelectedProductIds(new Set());
-    } catch (error) {
-      console.error('导出物流信息失败:', error);
-      toast.error(error instanceof Error ? error.message : '导出物流信息失败');
-    }
+  // 打开物流信息导出对话框
+  const handleOpenLogisticsDialog = () => {
+    setShowLogisticsDialog(true);
   };
 
   // 打开重新生成标题对话框
@@ -592,13 +586,12 @@ export function ProductListing() {
             导出上架表格 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
-            onClick={handleExportLogistics}
+            onClick={handleOpenLogisticsDialog}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0}
           >
-            <Download className="w-4 h-4" />
-            导出物流信息 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+            <Upload className="w-4 h-4" />
+            导出物流信息
           </Button>
           <Button
             onClick={handleExportProductPdf}
@@ -690,6 +683,23 @@ export function ProductListing() {
               {TEMU_SHOPS.map(shop => (
                 <option key={shop.shopId} value={shop.shopId}>
                   {shop.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 产品分类选择 */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">产品分类:</label>
+            <select
+              className="h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+              value={productCategoryId}
+              onChange={(e) => setProductCategoryId(e.target.value)}
+            >
+              <option value="">全部分类</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
@@ -1150,6 +1160,12 @@ export function ProductListing() {
         onCancel={() => setShowExportDialog(false)}
       />
 
+      {/* 物流信息导出对话框 */}
+      <LogisticsExportDialog
+        open={showLogisticsDialog}
+        onOpenChange={setShowLogisticsDialog}
+        getShopName={getShopName}
+      />
     </div>
   );
 }
