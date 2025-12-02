@@ -3,24 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, FileText, X, Image as ImageIcon, Sparkles, Upload } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, X, Image as ImageIcon, Sparkles, Upload } from 'lucide-react';
 import { productService, type Product } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import { type ProductCategory } from '@/types/productCategory';
 import { TEMU_SHOPS } from '@/types/shop';
 import { toast } from 'sonner';
-import { ImageReorderDialog } from '@/components/ImageReorderDialog';
 import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
 import { LogisticsExportDialog } from '@/components/LogisticsExportDialog';
-import JSZip from 'jszip';
+import { PdfExportDialog } from '@/components/PdfExportDialog';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
-  exportToExcel as exportToExcelUtil,
-  generateSingleProductPdf,
-  needsUserReorder,
-  downloadZip
+  exportToExcel as exportToExcelUtil
 } from '@/utils/productExportUtils';
 
 export function ProductListing() {
@@ -31,6 +27,9 @@ export function ProductListing() {
 
   // 物流信息导出对话框
   const [showLogisticsDialog, setShowLogisticsDialog] = useState(false);
+
+  // PDF导出对话框（上传订单表）
+  const [showPdfExportDialog, setShowPdfExportDialog] = useState(false);
 
   // 选择状态
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
@@ -47,24 +46,6 @@ export function ProductListing() {
   const [productCategoryId, setProductCategoryId] = useState(''); // 产品分类ID
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
-
-  // PDF导出相关状态
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [showReorderDialog, setShowReorderDialog] = useState(false);
-  // 简化的PDF导出状态：逐个产品处理
-  const [pdfExportState, setPdfExportState] = useState<{
-    products: Product[];           // 待处理的产品列表
-    currentIndex: number;          // 当前处理到第几个
-    zip: JSZip | null;             // 共享ZIP对象
-    currentProduct: Product | null; // 当前需要排序的日历产品
-    currentCategory: ProductCategory | null; // 当前产品的分类
-  }>({
-    products: [],
-    currentIndex: 0,
-    zip: null,
-    currentProduct: null,
-    currentCategory: null,
-  });
 
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
@@ -215,127 +196,6 @@ export function ProductListing() {
     } else {
       setSelectedProductIds(new Set(productIds));
     }
-  };
-
-  // 获取产品对应的分类
-  const getCategoryForProduct = (product: Product): ProductCategory | null => {
-    return categories.find(c => c.id === product.productCategoryId) || null;
-  };
-
-  // 导出产品图PDF - 简化版：逐个产品处理
-  const handleExportProductPdf = async () => {
-    if (selectedProductIds.size === 0) {
-      toast.error('请至少选择一个商品');
-      return;
-    }
-
-    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-    const zip = new JSZip();
-
-    // 初始化状态，开始逐个处理
-    setPdfExportState({
-      products: selectedProducts,
-      currentIndex: 0,
-      zip,
-      currentProduct: null,
-      currentCategory: null,
-    });
-
-    // 开始处理第一个产品
-    await processNextProduct(selectedProducts, 0, zip);
-  };
-
-  // 处理下一个产品
-  const processNextProduct = async (
-    productList: Product[],
-    index: number,
-    zip: JSZip
-  ) => {
-    // 如果所有产品都处理完了，下载ZIP
-    if (index >= productList.length) {
-      try {
-        await downloadZip(zip);
-        toast.success(`成功导出 ${productList.length} 个商品的PDF`);
-        setSelectedProductIds(new Set());
-      } catch (error) {
-        console.error('下载ZIP失败:', error);
-        toast.error('下载失败，请重试');
-      }
-      // 清理状态
-      setPdfExportState({
-        products: [],
-        currentIndex: 0,
-        zip: null,
-        currentProduct: null,
-        currentCategory: null,
-      });
-      setShowReorderDialog(false);
-      setIsGeneratingPdf(false);
-      return;
-    }
-
-    const product = productList[index];
-    const category = getCategoryForProduct(product);
-
-    if (!category) {
-      console.warn(`产品 ${product.newProductCode || product.id} 找不到分类，跳过`);
-      // 继续处理下一个
-      await processNextProduct(productList, index + 1, zip);
-      return;
-    }
-
-    // 更新当前处理进度
-    setPdfExportState(prev => ({
-      ...prev,
-      currentIndex: index,
-      currentProduct: product,
-      currentCategory: category,
-    }));
-
-    // 判断是否需要用户排序
-    if (needsUserReorder(category)) {
-      // 需要用户排序（如日历）：弹出排序对话框
-      setShowReorderDialog(true);
-      setIsGeneratingPdf(false);
-    } else {
-      // 不需要排序：直接生成 PDF
-      setIsGeneratingPdf(true);
-      try {
-        const pdfBlob = await generateSingleProductPdf(product, category);
-        const pdfFileName = `${product.newProductCode || product.id}.pdf`;
-        zip.file(pdfFileName, pdfBlob);
-      } catch (error) {
-        console.error(`生成PDF失败: ${product.newProductCode || product.id}`, error);
-        toast.error(`生成PDF失败: ${product.newProductCode || product.id}`);
-      }
-      // 继续处理下一个
-      await processNextProduct(productList, index + 1, zip);
-    }
-  };
-
-  // 日历排序确认后的处理
-  const handleConfirmReorder = async (reorderedProducts: Product[]) => {
-    const { products: productList, currentIndex, zip, currentCategory } = pdfExportState;
-
-    if (!zip || !currentCategory || reorderedProducts.length === 0) return;
-
-    // 取排序后的第一个产品（因为 ImageReorderDialog 支持多产品，但我们这里只传一个）
-    const product = reorderedProducts[0];
-
-    setIsGeneratingPdf(true);
-    setShowReorderDialog(false);
-
-    try {
-      const pdfBlob = await generateSingleProductPdf(product, currentCategory);
-      const pdfFileName = `${product.newProductCode || product.id}.pdf`;
-      zip.file(pdfFileName, pdfBlob);
-    } catch (error) {
-      console.error(`生成日历PDF失败: ${product.newProductCode || product.id}`, error);
-      toast.error(`生成日历PDF失败: ${product.newProductCode || product.id}`);
-    }
-
-    // 继续处理下一个产品
-    await processNextProduct(productList, currentIndex + 1, zip);
   };
 
   // 商品图预览
@@ -594,22 +454,12 @@ export function ProductListing() {
             导出物流信息
           </Button>
           <Button
-            onClick={handleExportProductPdf}
+            onClick={() => setShowPdfExportDialog(true)}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0 || isGeneratingPdf}
           >
-            {isGeneratingPdf ? (
-              <>
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                导出中...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                导出产品图PDF {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
-              </>
-            )}
+            <Upload className="w-4 h-4" />
+            导出产品图PDF
           </Button>
           <Button
             onClick={handleOpenRegenerateDialog}
@@ -1102,32 +952,6 @@ export function ProductListing() {
         </div>
       )}
 
-      {/* 图片重排序对话框 - 简化版：每次只处理一个日历产品 */}
-      {showReorderDialog && pdfExportState.currentProduct && (
-        <ImageReorderDialog
-          open={showReorderDialog}
-          onOpenChange={(open) => {
-            if (!open) {
-              // 用户取消，清理状态
-              setPdfExportState({
-                products: [],
-                currentIndex: 0,
-                zip: null,
-                currentProduct: null,
-                currentCategory: null,
-              });
-              setIsGeneratingPdf(false);
-            }
-            setShowReorderDialog(open);
-          }}
-          products={[pdfExportState.currentProduct]}
-          onConfirm={handleConfirmReorder}
-          isCalendar={true}
-          currentIndex={pdfExportState.currentIndex}
-          totalCount={pdfExportState.products.length}
-        />
-      )}
-
       {/* 重新生成标题对话框 */}
       <RegenerateTitleDialog
         open={showRegenerateDialog}
@@ -1165,6 +989,12 @@ export function ProductListing() {
         open={showLogisticsDialog}
         onOpenChange={setShowLogisticsDialog}
         getShopName={getShopName}
+      />
+
+      {/* PDF导出对话框（上传订单表） */}
+      <PdfExportDialog
+        open={showPdfExportDialog}
+        onOpenChange={setShowPdfExportDialog}
       />
     </div>
   );
