@@ -8,20 +8,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { GripVertical } from 'lucide-react';
 import { Product } from '@/services/productService';
 
 interface ImageReorderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  products: Product[];
+  products: Product[];  // 当前要排序的产品（简化后只传一个产品）
   onConfirm: (reorderedProducts: Product[]) => void;
   isCalendar?: boolean; // 是否为日历模式
-  // 多日历切换支持
-  currentIndex?: number; // 当前日历索引
-  totalCount?: number;   // 总日历数量
-  onPrevious?: () => void; // 切换到上一个日历
-  onNext?: () => void;     // 切换到下一个日历
+  // 进度显示
+  currentIndex?: number; // 当前处理到第几个产品（0-based）
+  totalCount?: number;   // 总产品数量
 }
 
 // 月份对照表
@@ -46,12 +45,9 @@ export function ImageReorderDialog({
   products,
   onConfirm,
   isCalendar = false,
-  currentIndex,
-  totalCount,
-  onPrevious,
-  onNext,
+  currentIndex = 0,
+  totalCount = 1,
 }: ImageReorderDialogProps) {
-  const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [reorderedProducts, setReorderedProducts] = useState<Product[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -64,12 +60,15 @@ export function ImageReorderDialog({
           productImages: [...(p.productImages || [])]
         }))
       );
-      setCurrentProductIndex(0);
     }
   }, [open, products]);
 
-  const currentProduct = reorderedProducts[currentProductIndex];
+  // 简化后只处理一个产品
+  const currentProduct = reorderedProducts[0];
   const productImages = currentProduct?.productImages || [];
+
+  // 进度计算
+  const progress = totalCount > 0 ? Math.round(((currentIndex + 1) / totalCount) * 100) : 0;
 
   // 处理拖拽开始
   const handleDragStart = (index: number) => {
@@ -98,106 +97,63 @@ export function ImageReorderDialog({
     newImages.splice(draggedIndex, 1);
     newImages.splice(targetIndex, 0, draggedImage);
 
-    newProducts[currentProductIndex].productImages = newImages;
+    newProducts[0].productImages = newImages;
     setReorderedProducts(newProducts);
     setDraggedIndex(null);
-  };
-
-  // 切换到上一个产品
-  const handlePrevProduct = () => {
-    if (currentProductIndex > 0) {
-      setCurrentProductIndex(currentProductIndex - 1);
-    }
-  };
-
-  // 切换到下一个产品
-  const handleNextProduct = () => {
-    if (currentProductIndex < reorderedProducts.length - 1) {
-      setCurrentProductIndex(currentProductIndex + 1);
-    }
   };
 
   // 确认（不关闭对话框，由父组件控制）
   const handleConfirm = () => {
     onConfirm(reorderedProducts);
-    // 注意：不在这里关闭对话框，由父组件根据是否是最后一个日历来决定是否关闭
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[85vw] sm:max-w-[85vw] max-w-[1400px] max-h-[90vh] flex flex-col">
         <DialogHeader>
+          {/* 进度显示区域 */}
+          {totalCount > 1 && (
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  导出进度：第 {currentIndex + 1} / {totalCount} 个产品
+                </span>
+                <span className="text-sm font-semibold text-blue-600">{progress}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+              {currentProduct && (
+                <div className="mt-2 text-xs text-gray-600">
+                  当前产品：{currentProduct.newProductCode || currentProduct.id}
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogTitle>
-            调整图片顺序
-            {totalCount && totalCount > 1 && (
-              <span className="ml-2 text-sm font-normal text-gray-600">
-                ({(currentIndex ?? 0) + 1} / {totalCount})
-              </span>
-            )}
+            调整日历图片顺序
           </DialogTitle>
           <DialogDescription>
-            拖拽图片调整日历页面的顺序
-            {totalCount && totalCount > 1 && (
-              <span className="ml-2 text-blue-600">
-                · 还有 {totalCount - (currentIndex ?? 0) - 1} 个日历待调整
-              </span>
-            )}
+            拖拽图片调整日历页面的顺序，确认后将生成 PDF
           </DialogDescription>
+
           {/* 日历模式：月份说明 */}
           {isCalendar && (
-            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-center text-gray-700">
+            <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs text-center text-gray-700">
               {MONTHS.map((month, index) => (
                 <span key={month.number}>
                   <span className="font-medium text-gray-900">{month.chinese}</span>
-                  <span className="text-gray-600">={month.english}</span>
-                  {index < MONTHS.length - 1 && <span className="mx-2 text-gray-400">|</span>}
+                  <span className="text-gray-500">={month.english}</span>
+                  {index < MONTHS.length - 1 && <span className="mx-1.5 text-gray-300">|</span>}
                 </span>
               ))}
             </div>
           )}
         </DialogHeader>
 
-        {/* 主体内容区域 - 包含左右按钮和中间内容 */}
-        <div className="flex-1 flex items-stretch gap-4 overflow-hidden py-4">
-          {/* 左侧按钮区域 */}
-          {reorderedProducts.length > 1 ? (
-            <div className="flex items-center justify-center w-16 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevProduct}
-                disabled={currentProductIndex === 0}
-                className="h-12 w-12 p-0 rounded-full shadow-md bg-white hover:bg-gray-50 disabled:opacity-30"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </Button>
-            </div>
-          ) : (
-            <div className="w-16 flex-shrink-0" />
-          )}
-
-          {/* 中间内容区域 */}
-          <div className="flex-1 overflow-auto">
-            {/* 产品导航指示器 */}
-            {reorderedProducts.length > 1 && (
-              <div className="flex items-center justify-center gap-2 mb-6">
-                {reorderedProducts.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentProductIndex(index)}
-                    className={`h-2 rounded-full transition-all ${
-                      index === currentProductIndex
-                        ? 'bg-blue-600 w-12'
-                        : 'bg-gray-300 hover:bg-gray-400 w-2'
-                    }`}
-                    aria-label={`切换到产品 ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* 图片列表 */}
-            <div className="grid grid-cols-4 gap-4">
+        {/* 主体内容区域 */}
+        <div className="flex-1 overflow-auto py-4">
+          {/* 图片列表 */}
+          <div className="grid grid-cols-4 gap-4">
               {productImages.map((imageUrl, index) => (
                 <div
                   key={`${imageUrl}-${index}`}
@@ -233,69 +189,30 @@ export function ImageReorderDialog({
               ))}
             </div>
 
-            {productImages.length === 0 && (
-              <div className="text-center text-gray-500 py-12">
-                当前产品没有图片
-              </div>
-            )}
-          </div>
-
-          {/* 右侧按钮区域 */}
-          {reorderedProducts.length > 1 ? (
-            <div className="flex items-center justify-center w-16 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNextProduct}
-                disabled={currentProductIndex === reorderedProducts.length - 1}
-                className="h-12 w-12 p-0 rounded-full shadow-md bg-white hover:bg-gray-50 disabled:opacity-30"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </Button>
+          {productImages.length === 0 && (
+            <div className="text-center text-gray-500 py-12">
+              当前产品没有图片
             </div>
-          ) : (
-            <div className="w-16 flex-shrink-0" />
           )}
         </div>
 
         <DialogFooter>
           <div className="flex items-center justify-between w-full">
             <span className="text-sm text-gray-600">
-              产品 {currentProductIndex + 1} / {reorderedProducts.length}
+              共 {productImages.length} 张图片
             </span>
             <div className="flex gap-2">
-              {/* 多日历切换按钮（仅在有多个日历时显示） */}
-              {totalCount && totalCount > 1 && onPrevious && (
-                <Button
-                  variant="outline"
-                  onClick={onPrevious}
-                  disabled={(currentIndex ?? 0) === 0}
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  上一个日历
-                </Button>
-              )}
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                取消
+                取消导出
               </Button>
               <Button onClick={handleConfirm}>
-                {totalCount && totalCount > 1 && (currentIndex ?? 0) < totalCount - 1
-                  ? '保存并继续下一个'
-                  : '确认并导出'}
+                {totalCount > 1 && currentIndex < totalCount - 1
+                  ? '确认并继续下一个'
+                  : '确认并完成导出'}
               </Button>
-              {/* 仅预览下一个日历（不导出） */}
-              {totalCount && totalCount > 1 && onNext && (currentIndex ?? 0) < totalCount - 1 && (
-                <Button
-                  variant="outline"
-                  onClick={onNext}
-                >
-                  预览下一个
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              )}
             </div>
           </div>
         </DialogFooter>

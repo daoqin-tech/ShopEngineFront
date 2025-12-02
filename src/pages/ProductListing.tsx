@@ -12,13 +12,14 @@ import { toast } from 'sonner';
 import { ImageReorderDialog } from '@/components/ImageReorderDialog';
 import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
+import JSZip from 'jszip';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil,
   exportToExcel as exportToExcelUtil,
   exportLogisticsInfo as exportLogisticsInfoUtil,
-  exportProductPdfSmart as exportProductPdfSmartUtil,
-  addCalendarPdfsToZip,
+  generateSingleProductPdf,
+  needsUserReorder,
   downloadZip
 } from '@/utils/productExportUtils';
 
@@ -46,9 +47,20 @@ export function ProductListing() {
   // PDF导出相关状态
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showReorderDialog, setShowReorderDialog] = useState(false);
-  const [calendarProductsList, setCalendarProductsList] = useState<{ products: Product[]; category: ProductCategory }[]>([]);
-  const [currentCalendarIndex, setCurrentCalendarIndex] = useState(0);
-  const [sharedZip, setSharedZip] = useState<any>(null); // 共享的ZIP对象
+  // 简化的PDF导出状态：逐个产品处理
+  const [pdfExportState, setPdfExportState] = useState<{
+    products: Product[];           // 待处理的产品列表
+    currentIndex: number;          // 当前处理到第几个
+    zip: JSZip | null;             // 共享ZIP对象
+    currentProduct: Product | null; // 当前需要排序的日历产品
+    currentCategory: ProductCategory | null; // 当前产品的分类
+  }>({
+    products: [],
+    currentIndex: 0,
+    zip: null,
+    currentProduct: null,
+    currentCategory: null,
+  });
 
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
@@ -199,179 +211,12 @@ export function ProductListing() {
     }
   };
 
+  // 获取产品对应的分类
+  const getCategoryForProduct = (product: Product): ProductCategory | null => {
+    return categories.find(c => c.id === product.productCategoryId) || null;
+  };
 
-  // 导出产品图PDF - 旧版本(双面打印,保留备用)
-  // const handleExportProductPdf_DoubleSided = async () => {
-  //   if (selectedProductIds.size === 0) {
-  //     toast.error('请至少选择一个商品');
-  //     return;
-  //   }
-
-  //   const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-
-  //   setIsGeneratingPdf(true);
-
-  //   try {
-  //     // 获取所有选中商品的taskId
-  //     const taskIds = selectedProducts.map(p => p.taskId);
-
-  //     // 批量获取产品图
-  //     const taskImagesMap = await productService.batchGetTaskImages(taskIds);
-
-  //     // 过滤出有图片的商品
-  //     const productsWithImages = selectedProducts.filter(p => {
-  //       const images = taskImagesMap[p.taskId];
-  //       return images && images.length > 0;
-  //     });
-
-  //     if (productsWithImages.length === 0) {
-  //       toast.error('所选商品没有产品图');
-  //       setIsGeneratingPdf(false);
-  //       return;
-  //     }
-
-  //     // 创建 JSZip 实例
-  //     const zip = new JSZip();
-
-  //     // 获取选择的页面尺寸
-  //     const pageSize = PAGE_SIZES[pdfPageSize];
-
-  //     // 为每个商品生成一个PDF(包含所有产品图)
-  //     for (const product of productsWithImages) {
-  //       const productImages = taskImagesMap[product.taskId];
-  //       if (!productImages || productImages.length === 0) continue;
-
-  //       const pdf = new jsPDF({
-  //         orientation: 'portrait',
-  //         unit: 'mm',
-  //         format: [pageSize.width, pageSize.height]
-  //       });
-
-  //       const pageWidth = pageSize.width;
-  //       const pageHeight = pageSize.height;
-
-  //       let isFirstPage = true;
-
-  //       // 为该商品的所有产品图创建页面(每张图后面跟一个空白页,确保图片在正面)
-  //       for (const imageUrl of productImages) {
-  //           try {
-  //             const response = await fetch(imageUrl, {
-  //               mode: 'cors',
-  //               headers: {
-  //                 'Accept': 'image/*',
-  //               }
-  //             });
-
-  //             if (!response.ok) {
-  //               console.warn(`跳过图片 ${imageUrl}，HTTP错误: ${response.status}`);
-  //               continue;
-  //             }
-
-  //             const blob = await response.blob();
-  //             const imageDataUrl = await new Promise<string>((resolve) => {
-  //               const reader = new FileReader();
-  //               reader.onload = (e) => resolve(e.target?.result as string);
-  //               reader.readAsDataURL(blob);
-  //             });
-
-  //             // 如果不是第一页，添加新页
-  //             if (!isFirstPage) {
-  //               pdf.addPage();
-  //             }
-  //             isFirstPage = false;
-
-  //             // 获取图片尺寸
-  //             const img = new Image();
-  //             await new Promise((resolve, reject) => {
-  //               img.onload = resolve;
-  //               img.onerror = reject;
-  //               img.src = imageDataUrl;
-  //             });
-
-  //             const imgWidth = img.naturalWidth;
-  //             const imgHeight = img.naturalHeight;
-
-  //             // 计算图片显示尺寸，保持比例并铺满页面
-  //             const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
-  //             const displayWidth = imgWidth * ratio;
-  //             const displayHeight = imgHeight * ratio;
-
-  //             // 居中显示
-  //             const x = (pageWidth - displayWidth) / 2;
-  //             const y = (pageHeight - displayHeight) / 2;
-
-  //             pdf.addImage(imageDataUrl, 'JPEG', x, y, displayWidth, displayHeight);
-
-  //             // 在每张产品图后添加一个空白页,确保下一张产品图在正面
-  //             pdf.addPage();
-
-  //         } catch (error) {
-  //           console.warn(`跳过图片 ${imageUrl}，处理失败:`, error);
-  //         }
-  //       }
-
-  //       // 此时最后一页是空白页(最后一张产品图的背面)
-  //       // 需要再添加一页空白页(新纸张的正面),然后货号页在其背面
-  //       pdf.addPage(); // 新纸张的正面(空白页)
-  //       pdf.addPage(); // 新纸张的背面(货号页)
-
-  //       // 设置货号文字样式 - 居中显示
-  //       pdf.setFontSize(40);
-  //       pdf.setTextColor(0, 0, 0);
-  //       const productCode = product.productCode || product.id;
-  //       const textWidth = pdf.getTextWidth(productCode);
-  //       const textX = (pageWidth - textWidth) / 2;
-  //       const textY = pageHeight / 2;
-  //       pdf.text(productCode, textX, textY);
-
-  //       // 添加右下角黑色标记 (用于分本)
-  //       // 黑标尺寸: 宽10mm (1cm), 高5mm (0.5cm)
-  //       // 位置: 距离右边缘0mm, 距离底部5mm (0.5cm)
-  //       const blackMarkWidth = 10;  // 1cm
-  //       const blackMarkHeight = 5;  // 0.5cm
-  //       const blackMarkX = pageWidth - blackMarkWidth;  // 右对齐
-  //       const blackMarkY = pageHeight - blackMarkHeight - 5;  // 距离底部0.5cm
-
-  //       pdf.setFillColor(0, 0, 0);  // 黑色
-  //       pdf.rect(blackMarkX, blackMarkY, blackMarkWidth, blackMarkHeight, 'F');  // 'F' = filled
-
-  //       // 生成PDF blob并添加到压缩包
-  //       const pdfBlob = pdf.output('blob');
-  //       const pdfFileName = `${product.productCode || product.id}.pdf`;
-  //       zip.file(pdfFileName, pdfBlob);
-  //     }
-
-  //     // 生成压缩包
-  //     const zipContent = await zip.generateAsync({ type: 'blob' });
-
-  //     // 生成文件名
-  //     const now = new Date();
-  //     const dateTimeStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
-  //     const filename = `产品图PDF_${dateTimeStr}.zip`;
-
-  //     // 下载压缩包
-  //     const url = window.URL.createObjectURL(zipContent);
-  //     const link = document.createElement('a');
-  //     link.href = url;
-  //     link.download = filename;
-  //     document.body.appendChild(link);
-  //     link.click();
-  //     document.body.removeChild(link);
-  //     window.URL.revokeObjectURL(url);
-
-  //     toast.success(`成功导出 ${productsWithImages.length} 个商品的PDF`);
-  //     setSelectedProductIds(new Set());
-  //     setShowPdfDialog(false);
-
-  //   } catch (error) {
-  //     console.error('导出PDF失败:', error);
-  //     toast.error('导出PDF失败，请重试');
-  //   } finally {
-  //     setIsGeneratingPdf(false);
-  //   }
-  // };
-
-  // 导出产品图PDF - 使用智能导出（统一打包）
+  // 导出产品图PDF - 简化版：逐个产品处理
   const handleExportProductPdf = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
@@ -379,92 +224,112 @@ export function ProductListing() {
     }
 
     const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+    const zip = new JSZip();
 
-    setIsGeneratingPdf(true);
+    // 初始化状态，开始逐个处理
+    setPdfExportState({
+      products: selectedProducts,
+      currentIndex: 0,
+      zip,
+      currentProduct: null,
+      currentCategory: null,
+    });
 
-    try {
-      // 使用智能导出函数，自动识别分类并生成非日历PDF
-      const result = await exportProductPdfSmartUtil(
-        selectedProducts,
-        categories
-      );
+    // 开始处理第一个产品
+    await processNextProduct(selectedProducts, 0, zip);
+  };
 
-      // 保存ZIP对象和日历列表
-      setSharedZip(result.zip);
-      setCalendarProductsList(result.calendarProducts);
-
-      // 如果有日历类型，显示重排序对话框
-      if (result.calendarProducts.length > 0) {
-        setCurrentCalendarIndex(0);
-        setShowReorderDialog(true);
-
-        if (result.nonCalendarCount > 0) {
-          toast.success(`已准备 ${result.nonCalendarCount} 个非日历商品的PDF，请调整日历顺序`);
-        } else {
-          toast.info('请调整日历图片顺序');
-        }
-      } else {
-        // 没有日历类型，直接下载ZIP
-        await downloadZip(result.zip);
-        toast.success(`成功导出 ${result.nonCalendarCount} 个商品的PDF`);
+  // 处理下一个产品
+  const processNextProduct = async (
+    productList: Product[],
+    index: number,
+    zip: JSZip
+  ) => {
+    // 如果所有产品都处理完了，下载ZIP
+    if (index >= productList.length) {
+      try {
+        await downloadZip(zip);
+        toast.success(`成功导出 ${productList.length} 个商品的PDF`);
         setSelectedProductIds(new Set());
+      } catch (error) {
+        console.error('下载ZIP失败:', error);
+        toast.error('下载失败，请重试');
       }
-    } catch (error) {
-      console.error('导出PDF失败:', error);
-      toast.error(error instanceof Error ? error.message : '导出PDF失败，请重试');
-    } finally {
+      // 清理状态
+      setPdfExportState({
+        products: [],
+        currentIndex: 0,
+        zip: null,
+        currentProduct: null,
+        currentCategory: null,
+      });
+      setShowReorderDialog(false);
       setIsGeneratingPdf(false);
+      return;
+    }
+
+    const product = productList[index];
+    const category = getCategoryForProduct(product);
+
+    if (!category) {
+      console.warn(`产品 ${product.newProductCode || product.id} 找不到分类，跳过`);
+      // 继续处理下一个
+      await processNextProduct(productList, index + 1, zip);
+      return;
+    }
+
+    // 更新当前处理进度
+    setPdfExportState(prev => ({
+      ...prev,
+      currentIndex: index,
+      currentProduct: product,
+      currentCategory: category,
+    }));
+
+    // 判断是否需要用户排序
+    if (needsUserReorder(category)) {
+      // 需要用户排序（如日历）：弹出排序对话框
+      setShowReorderDialog(true);
+      setIsGeneratingPdf(false);
+    } else {
+      // 不需要排序：直接生成 PDF
+      setIsGeneratingPdf(true);
+      try {
+        const pdfBlob = await generateSingleProductPdf(product, category);
+        const pdfFileName = `${product.newProductCode || product.id}.pdf`;
+        zip.file(pdfFileName, pdfBlob);
+      } catch (error) {
+        console.error(`生成PDF失败: ${product.newProductCode || product.id}`, error);
+        toast.error(`生成PDF失败: ${product.newProductCode || product.id}`);
+      }
+      // 继续处理下一个
+      await processNextProduct(productList, index + 1, zip);
     }
   };
 
-  // 确认当前日历重排序后的处理
+  // 日历排序确认后的处理
   const handleConfirmReorder = async (reorderedProducts: Product[]) => {
-    if (calendarProductsList.length === 0 || !sharedZip) return;
+    const { products: productList, currentIndex, zip, currentCategory } = pdfExportState;
 
-    const currentCalendar = calendarProductsList[currentCalendarIndex];
+    if (!zip || !currentCategory || reorderedProducts.length === 0) return;
+
+    // 取排序后的第一个产品（因为 ImageReorderDialog 支持多产品，但我们这里只传一个）
+    const product = reorderedProducts[0];
 
     setIsGeneratingPdf(true);
+    setShowReorderDialog(false);
+
     try {
-      // 将当前日历的PDF添加到共享ZIP中
-      await addCalendarPdfsToZip(sharedZip, reorderedProducts, currentCalendar.category);
-
-      // 检查是否还有下一个日历
-      if (currentCalendarIndex < calendarProductsList.length - 1) {
-        // 还有下一个日历，切换到下一个
-        setCurrentCalendarIndex(currentCalendarIndex + 1);
-        toast.success(`当前日历已添加，请调整下一个日历的顺序`);
-      } else {
-        // 所有日历都已添加，下载ZIP
-        await downloadZip(sharedZip);
-        toast.success(`所有商品PDF导出完成！`);
-
-        // 清理状态
-        setShowReorderDialog(false);
-        setCalendarProductsList([]);
-        setCurrentCalendarIndex(0);
-        setSharedZip(null);
-        setSelectedProductIds(new Set());
-      }
+      const pdfBlob = await generateSingleProductPdf(product, currentCategory);
+      const pdfFileName = `${product.newProductCode || product.id}.pdf`;
+      zip.file(pdfFileName, pdfBlob);
     } catch (error) {
-      console.error('添加日历PDF失败:', error);
-      toast.error(error instanceof Error ? error.message : '添加日历PDF失败，请重试');
-    } finally {
-      setIsGeneratingPdf(false);
+      console.error(`生成日历PDF失败: ${product.newProductCode || product.id}`, error);
+      toast.error(`生成日历PDF失败: ${product.newProductCode || product.id}`);
     }
-  };
 
-  // 切换到上一个日历
-  const handlePreviousCalendar = () => {
-    if (currentCalendarIndex > 0) {
-      setCurrentCalendarIndex(currentCalendarIndex - 1);
-    }
-  };
-
-  // 切换到下一个日历（不导出，仅预览）
-  const handleNextCalendar = () => {
-    if (currentCalendarIndex < calendarProductsList.length - 1) {
-      setCurrentCalendarIndex(currentCalendarIndex + 1);
-    }
+    // 继续处理下一个产品
+    await processNextProduct(productList, currentIndex + 1, zip);
   };
 
   // 商品图预览
@@ -1227,18 +1092,29 @@ export function ProductListing() {
         </div>
       )}
 
-      {/* 图片重排序对话框 - 支持多个日历切换 */}
-      {showReorderDialog && calendarProductsList.length > 0 && (
+      {/* 图片重排序对话框 - 简化版：每次只处理一个日历产品 */}
+      {showReorderDialog && pdfExportState.currentProduct && (
         <ImageReorderDialog
           open={showReorderDialog}
-          onOpenChange={setShowReorderDialog}
-          products={calendarProductsList[currentCalendarIndex].products}
+          onOpenChange={(open) => {
+            if (!open) {
+              // 用户取消，清理状态
+              setPdfExportState({
+                products: [],
+                currentIndex: 0,
+                zip: null,
+                currentProduct: null,
+                currentCategory: null,
+              });
+              setIsGeneratingPdf(false);
+            }
+            setShowReorderDialog(open);
+          }}
+          products={[pdfExportState.currentProduct]}
           onConfirm={handleConfirmReorder}
           isCalendar={true}
-          currentIndex={currentCalendarIndex}
-          totalCount={calendarProductsList.length}
-          onPrevious={handlePreviousCalendar}
-          onNext={handleNextCalendar}
+          currentIndex={pdfExportState.currentIndex}
+          totalCount={pdfExportState.products.length}
         />
       )}
 
