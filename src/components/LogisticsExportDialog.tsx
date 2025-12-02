@@ -32,7 +32,6 @@ export function LogisticsExportDialog({
   const [fileName, setFileName] = useState('');
   const [skuCount, setSkuCount] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   // 重置状态
   const resetState = () => {
@@ -40,7 +39,6 @@ export function LogisticsExportDialog({
     setFileName('');
     setSkuCount(0);
     setProducts([]);
-    setIsProcessing(false);
   };
 
   // 关闭对话框
@@ -62,7 +60,6 @@ export function LogisticsExportDialog({
     // 重置input
     e.target.value = '';
     setFileName(file.name);
-    setIsProcessing(true);
     setStage('processing');
 
     try {
@@ -143,8 +140,6 @@ export function LogisticsExportDialog({
       console.error('处理文件失败:', error);
       toast.error(error instanceof Error ? error.message : '处理文件失败');
       resetState();
-    } finally {
-      setIsProcessing(false);
     }
   };
 
