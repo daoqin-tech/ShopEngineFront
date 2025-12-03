@@ -2345,7 +2345,7 @@ export function AIImageProjects() {
 
       {/* 查看图片对话框 */}
       <Dialog open={viewImagesDialogOpen} onOpenChange={setViewImagesDialogOpen}>
-        <DialogContent className="!max-w-[95vw] w-[95vw] h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="!max-w-[80vw] w-[80vw] h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
               <h3 className="text-lg font-medium">
