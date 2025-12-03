@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy, Calendar, X } from 'lucide-react';
+import { Plus, Image, Images, Check, Search, ChevronLeft, ChevronRight, Copy, Calendar } from 'lucide-react';
 import { AIImageProjectsAPI, type AIImageProject } from '@/services/aiImageProjects';
 import { imageTemplateService, type ImageTemplateProjectListItem } from '@/services/imageTemplateService';
 import { FileUploadAPI } from '@/services/fileUpload';
@@ -2345,20 +2345,15 @@ export function AIImageProjects() {
 
       {/* 查看图片对话框 */}
       <Dialog open={viewImagesDialogOpen} onOpenChange={setViewImagesDialogOpen}>
-        <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">
-                  {viewingProject?.name || '项目图片'}
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  共 {viewingImages.filter(img => img.status === 'completed').length} 张图片
-                </p>
-              </div>
-              <Button size="sm" variant="ghost" onClick={() => setViewImagesDialogOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
+            <DialogTitle>
+              <h3 className="text-lg font-medium">
+                {viewingProject?.name || '项目图片'}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1 font-normal">
+                共 {viewingImages.filter(img => img.status === 'completed').length} 张图片
+              </p>
             </DialogTitle>
           </DialogHeader>
 
@@ -2368,19 +2363,18 @@ export function AIImageProjects() {
                 <div className="text-gray-500">加载中...</div>
               </div>
             ) : viewingImages.filter(img => img.status === 'completed').length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 {viewingImages
                   .filter(img => img.status === 'completed')
                   .map((image) => (
-                    <div key={image.id} className="group relative bg-gray-100 rounded-lg overflow-hidden aspect-square">
+                    <div key={image.id} className="group relative bg-gray-100 rounded-lg overflow-hidden">
                       <img
                         src={image.imageUrl}
                         alt={`图片 ${image.id}`}
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(image.imageUrl, '_blank')}
+                        className="w-full h-auto"
                       />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white text-xs truncate">{image.width}×{image.height}</p>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white text-sm">{image.width}×{image.height}</p>
                       </div>
                     </div>
                   ))}
