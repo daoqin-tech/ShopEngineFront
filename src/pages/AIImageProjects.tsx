@@ -858,29 +858,29 @@ export function AIImageProjects() {
   // ========== 修改日历功能 ==========
 
   // 打开修改日历对话框
-  const handleOpenFixCalendarDialog = async () => {
-    if (selectedProjectIds.size === 0) {
-      toast.error('请选择要修改的项目');
-      return;
-    }
+  // const handleOpenFixCalendarDialog = async () => {
+  //   if (selectedProjectIds.size === 0) {
+  //     toast.error('请选择要修改的项目');
+  //     return;
+  //   }
 
-    try {
-      // 重置状态
-      setFixCalendarProgress({
-        current: 0,
-        total: 0,
-        currentImage: '',
-        successCount: 0,
-        failedCount: 0,
-        isCompleted: false,
-      });
+  //   try {
+  //     // 重置状态
+  //     setFixCalendarProgress({
+  //       current: 0,
+  //       total: 0,
+  //       currentImage: '',
+  //       successCount: 0,
+  //       failedCount: 0,
+  //       isCompleted: false,
+  //     });
 
-      setFixCalendarDialogOpen(true);
-    } catch (err) {
-      toast.error('打开修改日历对话框失败');
-      console.error('Error opening fix calendar dialog:', err);
-    }
-  };
+  //     setFixCalendarDialogOpen(true);
+  //   } catch (err) {
+  //     toast.error('打开修改日历对话框失败');
+  //     console.error('Error opening fix calendar dialog:', err);
+  //   }
+  // };
 
   // Canvas合成：竖版日历（1024×1440）
   const compositeVerticalCalendar = async (
@@ -1184,7 +1184,7 @@ export function AIImageProjects() {
             <Image className="w-4 h-4" />
             {isProcessing ? '替换中...' : '模板替换'}
           </Button>
-          <Button
+          {/* <Button
             onClick={handleOpenFixCalendarDialog}
             disabled={selectedProjectIds.size === 0 || fixCalendarProcessing}
             variant="outline"
@@ -1192,7 +1192,7 @@ export function AIImageProjects() {
           >
             <Calendar className="w-4 h-4" />
             {fixCalendarProcessing ? '修改中...' : '修改日历'}
-          </Button>
+          </Button> */}
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             新建商品制图
