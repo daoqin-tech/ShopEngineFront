@@ -2363,7 +2363,7 @@ export function AIImageProjects() {
                 <div className="text-gray-500">加载中...</div>
               </div>
             ) : viewingImages.filter(img => img.status === 'completed').length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {viewingImages
                   .filter(img => img.status === 'completed')
                   .map((image) => (
@@ -2373,8 +2373,8 @@ export function AIImageProjects() {
                         alt={`图片 ${image.id}`}
                         className="w-full h-auto"
                       />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white text-sm">{image.width}×{image.height}</p>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-white text-xs">{image.width}×{image.height}</p>
                       </div>
                     </div>
                   ))}
