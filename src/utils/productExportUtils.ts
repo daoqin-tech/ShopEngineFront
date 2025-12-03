@@ -495,7 +495,7 @@ export function exportLogisticsInfo(
 
 /**
  * 产品分类类型枚举
- * 基于 typeCode 判断：SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋
+ * 基于 typeCode 判断：SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋, BJ-笔记本
  */
 export enum ProductCategoryType {
   JOURNAL_PAPER = 'journal_paper',     // 手账纸 (SZ) - 40张
@@ -503,6 +503,7 @@ export enum ProductCategoryType {
   CALENDAR_H = 'calendar_h',           // 横版日历 (HR) - 需要用户排序
   CALENDAR_V = 'calendar_v',           // 竖版日历 (SR) - 需要用户排序
   PAPER_BAG = 'paper_bag',             // 手提纸袋 (ST) - CMYK处理
+  NOTEBOOK = 'notebook',               // 笔记本 (BJ) - 单张图片，货号右下角
   NORMAL = 'normal',                   // 其他普通产品
 }
 
@@ -521,6 +522,8 @@ export function getProductCategoryType(category: ProductCategory): ProductCatego
       return ProductCategoryType.CALENDAR_V;
     case 'ST':
       return ProductCategoryType.PAPER_BAG;
+    case 'BJ':
+      return ProductCategoryType.NOTEBOOK;
     default:
       return ProductCategoryType.NORMAL;
   }
@@ -687,6 +690,37 @@ async function generateNormalProductPdf(
 }
 
 /**
+ * 生成笔记本 PDF
+ * 特点：只导出第一张产品图，货号在右下角，出血6mm
+ */
+async function generateNotebookPdf(
+  product: Product,
+  pageWidth: number,
+  pageHeight: number
+): Promise<Blob> {
+  const productImages = product.productImages || [];
+  const { pdf, actualWidth, actualHeight } = createPdfInstance(pageWidth, pageHeight);
+
+  // 只取第一张图片
+  if (productImages.length > 0) {
+    const imageDataUrl = await fetchImageAsDataUrl(productImages[0]);
+    if (imageDataUrl) {
+      pdf.addImage(imageDataUrl, 'JPEG', 0, 0, actualWidth, actualHeight);
+
+      // 右下角显示货号
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(50, 50, 50);
+      const productCode = product.newProductCode || product.id;
+      const textWidth = pdf.getTextWidth(productCode);
+      pdf.text(productCode, actualWidth - textWidth - 8, actualHeight - 8);
+    }
+  }
+
+  return pdf.output('blob');
+}
+
+/**
  * 生成单个产品的 PDF Blob（路由函数）
  * 根据分类类型调用对应的生成函数
  */
@@ -714,6 +748,10 @@ async function generateProductPdfBlob(product: Product, category: ProductCategor
     case ProductCategoryType.CALENDAR_V:
       // 日历：无货号页，第一页显示货号
       return generateCalendarPdf(product, width, height);
+
+    case ProductCategoryType.NOTEBOOK:
+      // 笔记本：只导出第一张图片，货号右下角，出血6mm
+      return generateNotebookPdf(product, width, height);
 
     case ProductCategoryType.JOURNAL_PAPER:
     case ProductCategoryType.WRAPPING_PAPER:
