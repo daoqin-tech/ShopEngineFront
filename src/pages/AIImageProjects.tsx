@@ -2345,7 +2345,7 @@ export function AIImageProjects() {
 
       {/* 查看图片对话框 */}
       <Dialog open={viewImagesDialogOpen} onOpenChange={setViewImagesDialogOpen}>
-        <DialogContent className="!max-w-[80vw] w-[80vw] h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="!max-w-[70vw] w-[70vw] h-[70vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
               <h3 className="text-lg font-medium">
@@ -2363,7 +2363,7 @@ export function AIImageProjects() {
                 <div className="text-gray-500">加载中...</div>
               </div>
             ) : viewingImages.filter(img => img.status === 'completed').length > 0 ? (
-              <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {viewingImages
                   .filter(img => img.status === 'completed')
                   .map((image) => (
