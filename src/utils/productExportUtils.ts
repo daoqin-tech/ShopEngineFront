@@ -690,30 +690,111 @@ async function generateNormalProductPdf(
 }
 
 /**
+ * 从图片右侧区域提取平均颜色
+ * @param imageDataUrl 图片的 DataURL
+ * @param rightPercentage 右侧区域占比（0-1），默认 0.1 即 10%
+ * @returns RGB颜色对象 {r, g, b}
+ */
+async function extractRightEdgeColor(imageDataUrl: string, rightPercentage: number = 0.1): Promise<{r: number, g: number, b: number}> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve({ r: 200, g: 200, b: 200 }); // 默认灰色
+        return;
+      }
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      // 计算右侧区域的起始位置
+      const startX = Math.floor(img.width * (1 - rightPercentage));
+      const regionWidth = img.width - startX;
+
+      // 获取右侧区域的像素数据
+      const imageData = ctx.getImageData(startX, 0, regionWidth, img.height);
+      const pixels = imageData.data;
+
+      let totalR = 0, totalG = 0, totalB = 0;
+      const pixelCount = pixels.length / 4;
+
+      for (let i = 0; i < pixels.length; i += 4) {
+        totalR += pixels[i];
+        totalG += pixels[i + 1];
+        totalB += pixels[i + 2];
+      }
+
+      resolve({
+        r: Math.round(totalR / pixelCount),
+        g: Math.round(totalG / pixelCount),
+        b: Math.round(totalB / pixelCount)
+      });
+    };
+    img.onerror = () => {
+      resolve({ r: 200, g: 200, b: 200 }); // 默认灰色
+    };
+    img.src = imageDataUrl;
+  });
+}
+
+/**
  * 生成笔记本 PDF
- * 特点：只导出第一张产品图，货号在右下角，出血6mm
+ * 特点：封面 + 封底展开图，总宽度 432mm，高度 210mm
+ * - 封面（左半部分）：产品图
+ * - 封底（右半部分）：从封面提取的主色调纯色，货号在封底
+ * - 出血：6mm
  */
 async function generateNotebookPdf(
   product: Product,
-  pageWidth: number,
-  pageHeight: number
+  _pageWidth: number,  // 原始宽度参数不使用，笔记本有特殊尺寸
+  _pageHeight: number  // 原始高度参数不使用
 ): Promise<Blob> {
   const productImages = product.productImages || [];
-  const { pdf, actualWidth, actualHeight } = createPdfInstance(pageWidth, pageHeight);
 
-  // 只取第一张图片
+  // 笔记本特殊尺寸：封面+封底展开（已含出血）
+  // 总宽度 432mm（已含出血）= 封面 216mm + 封底 216mm
+  // 高度 216mm（210mm + 6mm出血）
+  const actualWidth = 432; // mm（已含出血）
+  const actualHeight = 216; // mm（已含出血）
+  const halfWidth = actualWidth / 2; // 封面和封底各占一半 216mm
+
+  // 创建 PDF（横向）
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: [actualWidth, actualHeight]
+  });
+
   if (productImages.length > 0) {
     const imageDataUrl = await fetchImageAsDataUrl(productImages[0]);
     if (imageDataUrl) {
-      pdf.addImage(imageDataUrl, 'JPEG', 0, 0, actualWidth, actualHeight);
+      // 1. 从图片右侧 10% 区域提取颜色
+      const edgeColor = await extractRightEdgeColor(imageDataUrl, 0.1);
 
-      // 右下角显示货号
+      // 2. 封底（右半部分）：填充纯色
+      pdf.setFillColor(edgeColor.r, edgeColor.g, edgeColor.b);
+      pdf.rect(halfWidth, 0, halfWidth, actualHeight, 'F');
+
+      // 3. 封面（左半部分）：绘制产品图
+      pdf.addImage(imageDataUrl, 'JPEG', 0, 0, halfWidth, actualHeight);
+
+      // 4. 货号放在封底右下角
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(50, 50, 50);
+      // 根据背景色亮度决定文字颜色
+      const brightness = (edgeColor.r * 299 + edgeColor.g * 587 + edgeColor.b * 114) / 1000;
+      if (brightness > 128) {
+        pdf.setTextColor(50, 50, 50); // 深色文字
+      } else {
+        pdf.setTextColor(220, 220, 220); // 浅色文字
+      }
       const productCode = product.newProductCode || product.id;
       const textWidth = pdf.getTextWidth(productCode);
-      pdf.text(productCode, actualWidth - textWidth - 8, actualHeight - 8);
+      pdf.text(productCode, actualWidth - textWidth - 10, actualHeight - 10);
     }
   }
 
