@@ -757,9 +757,9 @@ async function generateNotebookPdf(
 
   // 笔记本特殊尺寸：封面+封底展开（已含出血）
   // 总宽度 432mm（已含出血）= 封面 216mm + 封底 216mm
-  // 高度 216mm（210mm + 6mm出血）
+  // 高度 286mm（280mm + 6mm出血）
   const actualWidth = 432; // mm（已含出血）
-  const actualHeight = 216; // mm（已含出血）
+  const actualHeight = 286; // mm（280mm + 6mm出血）
   const halfWidth = actualWidth / 2; // 封面和封底各占一半 216mm
 
   // 创建 PDF（横向）
