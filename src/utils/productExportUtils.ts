@@ -782,7 +782,7 @@ async function generateNotebookPdf(
       // 3. 封面（左半部分）：绘制产品图
       pdf.addImage(imageDataUrl, 'JPEG', 0, 0, halfWidth, actualHeight);
 
-      // 4. 货号放在封底右下角
+      // 4. 货号放在封底左下角（去掉前7位）
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
       // 根据背景色亮度决定文字颜色
@@ -792,9 +792,11 @@ async function generateNotebookPdf(
       } else {
         pdf.setTextColor(220, 220, 220); // 浅色文字
       }
-      const productCode = product.newProductCode || product.id;
-      const textWidth = pdf.getTextWidth(productCode);
-      pdf.text(productCode, actualWidth - textWidth - 10, actualHeight - 10);
+      const fullProductCode = product.newProductCode || product.id;
+      // 去掉前7位
+      const productCode = fullProductCode.length > 7 ? fullProductCode.substring(7) : fullProductCode;
+      // 封底左下角，padding 10mm
+      pdf.text(productCode, halfWidth + 10, actualHeight - 10);
     }
   }
 
