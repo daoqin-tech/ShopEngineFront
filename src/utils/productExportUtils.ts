@@ -795,8 +795,8 @@ async function generateNotebookPdf(
       const fullProductCode = product.newProductCode || product.id;
       // 去掉前7位
       const productCode = fullProductCode.length > 7 ? fullProductCode.substring(7) : fullProductCode;
-      // 封底左下角，padding 10mm
-      pdf.text(productCode, halfWidth + 10, actualHeight - 10);
+      // 封底左下角，padding 20mm
+      pdf.text(productCode, halfWidth + 20, actualHeight - 20);
     }
   }
 
