@@ -158,6 +158,7 @@ export function AIImageProjects() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [expandedCategoryId, setExpandedCategoryId] = useState(''); // 展开的一级分类ID
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [categoryTree, setCategoryTree] = useState<ProductCategoryWithChildren[]>([]); // 树形结构分类
   const [creating, setCreating] = useState(false);
@@ -245,6 +246,7 @@ export function AIImageProjects() {
   const handleNewProject = async () => {
     setNewProjectName('');
     setSelectedCategoryId('');
+    setExpandedCategoryId('');
     setCreateDialogOpen(true);
     await loadCategories();
   };
@@ -2314,23 +2316,46 @@ export function AIImageProjects() {
           <div className="space-y-6 py-4">
             <div className="space-y-3">
               <Label>产品分类 *</Label>
-              {/* 树状结构 */}
+              {/* 树状结构 - 默认收起 */}
               <div className="border rounded-lg max-h-[400px] overflow-y-auto">
                 {categoryTree.map((category, index) => {
                   const hasChildren = category.children && category.children.length > 0;
+                  const isExpanded = expandedCategoryId === category.id;
+                  const hasSelectedChild = category.children?.some(c => c.id === selectedCategoryId);
 
                   return (
                     <div key={category.id} className={index > 0 ? 'border-t' : ''}>
-                      {/* 父分类 */}
-                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 font-medium text-gray-700">
-                        <span>{category.name}</span>
-                        {hasChildren && (
-                          <span className="text-xs text-gray-400">({category.children!.length})</span>
+                      {/* 父分类 - 可点击展开/收起 */}
+                      <div
+                        onClick={() => {
+                          if (hasChildren) {
+                            setExpandedCategoryId(isExpanded ? '' : category.id);
+                          }
+                        }}
+                        className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
+                          isExpanded
+                            ? 'bg-primary/10'
+                            : hasSelectedChild
+                              ? 'bg-primary/5'
+                              : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 font-medium text-gray-700">
+                          {hasChildren && (
+                            <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          )}
+                          <span>{category.name}</span>
+                          {hasChildren && (
+                            <span className="text-xs text-gray-400">({category.children!.length})</span>
+                          )}
+                        </div>
+                        {hasSelectedChild && !isExpanded && (
+                          <Check className="w-4 h-4 text-primary" />
                         )}
                       </div>
-                      {/* 子分类 */}
-                      {hasChildren && (
-                        <div className="px-4 py-2 space-y-1">
+                      {/* 子分类 - 展开时显示 */}
+                      {hasChildren && isExpanded && (
+                        <div className="px-4 py-2 space-y-1 bg-white">
                           {category.children!.map((child) => (
                             <div
                               key={child.id}
@@ -2342,7 +2367,7 @@ export function AIImageProjects() {
                               }`}
                             >
                               <div className="flex items-center gap-2">
-                                <span className="text-gray-300">└</span>
+                                <span className={selectedCategoryId === child.id ? 'text-white/50' : 'text-gray-300'}>└</span>
                                 <span className="text-sm">{child.name}</span>
                               </div>
                               {selectedCategoryId === child.id && (
