@@ -1227,10 +1227,19 @@ export function AIImageProjects() {
                 <SelectValue placeholder="全部分类" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
+                {categoryTree.map((parent) => (
+                  <div key={parent.id}>
+                    {/* 父分类作为分组标题 */}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50">
+                      {parent.name}
+                    </div>
+                    {/* 子分类 */}
+                    {parent.children?.map((child) => (
+                      <SelectItem key={child.id} value={child.id} className="pl-6">
+                        {child.name}
+                      </SelectItem>
+                    ))}
+                  </div>
                 ))}
               </SelectContent>
             </Select>
