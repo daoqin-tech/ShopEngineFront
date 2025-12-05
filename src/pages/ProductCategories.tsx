@@ -10,14 +10,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Settings } from 'lucide-react';
+import { Plus, Pencil, Trash2, Settings, ChevronRight, ChevronDown } from 'lucide-react';
 import { productCategoryService } from '@/services/productCategoryService';
 import { productCategorySpecService } from '@/services/productCategorySpecService';
 import { formatManufacturingSize } from '@/utils/formatUtils';
 import type {
   ProductCategory,
-  CreateProductCategoryRequest,
-  UpdateProductCategoryRequest,
+  ProductCategoryWithChildren,
+  CreateProductCategoryWithParentRequest,
+  UpdateProductCategoryWithParentRequest,
 } from '@/types/productCategory';
 import type {
   ProductCategorySpec,
@@ -28,10 +29,17 @@ import { toast } from 'sonner';
 
 export function ProductCategories() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  // 树形分类数据（用于父子层级展示）
+  const [categoryTree, setCategoryTree] = useState<ProductCategoryWithChildren[]>([]);
+  // 展开的分类ID集合
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+  // 当前正在为哪个父分类添加子分类
+  const [addingChildForParent, setAddingChildForParent] = useState<ProductCategoryWithChildren | null>(null);
   const [formData, setFormData] = useState({
+    parentId: null as string | null,
     name: '',
     nameEn: '',
     sortOrder: 0,
@@ -59,12 +67,17 @@ export function ProductCategories() {
     isActive: true,
   });
 
-  // 加载分类列表
+  // 加载分类列表（扁平和树形两种）
   const loadCategories = async () => {
     setIsLoading(true);
     try {
-      const data = await productCategoryService.getAllCategories();
-      setCategories(data);
+      // 同时加载扁平列表和树形结构
+      const [flatData, treeData] = await Promise.all([
+        productCategoryService.getAllCategories(),
+        productCategoryService.getCategoryTree(),
+      ]);
+      setCategories(flatData);
+      setCategoryTree(treeData);
     } catch (error) {
       console.error('Failed to load categories:', error);
       toast.error('加载分类失败');
@@ -77,10 +90,26 @@ export function ProductCategories() {
     loadCategories();
   }, []);
 
-  // 打开新增对话框
+  // 切换展开/折叠
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+
+  // 打开新增对话框（顶级分类）
   const handleAdd = () => {
     setEditingCategory(null);
+    setAddingChildForParent(null);
     setFormData({
+      parentId: null,
       name: '',
       nameEn: '',
       sortOrder: categories.length + 1,
@@ -94,10 +123,34 @@ export function ProductCategories() {
     setIsDialogOpen(true);
   };
 
-  // 打开编辑对话框
-  const handleEdit = (category: ProductCategory) => {
-    setEditingCategory(category);
+  // 打开新增子分类对话框
+  const handleAddChild = (parent: ProductCategoryWithChildren) => {
+    setEditingCategory(null);
+    setAddingChildForParent(parent);
+    const childrenCount = parent.children?.length || 0;
     setFormData({
+      parentId: parent.id,
+      name: '',
+      nameEn: '',
+      sortOrder: childrenCount + 1,
+      isActive: true,
+      typeCode: '',
+      sizeCode: '',
+      // 子分类不需要设置制造尺寸，从父分类继承
+      manufacturingLength: undefined,
+      manufacturingWidth: undefined,
+      manufacturingHeight: undefined,
+    });
+    setIsDialogOpen(true);
+  };
+
+  // 打开编辑对话框
+  const handleEdit = (category: ProductCategory | ProductCategoryWithChildren) => {
+    setEditingCategory(category);
+    setAddingChildForParent(null);
+    const catWithParent = category as ProductCategoryWithChildren;
+    setFormData({
+      parentId: catWithParent.parentId || null,
       name: category.name,
       nameEn: category.nameEn || '',
       sortOrder: category.sortOrder,
@@ -118,39 +171,47 @@ export function ProductCategories() {
       return;
     }
 
+    // 判断是否为子分类
+    const isChildCategory = !!formData.parentId;
+
     try {
       if (editingCategory) {
         // 更新
-        const updateData: UpdateProductCategoryRequest = {
+        const updateData: UpdateProductCategoryWithParentRequest = {
+          parentId: formData.parentId,
           name: formData.name.trim(),
           nameEn: formData.nameEn.trim() || undefined,
           sortOrder: formData.sortOrder,
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
           sizeCode: formData.sizeCode.trim() || undefined,
-          manufacturingLength: formData.manufacturingLength,
-          manufacturingWidth: formData.manufacturingWidth,
-          manufacturingHeight: formData.manufacturingHeight,
+          // 子分类不保存制造尺寸（从父分类继承）
+          manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
+          manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
+          manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
         };
-        await productCategoryService.updateCategory(editingCategory.id, updateData);
+        await productCategoryService.updateCategoryWithParent(editingCategory.id, updateData);
         toast.success('更新成功');
       } else {
         // 新增
-        const createData: CreateProductCategoryRequest = {
+        const createData: CreateProductCategoryWithParentRequest = {
+          parentId: formData.parentId,
           name: formData.name.trim(),
           nameEn: formData.nameEn.trim() || undefined,
           sortOrder: formData.sortOrder,
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
           sizeCode: formData.sizeCode.trim() || undefined,
-          manufacturingLength: formData.manufacturingLength,
-          manufacturingWidth: formData.manufacturingWidth,
-          manufacturingHeight: formData.manufacturingHeight,
+          // 子分类不保存制造尺寸（从父分类继承）
+          manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
+          manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
+          manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
         };
-        await productCategoryService.createCategory(createData);
+        await productCategoryService.createCategoryWithParent(createData);
         toast.success('创建成功');
       }
       setIsDialogOpen(false);
+      setAddingChildForParent(null);
       loadCategories();
     } catch (error: any) {
       console.error('Failed to save category:', error);
@@ -315,90 +376,193 @@ export function ProductCategories() {
           <table className="w-full">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left p-4 font-medium">中文名称</th>
+                <th className="text-left p-4 font-medium">分类名称</th>
                 <th className="text-left p-4 font-medium">英文名称</th>
                 <th className="text-center p-4 font-medium w-24">类型码</th>
                 <th className="text-center p-4 font-medium w-24">尺寸码</th>
                 <th className="text-center p-4 font-medium">生产尺寸(cm)</th>
                 <th className="text-center p-4 font-medium w-24">排序</th>
                 <th className="text-center p-4 font-medium w-24">状态</th>
-                <th className="text-left p-4 font-medium w-40">创建时间</th>
-                <th className="text-center p-4 font-medium w-32">操作</th>
+                <th className="text-center p-4 font-medium w-48">操作</th>
               </tr>
             </thead>
             <tbody>
-              {!categories || categories.length === 0 ? (
+              {!categoryTree || categoryTree.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     暂无数据
                   </td>
                 </tr>
               ) : (
-                categories.map((category) => (
-                  <tr key={category.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="p-4">{category.name}</td>
-                    <td className="p-4 text-muted-foreground">{category.nameEn || '-'}</td>
-                    <td className="p-4 text-center">
-                      <span className="font-mono text-sm">
-                        {category.typeCode || '-'}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className="font-mono text-sm">
-                        {category.sizeCode || '-'}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className="font-mono text-sm">
-                        {formatManufacturingSize(
-                          category.manufacturingLength,
-                          category.manufacturingWidth,
-                          category.manufacturingHeight
-                        )}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">{category.sortOrder}</td>
-                    <td className="p-4 text-center">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          category.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {category.isActive ? '启用' : '禁用'}
-                      </span>
-                    </td>
-                    <td className="p-4 text-muted-foreground text-sm">
-                      {category.createdAt}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenSpecConfig(category)}
-                          title="配置规格"
+                categoryTree.map((category) => (
+                  <>
+                    {/* 父分类/一级分类行 */}
+                    <tr key={category.id} className="border-b hover:bg-muted/30 bg-muted/10">
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          {category.children && category.children.length > 0 ? (
+                            <button
+                              onClick={() => toggleExpand(category.id)}
+                              className="p-1 hover:bg-muted rounded"
+                            >
+                              {expandedIds.has(category.id) ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                            </button>
+                          ) : (
+                            <span className="w-6" />
+                          )}
+                          <span className="font-medium">{category.name}</span>
+                          {category.children && category.children.length > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              ({category.children.length}个子分类)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 text-muted-foreground">{category.nameEn || '-'}</td>
+                      <td className="p-4 text-center">
+                        <span className="font-mono text-sm text-muted-foreground">
+                          {category.typeCode || '-'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="font-mono text-sm text-muted-foreground">
+                          {category.sizeCode || '-'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="font-mono text-sm">
+                          {formatManufacturingSize(
+                            category.manufacturingLength,
+                            category.manufacturingWidth,
+                            category.manufacturingHeight
+                          )}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">{category.sortOrder}</td>
+                      <td className="p-4 text-center">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            category.isActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
                         >
-                          <Settings className="w-4 h-4 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(category.id, category.name)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                          {category.isActive ? '启用' : '禁用'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex justify-center gap-1">
+                          {/* 只有没有子分类的才能配置规格 */}
+                          {(!category.children || category.children.length === 0) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenSpecConfig(category)}
+                              title="配置规格"
+                            >
+                              <Settings className="w-4 h-4 text-blue-600" />
+                            </Button>
+                          )}
+                          {/* 添加子分类按钮 */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAddChild(category)}
+                            title="添加子分类"
+                          >
+                            <Plus className="w-4 h-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(category)}
+                            title="编辑"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(category.id, category.name)}
+                            title="删除"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                    {/* 子分类行 */}
+                    {expandedIds.has(category.id) && category.children?.map((child) => (
+                      <tr key={child.id} className="border-b hover:bg-muted/30">
+                        <td className="p-4">
+                          <div className="flex items-center gap-2 pl-8">
+                            <span className="text-muted-foreground">└</span>
+                            <span>{child.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-muted-foreground">{child.nameEn || '-'}</td>
+                        <td className="p-4 text-center">
+                          <span className="font-mono text-sm">
+                            {child.typeCode || '-'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="font-mono text-sm">
+                            {child.sizeCode || '-'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="font-mono text-sm text-muted-foreground">
+                            继承父分类
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">{child.sortOrder}</td>
+                        <td className="p-4 text-center">
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              child.isActive
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {child.isActive ? '启用' : '禁用'}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenSpecConfig(child)}
+                              title="配置规格"
+                            >
+                              <Settings className="w-4 h-4 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(child)}
+                              title="编辑"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(child.id, child.name)}
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
                 ))
               )}
             </tbody>
@@ -407,15 +571,29 @@ export function ProductCategories() {
       )}
 
       {/* 新增/编辑对话框 */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setAddingChildForParent(null);
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingCategory ? '编辑分类' : '新增分类'}</DialogTitle>
+            <DialogTitle>
+              {editingCategory
+                ? '编辑分类'
+                : addingChildForParent
+                  ? `新增子分类 - ${addingChildForParent.name}`
+                  : '新增分类'}
+            </DialogTitle>
             <DialogDescription>
-              {editingCategory ? '修改分类信息' : '创建新的产品分类'}
+              {editingCategory
+                ? '修改分类信息'
+                : addingChildForParent
+                  ? `为"${addingChildForParent.name}"添加子分类`
+                  : '创建新的产品分类'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* 基础信息 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">中文名称 *</Label>
@@ -436,81 +614,139 @@ export function ProductCategories() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="typeCode">类型码</Label>
-                <Input
-                  id="typeCode"
-                  value={formData.typeCode}
-                  onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
-                  placeholder="如: SZ, BZ, HR"
-                  maxLength={10}
-                />
-                <p className="text-xs text-muted-foreground">
-                  用于生成货号（SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋）
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sizeCode">尺寸码</Label>
-                <Input
-                  id="sizeCode"
-                  value={formData.sizeCode}
-                  onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
-                  placeholder="如: 15, 21, 30, 66"
-                  maxLength={10}
-                />
-                <p className="text-xs text-muted-foreground">
-                  用于生成货号（15-15cm, 21-21cm, 30-30cm, 66-66cm）
-                </p>
-              </div>
-            </div>
-            <div>
-              <Label className="mb-2 block">生产尺寸 (cm)</Label>
-              <div className="grid grid-cols-3 gap-4">
+
+            {/* 子分类独有字段：类型码和尺寸码 */}
+            {(formData.parentId || addingChildForParent) && (
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="manufacturingLength" className="text-xs text-muted-foreground">长度</Label>
+                  <Label htmlFor="typeCode">类型码 *</Label>
                   <Input
-                    id="manufacturingLength"
-                    type="number"
-                    step="0.1"
-                    value={formData.manufacturingLength || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, manufacturingLength: e.target.value ? parseFloat(e.target.value) : undefined })
-                    }
-                    placeholder="如: 29.7"
+                    id="typeCode"
+                    value={formData.typeCode}
+                    onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
+                    placeholder="如: BJ-01, BJ-02"
+                    maxLength={10}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    子分类的类型码，用于生成货号
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="manufacturingWidth" className="text-xs text-muted-foreground">宽度</Label>
+                  <Label htmlFor="sizeCode">尺寸码 *</Label>
                   <Input
-                    id="manufacturingWidth"
-                    type="number"
-                    step="0.1"
-                    value={formData.manufacturingWidth || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, manufacturingWidth: e.target.value ? parseFloat(e.target.value) : undefined })
-                    }
+                    id="sizeCode"
+                    value={formData.sizeCode}
+                    onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
                     placeholder="如: 21"
+                    maxLength={10}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="manufacturingHeight" className="text-xs text-muted-foreground">高度</Label>
-                  <Input
-                    id="manufacturingHeight"
-                    type="number"
-                    step="0.1"
-                    value={formData.manufacturingHeight || ''}
-                    onChange={(e) =>
-                      setFormData({ ...formData, manufacturingHeight: e.target.value ? parseFloat(e.target.value) : undefined })
-                    }
-                    placeholder="如: 0"
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    子分类的尺寸码，用于生成货号
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                用于PDF导出尺寸（纸类产品高度通常为0）
-              </p>
-            </div>
+            )}
+
+            {/* 一级分类/父分类字段 */}
+            {!formData.parentId && !addingChildForParent && (
+              <>
+                {/* 类型码和尺寸码（一级分类也可以有，兼容现有数据） */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="typeCode">类型码</Label>
+                    <Input
+                      id="typeCode"
+                      value={formData.typeCode}
+                      onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
+                      placeholder="如: SZ, BZ, HR"
+                      maxLength={10}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      用于生成货号（SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋）
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sizeCode">尺寸码</Label>
+                    <Input
+                      id="sizeCode"
+                      value={formData.sizeCode}
+                      onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
+                      placeholder="如: 15, 21, 30, 66"
+                      maxLength={10}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      用于生成货号（15-15cm, 21-21cm, 30-30cm, 66-66cm）
+                    </p>
+                  </div>
+                </div>
+                {/* 生产尺寸（只有一级分类/父分类才有） */}
+                <div>
+                  <Label className="mb-2 block">生产尺寸 (cm)</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="manufacturingLength" className="text-xs text-muted-foreground">长度</Label>
+                      <Input
+                        id="manufacturingLength"
+                        type="number"
+                        step="0.1"
+                        value={formData.manufacturingLength || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, manufacturingLength: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 29.7"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="manufacturingWidth" className="text-xs text-muted-foreground">宽度</Label>
+                      <Input
+                        id="manufacturingWidth"
+                        type="number"
+                        step="0.1"
+                        value={formData.manufacturingWidth || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, manufacturingWidth: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 21"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="manufacturingHeight" className="text-xs text-muted-foreground">高度</Label>
+                      <Input
+                        id="manufacturingHeight"
+                        type="number"
+                        step="0.1"
+                        value={formData.manufacturingHeight || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, manufacturingHeight: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 0"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    用于PDF导出尺寸（纸类产品高度通常为0）。子分类会继承父分类的生产尺寸。
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* 子分类提示：继承父分类的生产尺寸 */}
+            {(formData.parentId || addingChildForParent) && (
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  💡 子分类会自动继承父分类的生产尺寸
+                  {addingChildForParent && (
+                    <span className="block mt-1">
+                      父分类生产尺寸: {formatManufacturingSize(
+                        addingChildForParent.manufacturingLength,
+                        addingChildForParent.manufacturingWidth,
+                        addingChildForParent.manufacturingHeight
+                      )}
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="sortOrder">排序顺序</Label>
               <Input
