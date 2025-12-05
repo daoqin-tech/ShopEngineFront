@@ -1224,11 +1224,12 @@ export function AIImageProjects() {
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">产品分类:</label>
-            <Select value={categoryFilter || undefined} onValueChange={(value) => setCategoryFilter(value || '')}>
+            <Select value={categoryFilter || 'all'} onValueChange={(value) => setCategoryFilter(value === 'all' ? '' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="全部分类" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">全部分类</SelectItem>
                 {categoryTree.map((parent) => (
                   <div key={parent.id}>
                     {/* 父分类作为分组标题 */}
