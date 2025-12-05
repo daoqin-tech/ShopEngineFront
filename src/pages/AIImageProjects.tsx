@@ -11,7 +11,7 @@ import { imageTemplateService, type ImageTemplateProjectListItem } from '@/servi
 import { FileUploadAPI } from '@/services/fileUpload';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { productCategoryService } from '@/services/productCategoryService';
-import type { ProductCategory } from '@/types/productCategory';
+import type { ProductCategory, ProductCategoryWithChildren } from '@/types/productCategory';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -158,7 +158,9 @@ export function AIImageProjects() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState(''); // 选中的父分类ID（用于展示子分类）
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [categoryTree, setCategoryTree] = useState<ProductCategoryWithChildren[]>([]); // 树形结构分类
   const [creating, setCreating] = useState(false);
 
   // 获取项目列表
@@ -225,11 +227,15 @@ export function AIImageProjects() {
     fetchProjects(1);
   };
 
-  // 加载分类列表
+  // 加载分类列表（扁平和树形两种）
   const loadCategories = async () => {
     try {
-      const data = await productCategoryService.getAllCategories(true); // 只获取启用的分类
-      setCategories(data);
+      const [flatData, treeData] = await Promise.all([
+        productCategoryService.getAllCategories(true), // 只获取启用的分类（扁平列表用于筛选）
+        productCategoryService.getCategoryTree(true), // 树形结构用于创建项目时选择
+      ]);
+      setCategories(flatData);
+      setCategoryTree(treeData);
     } catch (error) {
       console.error('Failed to load categories:', error);
       toast.error('加载分类失败');
@@ -240,6 +246,7 @@ export function AIImageProjects() {
   const handleNewProject = async () => {
     setNewProjectName('');
     setSelectedCategoryId('');
+    setSelectedParentCategoryId('');
     setCreateDialogOpen(true);
     await loadCategories();
   };
@@ -2300,21 +2307,96 @@ export function AIImageProjects() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>产品分类 *</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {categories.map((category) => (
-                  <div
-                    key={category.id}
-                    onClick={() => setSelectedCategoryId(category.id)}
-                    className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all hover:border-primary hover:bg-primary/5 ${
-                      selectedCategoryId === category.id
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-200'
-                    }`}
-                  >
-                    <div className="font-medium">{category.name}</div>
-                  </div>
-                ))}
+              {/* 树状结构分类选择 */}
+              <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
+                {categoryTree.map((category) => {
+                  const hasChildren = category.children && category.children.length > 0;
+                  const isExpanded = selectedParentCategoryId === category.id;
+                  const isChildSelected = hasChildren && category.children?.some(c => c.id === selectedCategoryId);
+
+                  return (
+                    <div key={category.id}>
+                      {/* 父分类行 */}
+                      <div
+                        onClick={() => {
+                          if (hasChildren) {
+                            // 有子分类：展开/收起
+                            setSelectedParentCategoryId(isExpanded ? '' : category.id);
+                          } else {
+                            // 无子分类：直接选中（理论上不会出现这种情况）
+                            setSelectedCategoryId(category.id);
+                            setSelectedParentCategoryId('');
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                          isExpanded || isChildSelected
+                            ? 'bg-primary/5'
+                            : 'hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {hasChildren && (
+                            <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                              ▶
+                            </span>
+                          )}
+                          <span className="font-medium">{category.name}</span>
+                          {hasChildren && (
+                            <span className="text-xs text-muted-foreground">
+                              ({category.children!.length})
+                            </span>
+                          )}
+                        </div>
+                        {isChildSelected && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
+                      </div>
+
+                      {/* 子分类列表 */}
+                      {hasChildren && isExpanded && (
+                        <div className="bg-muted/20">
+                          {category.children!.map((child) => (
+                            <div
+                              key={child.id}
+                              onClick={() => setSelectedCategoryId(child.id)}
+                              className={`flex items-center justify-between pl-10 pr-3 py-2 cursor-pointer transition-colors ${
+                                selectedCategoryId === child.id
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                            >
+                              <span className="text-sm">{child.name}</span>
+                              {selectedCategoryId === child.id && (
+                                <Check className="w-4 h-4 text-primary" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* 显示已选择的分类 */}
+              {selectedCategoryId && (
+                <div className="mt-2 text-sm text-primary font-medium">
+                  已选择：{(() => {
+                    for (const parent of categoryTree) {
+                      if (parent.id === selectedCategoryId) {
+                        return parent.name;
+                      }
+                      if (parent.children) {
+                        const child = parent.children.find(c => c.id === selectedCategoryId);
+                        if (child) {
+                          return `${parent.name} > ${child.name}`;
+                        }
+                      }
+                    }
+                    return '';
+                  })()}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="projectName">项目名称 *</Label>
