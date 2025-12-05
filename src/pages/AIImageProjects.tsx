@@ -2305,72 +2305,86 @@ export function AIImageProjects() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>产品分类 *</Label>
-              {/* 树状结构分类选择 */}
-              <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
+              {/* 树状结构分类选择 - 卡片式设计 */}
+              <div className="grid grid-cols-2 gap-3 max-h-[320px] overflow-y-auto pr-1">
                 {categoryTree.map((category) => {
                   const hasChildren = category.children && category.children.length > 0;
                   const isExpanded = selectedParentCategoryId === category.id;
-                  const isChildSelected = hasChildren && category.children?.some(c => c.id === selectedCategoryId);
+                  const selectedChild = hasChildren ? category.children?.find(c => c.id === selectedCategoryId) : null;
 
                   return (
-                    <div key={category.id}>
-                      {/* 父分类行 */}
+                    <div
+                      key={category.id}
+                      className={`rounded-xl border-2 overflow-hidden transition-all ${
+                        isExpanded
+                          ? 'border-primary shadow-md col-span-2'
+                          : selectedChild
+                            ? 'border-primary/50 bg-primary/5'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                      }`}
+                    >
+                      {/* 父分类头部 */}
                       <div
                         onClick={() => {
                           if (hasChildren) {
-                            // 有子分类：展开/收起
                             setSelectedParentCategoryId(isExpanded ? '' : category.id);
-                          } else {
-                            // 无子分类：直接选中（理论上不会出现这种情况）
-                            setSelectedCategoryId(category.id);
-                            setSelectedParentCategoryId('');
                           }
                         }}
-                        className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                          isExpanded || isChildSelected
-                            ? 'bg-primary/5'
-                            : 'hover:bg-muted/50'
+                        className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
+                          isExpanded
+                            ? 'bg-primary text-white'
+                            : selectedChild
+                              ? 'bg-primary/10'
+                              : 'bg-gray-50 hover:bg-gray-100'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          {hasChildren && (
-                            <span className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                              ▶
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isExpanded ? 'bg-white/20' : 'bg-white shadow-sm'
+                          }`}>
+                            <span className={`text-sm font-bold ${isExpanded ? 'text-white' : 'text-primary'}`}>
+                              {category.name.charAt(0)}
                             </span>
-                          )}
-                          <span className="font-medium">{category.name}</span>
-                          {hasChildren && (
-                            <span className="text-xs text-muted-foreground">
-                              ({category.children!.length})
-                            </span>
-                          )}
+                          </div>
+                          <div>
+                            <div className="font-medium">{category.name}</div>
+                            {hasChildren && !isExpanded && (
+                              <div className={`text-xs ${isExpanded ? 'text-white/70' : 'text-muted-foreground'}`}>
+                                {selectedChild ? `已选: ${selectedChild.name}` : `${category.children!.length} 个子分类`}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {isChildSelected && (
-                          <Check className="w-4 h-4 text-primary" />
+                        {hasChildren && (
+                          <ChevronRight className={`w-5 h-5 transition-transform ${
+                            isExpanded ? 'rotate-90 text-white' : 'text-gray-400'
+                          }`} />
                         )}
                       </div>
 
-                      {/* 子分类列表 */}
+                      {/* 子分类网格 */}
                       {hasChildren && isExpanded && (
-                        <div className="bg-muted/20">
-                          {category.children!.map((child) => (
-                            <div
-                              key={child.id}
-                              onClick={() => setSelectedCategoryId(child.id)}
-                              className={`flex items-center justify-between pl-10 pr-3 py-2 cursor-pointer transition-colors ${
-                                selectedCategoryId === child.id
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                            >
-                              <span className="text-sm">{child.name}</span>
-                              {selectedCategoryId === child.id && (
-                                <Check className="w-4 h-4 text-primary" />
-                              )}
-                            </div>
-                          ))}
+                        <div className="p-3 bg-gray-50/50">
+                          <div className="grid grid-cols-3 gap-2">
+                            {category.children!.map((child) => (
+                              <div
+                                key={child.id}
+                                onClick={() => setSelectedCategoryId(child.id)}
+                                className={`relative px-3 py-2.5 rounded-lg text-center cursor-pointer transition-all ${
+                                  selectedCategoryId === child.id
+                                    ? 'bg-primary text-white shadow-md scale-[1.02]'
+                                    : 'bg-white border border-gray-200 hover:border-primary hover:shadow-sm'
+                                }`}
+                              >
+                                <span className="text-sm font-medium">{child.name}</span>
+                                {selectedCategoryId === child.id && (
+                                  <Check className="absolute top-1 right-1 w-3.5 h-3.5" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2378,23 +2392,26 @@ export function AIImageProjects() {
                 })}
               </div>
 
-              {/* 显示已选择的分类 */}
+              {/* 已选择提示 */}
               {selectedCategoryId && (
-                <div className="mt-2 text-sm text-primary font-medium">
-                  已选择：{(() => {
-                    for (const parent of categoryTree) {
-                      if (parent.id === selectedCategoryId) {
-                        return parent.name;
-                      }
-                      if (parent.children) {
-                        const child = parent.children.find(c => c.id === selectedCategoryId);
-                        if (child) {
-                          return `${parent.name} > ${child.name}`;
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-lg border border-primary/20">
+                  <Check className="w-4 h-4 text-primary" />
+                  <span className="text-sm">
+                    已选择：
+                    <span className="font-medium text-primary">
+                      {(() => {
+                        for (const parent of categoryTree) {
+                          if (parent.children) {
+                            const child = parent.children.find(c => c.id === selectedCategoryId);
+                            if (child) {
+                              return `${parent.name} › ${child.name}`;
+                            }
+                          }
                         }
-                      }
-                    }
-                    return '';
-                  })()}
+                        return '';
+                      })()}
+                    </span>
+                  </span>
                 </div>
               )}
             </div>
