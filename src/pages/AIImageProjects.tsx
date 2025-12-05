@@ -2305,20 +2305,23 @@ export function AIImageProjects() {
           <div className="space-y-6 py-4">
             <div className="space-y-3">
               <Label>产品分类 *</Label>
-              {/* 简洁树状结构 */}
-              <div className="grid grid-cols-3 gap-4">
-                {categoryTree.map((category) => {
+              {/* 树状结构 */}
+              <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                {categoryTree.map((category, index) => {
                   const hasChildren = category.children && category.children.length > 0;
 
                   return (
-                    <div key={category.id} className="space-y-2">
-                      {/* 父分类标题 */}
-                      <div className="text-sm font-semibold text-gray-700 px-1">
-                        {category.name}
+                    <div key={category.id} className={index > 0 ? 'border-t' : ''}>
+                      {/* 父分类 */}
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 font-medium text-gray-700">
+                        <span>{category.name}</span>
+                        {hasChildren && (
+                          <span className="text-xs text-gray-400">({category.children!.length})</span>
+                        )}
                       </div>
-                      {/* 子分类列表 */}
+                      {/* 子分类 */}
                       {hasChildren && (
-                        <div className="space-y-1">
+                        <div className="px-4 py-2 space-y-1">
                           {category.children!.map((child) => (
                             <div
                               key={child.id}
@@ -2326,10 +2329,13 @@ export function AIImageProjects() {
                               className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${
                                 selectedCategoryId === child.id
                                   ? 'bg-primary text-white'
-                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                  : 'hover:bg-gray-100 text-gray-600'
                               }`}
                             >
-                              <span className="text-sm">{child.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-300">└</span>
+                                <span className="text-sm">{child.name}</span>
+                              </div>
                               {selectedCategoryId === child.id && (
                                 <Check className="w-4 h-4" />
                               )}
@@ -2344,7 +2350,7 @@ export function AIImageProjects() {
 
               {/* 已选择提示 */}
               {selectedCategoryId && (
-                <div className="flex items-center gap-2 mt-4 px-3 py-2 bg-primary/10 rounded-lg">
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
                   <Check className="w-4 h-4 text-primary" />
                   <span className="text-sm">
                     已选择：
