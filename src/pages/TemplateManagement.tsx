@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Upload, FileImage, Search } from 'lucide-react'
+import { Plus, Upload, FileImage, Search, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { DateTimePicker } from '@/components/ui/date-picker'
+import { Label } from '@/components/ui/label'
 import { type Template } from '@/types/template'
 import { toast } from 'sonner'
 import { templateService } from '@/services/templateService'
+import { productCategoryService } from '@/services/productCategoryService'
+import type { ProductCategoryWithChildren } from '@/types/productCategory'
 
 // 格式化日期
 const formatDate = (dateString: string) => {
@@ -38,6 +41,13 @@ export function TemplateManagement() {
   const [nameFilter, setNameFilter] = useState('')
   const [startTime, setStartTime] = useState<Date | undefined>()
   const [endTime, setEndTime] = useState<Date | undefined>()
+
+  // 新建模板对话框状态
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [newTemplateName, setNewTemplateName] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [categoryTree, setCategoryTree] = useState<ProductCategoryWithChildren[]>([])
+  const [creating, setCreating] = useState(false)
 
   // 加载模板列表
   const loadTemplates = async (page: number = currentPage) => {
@@ -142,15 +152,47 @@ export function TemplateManagement() {
     }
   }
 
-  // 创建空白模板
-  const handleCreateBlankTemplate = async () => {
+  // 打开新建模板对话框
+  const handleOpenCreateDialog = async () => {
+    // 加载分类数据
     try {
-      const template = await templateService.createTemplate()
+      const data = await productCategoryService.getCategoryTree()
+      // 只保留父分类（用于模板分类选择）
+      setCategoryTree(data)
+    } catch (error) {
+      console.error('加载分类失败:', error)
+      toast.error('加载分类数据失败')
+    }
+    setNewTemplateName('')
+    setSelectedCategoryId('')
+    setCreateDialogOpen(true)
+  }
+
+  // 确认创建模板
+  const handleConfirmCreate = async () => {
+    if (!selectedCategoryId) {
+      toast.error('请选择产品分类')
+      return
+    }
+    if (!newTemplateName.trim()) {
+      toast.error('请输入模板名称')
+      return
+    }
+
+    setCreating(true)
+    try {
+      const template = await templateService.createTemplate({
+        name: newTemplateName.trim(),
+        productCategoryId: selectedCategoryId
+      })
       toast.success('模板创建成功')
+      setCreateDialogOpen(false)
       // 跳转到模板编辑页面
       navigate(`/workspace/template/${template.id}`)
     } catch (err: any) {
       toast.error('创建模板失败')
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -165,7 +207,7 @@ export function TemplateManagement() {
       {/* 页面头部 */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">模板管理</h1>
-        <Button onClick={handleCreateBlankTemplate} className="flex items-center gap-2">
+        <Button onClick={handleOpenCreateDialog} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           新建空白模板
         </Button>
@@ -225,7 +267,7 @@ export function TemplateManagement() {
           </div>
           <h2 className="text-xl font-semibold text-gray-600 mb-2">还没有模板</h2>
           <p className="text-gray-500 mb-6">点击上方按钮创建您的第一个模板</p>
-          <Button onClick={handleCreateBlankTemplate}>
+          <Button onClick={handleOpenCreateDialog}>
             <Plus className="w-4 h-4 mr-2" />
             新建空白模板
           </Button>
@@ -417,6 +459,79 @@ export function TemplateManagement() {
               关闭
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 新建模板对话框 */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>新建模板</DialogTitle>
+            <DialogDescription>
+              选择产品分类并输入模板名称
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-3">
+              <Label>产品分类 *</Label>
+              {/* 只显示父分类列表 */}
+              <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                {categoryTree.map((category, index) => (
+                  <div
+                    key={category.id}
+                    onClick={() => setSelectedCategoryId(category.id)}
+                    className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
+                      index > 0 ? 'border-t' : ''
+                    } ${
+                      selectedCategoryId === category.id
+                        ? 'bg-primary text-white'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="font-medium">{category.name}</span>
+                    {selectedCategoryId === category.id && (
+                      <Check className="w-4 h-4" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* 已选择提示 */}
+              {selectedCategoryId && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
+                  <Check className="w-4 h-4 text-primary" />
+                  <span className="text-sm">
+                    已选择：
+                    <span className="font-medium text-primary ml-1">
+                      {categoryTree.find(c => c.id === selectedCategoryId)?.name}
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="templateName">模板名称 *</Label>
+              <Input
+                id="templateName"
+                type="text"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                placeholder="请输入模板名称"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogOpen(false)}
+              disabled={creating}
+            >
+              取消
+            </Button>
+            <Button onClick={handleConfirmCreate} disabled={creating}>
+              {creating ? '创建中...' : '确定'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

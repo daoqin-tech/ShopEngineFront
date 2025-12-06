@@ -90,8 +90,8 @@ export const templateService = {
   },
 
   // 创建模板
-  createTemplate: async (): Promise<Template> => {
-    const response = await apiClient.post('/templates')
+  createTemplate: async (data: { name: string; productCategoryId: string }): Promise<Template> => {
+    const response = await apiClient.post('/templates', data)
     return response.data
   },
 
