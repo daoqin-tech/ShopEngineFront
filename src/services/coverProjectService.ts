@@ -35,6 +35,7 @@ export interface TemplateSelectionItem {
   height: number
   slicing?: SlicingData
   layerCount: number
+  productCategoryId?: string  // 产品分类ID（关联product_categories表）
   createdAt: string
   updatedAt: string
 }

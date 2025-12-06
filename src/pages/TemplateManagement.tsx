@@ -257,9 +257,18 @@ export function TemplateManagement() {
               <SelectContent>
                 <SelectItem value="all">全部分类</SelectItem>
                 {filterCategoryTree.map((parent) => (
-                  <SelectItem key={parent.id} value={parent.id}>
-                    {parent.name}
-                  </SelectItem>
+                  <div key={parent.id}>
+                    {/* 父分类作为分组标题 */}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50">
+                      {parent.name}
+                    </div>
+                    {/* 子分类 */}
+                    {parent.children?.map((child) => (
+                      <SelectItem key={child.id} value={child.id} className="pl-6">
+                        {child.name}
+                      </SelectItem>
+                    ))}
+                  </div>
                 ))}
               </SelectContent>
             </Select>

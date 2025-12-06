@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import { Search, ArrowLeft, Image, FileImage, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { coverProjectService, type TemplateSelectionItem, type SimpleImageInfo } from '@/services/coverProjectService'
+import { productCategoryService } from '@/services/productCategoryService'
 import { toast } from 'sonner'
 
 export function CoverTaskCreator() {
@@ -31,6 +32,8 @@ export function CoverTaskCreator() {
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set())
   const [templateSearch, setTemplateSearch] = useState('')
   const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<string | null>(null)
+  // 分类ID到名称的映射（用于显示分类标签）
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
 
   // 加载状态
   const [loadingAiProjects, setLoadingAiProjects] = useState(true)
@@ -133,9 +136,25 @@ export function CoverTaskCreator() {
     }
   }
 
+  // 获取分类数据，构建ID到名称的映射
+  const fetchCategories = async () => {
+    try {
+      const categories = await productCategoryService.getAllCategories(true)
+      // 构建分类ID到名称的映射
+      const map: Record<string, string> = {}
+      categories.forEach(cat => {
+        map[cat.id] = cat.name
+      })
+      setCategoryMap(map)
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
+
   useEffect(() => {
     fetchAiProjects(1)
     fetchTemplates()
+    fetchCategories()
   }, [])
 
   useEffect(() => {
@@ -145,23 +164,12 @@ export function CoverTaskCreator() {
     return () => clearTimeout(timer)
   }, [templateSearch])
 
-  // 解析模板名称，提取分类信息
-  const parseTemplateName = (name: string): { displayName: string; category: string } => {
-    // 匹配括号内的内容作为分类
-    const match = name.match(/^(.+?)[(（](.+?)[)）]$/)
-
-    if (match) {
-      return {
-        displayName: match[1].trim(),
-        category: match[2].trim()
-      }
+  // 获取模板的分类名称
+  const getCategoryName = (template: TemplateSelectionItem): string => {
+    if (template.productCategoryId && categoryMap[template.productCategoryId]) {
+      return categoryMap[template.productCategoryId]
     }
-
-    // 如果没有括号，返回原名称和默认分类
-    return {
-      displayName: name,
-      category: '其他'
-    }
+    return '未分类'
   }
 
   // 模板加载完成后，默认选中第一个分组
@@ -295,20 +303,20 @@ export function CoverTaskCreator() {
     setIsPanning(false)
   }
 
-  // 按分类分组模板
+  // 按分类分组模板（使用数据库中的 productCategoryId）
   const groupedTemplates = () => {
-    // 获取所有唯一的分类值并排序
+    // 获取所有唯一的分类名称并排序
     const categorySet = new Set<string>()
     templates.forEach(t => {
-      const { category } = parseTemplateName(t.name)
-      categorySet.add(category)
+      const categoryName = getCategoryName(t)
+      categorySet.add(categoryName)
     })
     const categories = Array.from(categorySet).sort()
 
     // 创建分组
     const groups: Record<string, TemplateSelectionItem[]> = {}
     categories.forEach(category => {
-      groups[category] = templates.filter(t => parseTemplateName(t.name).category === category)
+      groups[category] = templates.filter(t => getCategoryName(t) === category)
     })
 
     return { categories, groups }
@@ -319,7 +327,7 @@ export function CoverTaskCreator() {
     if (selectedCategoryGroup === null) {
       return []
     }
-    return templates.filter(t => parseTemplateName(t.name).category === selectedCategoryGroup)
+    return templates.filter(t => getCategoryName(t) === selectedCategoryGroup)
   }
 
   // 开始生成
