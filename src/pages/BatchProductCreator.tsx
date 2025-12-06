@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { TEMU_SHOPS, JOURNAL_PAPER_SPECS, JOURNAL_PAPER_CATEGORIES, DECORATIVE_PAPER_SPECS, DECORATIVE_PAPER_CATEGORIES, CALENDAR_SPECS, CALENDAR_CATEGORIES, PAPER_BAG_SPECS, PAPER_BAG_CATEGORIES, PLANNER_SPECS, PLANNER_CATEGORIES } from '@/types/shop';
+import { TEMU_SHOPS, getTemuCategoriesByParentName } from '@/types/shop';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
+import { productCategoryService } from '@/services/productCategoryService';
+import { systemConfigService } from '@/services/systemConfigService';
+import type { ProductCategoryWithChildren } from '@/types/productCategory';
 import { toast } from 'sonner';
 import {
   Select,
@@ -54,20 +56,76 @@ interface BatchProductCreatorProps {}
 
 
 export function BatchProductCreator({}: BatchProductCreatorProps) {
-  // 产品类型：手账纸、装饰纸、日历、手提纸袋 或 计划本
-  const [productType, setProductType] = useState<'journal' | 'decorative' | 'calendar' | 'paper-bag' | 'planner'>('journal');
+  // 数据库分类数据
+  const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([]);
+  const [selectedParentId, setSelectedParentId] = useState<string>('');
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // 根据产品类型获取对应的规格和分类
-  const currentSpecs = productType === 'journal' ? JOURNAL_PAPER_SPECS :
-                       productType === 'decorative' ? DECORATIVE_PAPER_SPECS :
-                       productType === 'calendar' ? CALENDAR_SPECS :
-                       productType === 'paper-bag' ? PAPER_BAG_SPECS :
-                       PLANNER_SPECS;
-  const currentCategories = productType === 'journal' ? JOURNAL_PAPER_CATEGORIES :
-                           productType === 'decorative' ? DECORATIVE_PAPER_CATEGORIES :
-                           productType === 'calendar' ? CALENDAR_CATEGORIES :
-                           productType === 'paper-bag' ? PAPER_BAG_CATEGORIES :
-                           PLANNER_CATEGORIES;
+  // 系统配置（Temu固定值）
+  const [temuConfig, setTemuConfig] = useState({
+    variantName: '纸',
+    variantAttrName: '材质',
+    variantAttrValue: '纸',
+    stock: 6666,
+    shippingTime: 9,
+    origin: '中国-湖北省',
+  });
+
+  // 获取当前选中父分类的子分类列表
+  const currentChildCategories = React.useMemo(() => {
+    const parent = parentCategories.find(p => p.id === selectedParentId);
+    return parent?.children || [];
+  }, [parentCategories, selectedParentId]);
+
+  // 获取当前产品类型对应的Temu平台分类
+  const currentTemuCategories = React.useMemo(() => {
+    const parent = parentCategories.find(p => p.id === selectedParentId);
+    if (!parent) return [];
+    return getTemuCategoriesByParentName(parent.name);
+  }, [parentCategories, selectedParentId]);
+
+  // 加载数据库分类
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const data = await productCategoryService.getCategoryTree();
+        setParentCategories(data);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+        toast.error('加载分类数据失败');
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // 加载系统配置
+  useEffect(() => {
+    const loadTemuConfig = async () => {
+      try {
+        const configs = await systemConfigService.getConfigsByType('temu_default');
+        const configMap: Record<string, string> = {};
+        configs.forEach(c => { configMap[c.configKey] = c.configValue; });
+
+        setTemuConfig({
+          variantName: configMap['temu_variant_name'] || '纸',
+          variantAttrName: configMap['temu_variant_attr_name'] || '材质',
+          variantAttrValue: configMap['temu_variant_attr_value'] || '纸',
+          stock: parseInt(configMap['temu_default_stock'] || '6666'),
+          shippingTime: parseInt(configMap['temu_shipping_time'] || '9'),
+          origin: configMap['temu_origin'] || '中国-湖北省',
+        });
+        // 同时更新 formData 中的 origin
+        setFormData(prev => ({ ...prev, origin: configMap['temu_origin'] || '中国-湖北省' }));
+      } catch (error) {
+        console.error('Failed to load temu config:', error);
+        // 使用默认值，不显示错误
+      }
+    };
+    loadTemuConfig();
+  }, []);
 
   const [formData, setFormData] = useState<ProductFormData>({
     shopAccount: '',
@@ -291,14 +349,16 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
-                  const selectedSpec = currentSpecs.find(spec => spec.id === formData.productSpec);
-                  if (!selectedSpec) {
+                  // 从数据库分类中获取选中的子分类（商品规格）
+                  const selectedChildCategory = currentChildCategories.find(cat => cat.id === formData.productSpec);
+                  if (!selectedChildCategory) {
                     toast.error('请选择商品规格');
                     return;
                   }
 
-                  const selectedCategory = currentCategories.find(cat => cat.id === formData.productCategory);
-                  if (!selectedCategory) {
+                  // Temu平台分类
+                  const selectedTemuCategory = currentTemuCategories.find(cat => cat.id === formData.productCategory);
+                  if (!selectedTemuCategory) {
                     toast.error('请选择商品分类');
                     return;
                   }
@@ -309,28 +369,30 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
-                    categoryId: selectedCategory.categoryId,  // TEMU平台分类ID
-                    categoryName: selectedCategory.categoryName,
+                    categoryId: selectedTemuCategory.categoryId,  // TEMU平台分类ID
+                    categoryName: selectedTemuCategory.categoryName,
                     // productCategoryId 不传，让后端从AI项目自动获取
-                    productAttributes: selectedCategory.productAttributes,
+                    productAttributes: selectedTemuCategory.productAttributes,
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
                     freightTemplateName: selectedShop.freightTemplateName,
                     operatingSite: selectedShop.operatingSite,
-                    length: selectedSpec.length,
-                    width: selectedSpec.width,
-                    height: selectedSpec.height,
-                    weight: selectedSpec.weight,
-                    declaredPrice: selectedSpec.declaredPrice,
-                    suggestedRetailPrice: selectedSpec.suggestedRetailPrice,
-                    variantName: selectedSpec.variantName,
-                    variantAttributeName1: selectedSpec.variantAttributeName1,
-                    variantAttributeValue1: selectedSpec.variantAttributeValue1,
-                    stock: selectedSpec.stock,
-                    shippingTime: selectedSpec.shippingTime,
+                    // 从数据库子分类获取商品规格
+                    length: selectedChildCategory.productLength || 0,
+                    width: selectedChildCategory.productWidth || 0,
+                    height: selectedChildCategory.productHeight || 0,
+                    weight: selectedChildCategory.weight || 0,
+                    declaredPrice: selectedChildCategory.declaredPrice || 0,
+                    suggestedRetailPrice: selectedChildCategory.suggestedRetailPrice || 0,
+                    // 从系统配置获取Temu固定值
+                    variantName: temuConfig.variantName,
+                    variantAttributeName1: temuConfig.variantAttrName,
+                    variantAttributeValue1: temuConfig.variantAttrValue,
+                    stock: temuConfig.stock,
+                    shippingTime: temuConfig.shippingTime,
                     productCodePrefix: selectedShop.businessCode,
-                    productSpec: selectedSpec.productSpec,
-                    productUsage: selectedSpec.productUsage,
+                    productSpec: selectedChildCategory.productSpec || '',
+                    productUsage: selectedChildCategory.productUsage || '',
                     taskIds
                   };
 
@@ -356,7 +418,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     setCreating(false);
                   }
                 }}
-                disabled={creating || !formData.shopAccount || !formData.productSpec || !formData.productCategory || selectedProducts.length === 0}
+                disabled={creating || !formData.shopAccount || !selectedParentId || !formData.productSpec || !formData.productCategory || selectedProducts.length === 0}
                 className="min-w-24"
               >
                 {creating ? '提交中...' : `提交任务 (${selectedProducts.length})`}
@@ -423,98 +485,98 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
               </div>
             </div>
 
-            {/* 产品类型 Tab 切换（选中店铺后显示） */}
+            {/* 产品分类选择（选中店铺后显示） - 一级分类 + 二级分类 */}
             {formData.shopAccount && (
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-medium">产品类型 *</Label>
-                <Tabs
-                  value={productType}
-                  onValueChange={(value) => {
-                    setProductType(value as 'journal' | 'calendar');
-                    // 切换产品类型时清空规格和分类选择
-                    updateFormData('productSpec', '');
-                    updateFormData('productCategory', '');
-                  }}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-5 max-w-2xl">
-                    <TabsTrigger value="journal">手账纸</TabsTrigger>
-                    <TabsTrigger value="decorative">装饰纸</TabsTrigger>
-                    <TabsTrigger value="calendar">日历</TabsTrigger>
-                    <TabsTrigger value="paper-bag">手提纸袋</TabsTrigger>
-                    <TabsTrigger value="planner">计划本</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <Label className="text-sm font-medium">产品分类 *</Label>
+                {loadingCategories ? (
+                  <div className="text-sm text-muted-foreground">加载中...</div>
+                ) : (
+                  <div className="flex gap-3">
+                    <Select
+                      value={selectedParentId}
+                      onValueChange={(value) => {
+                        setSelectedParentId(value);
+                        // 自动选择第一个二级分类
+                        const parent = parentCategories.find(p => p.id === value);
+                        const firstChild = parent?.children?.[0];
+                        if (firstChild) {
+                          updateFormData('productSpec', firstChild.id);
+                        } else {
+                          updateFormData('productSpec', '');
+                        }
+                        updateFormData('productCategory', '');
+                      }}
+                    >
+                      <SelectTrigger className="w-48 h-10">
+                        <SelectValue placeholder="请选择一级分类" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {parentCategories.map((parent) => (
+                          <SelectItem key={parent.id} value={parent.id}>
+                            {parent.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={formData.productSpec}
+                      onValueChange={(value) => updateFormData('productSpec', value)}
+                      disabled={!selectedParentId || currentChildCategories.length === 0}
+                    >
+                      <SelectTrigger className="w-48 h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentChildCategories.map((child) => (
+                          <SelectItem key={child.id} value={child.id}>
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* 商品规格选择（选中店铺后显示） */}
-            {formData.shopAccount && (
+            {/* Temu商品分类选择（选中产品类型后显示） */}
+            {formData.shopAccount && selectedParentId && (
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <Package className="w-4 h-4" />
-                  商品规格 *
+                  Temu商品分类 *
                 </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {currentSpecs.map((spec) => (
-                    <button
-                      key={spec.id}
-                      type="button"
-                      onClick={() => updateFormData('productSpec', spec.id)}
-                      className={`
-                        p-4 rounded-md border-2 text-left transition-colors
-                        ${formData.productSpec === spec.id
-                          ? 'border-primary bg-background'
-                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                        }
-                      `}
-                    >
-                      <div className="space-y-2">
-                        <div className="font-medium text-sm">{spec.name}</div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <div>{spec.sheets}张 • {spec.size}</div>
-                          <div>¥{spec.declaredPrice} / ${spec.suggestedRetailPrice}</div>
+                {currentTemuCategories.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">该产品类型暂无对应的Temu分类</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {currentTemuCategories.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => updateFormData('productCategory', category.id)}
+                        className={`
+                          p-4 rounded-md border-2 text-left transition-colors
+                          ${formData.productCategory === category.id
+                            ? 'border-primary bg-background'
+                            : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                          }
+                        `}
+                      >
+                        <div className="space-y-2">
+                          <div className="font-medium text-sm">{category.name}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-2">
+                            {category.categoryName}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            分类ID: {category.categoryId}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 商品分类选择（选中店铺后显示） */}
-            {formData.shopAccount && (
-              <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  商品分类 *
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {currentCategories.map((category) => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => updateFormData('productCategory', category.id)}
-                      className={`
-                        p-4 rounded-md border-2 text-left transition-colors
-                        ${formData.productCategory === category.id
-                          ? 'border-primary bg-background'
-                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                        }
-                      `}
-                    >
-                      <div className="space-y-2">
-                        <div className="font-medium text-sm">{category.name}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-2">
-                          {category.categoryName}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          分类ID: {category.categoryId}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

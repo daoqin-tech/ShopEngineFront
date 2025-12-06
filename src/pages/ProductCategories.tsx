@@ -49,6 +49,15 @@ export function ProductCategories() {
     manufacturingLength: undefined as number | undefined,
     manufacturingWidth: undefined as number | undefined,
     manufacturingHeight: undefined as number | undefined,
+    // 子分类商品规格字段
+    productLength: undefined as number | undefined,
+    productWidth: undefined as number | undefined,
+    productHeight: undefined as number | undefined,
+    weight: undefined as number | undefined,
+    declaredPrice: undefined as number | undefined,
+    suggestedRetailPrice: undefined as number | undefined,
+    productSpec: '',
+    productUsage: '',
   });
 
   // 规格配置相关状态
@@ -119,6 +128,14 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
+      productLength: undefined,
+      productWidth: undefined,
+      productHeight: undefined,
+      weight: undefined,
+      declaredPrice: undefined,
+      suggestedRetailPrice: undefined,
+      productSpec: '',
+      productUsage: '',
     });
     setIsDialogOpen(true);
   };
@@ -140,6 +157,15 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
+      // 子分类商品规格字段初始化
+      productLength: undefined,
+      productWidth: undefined,
+      productHeight: undefined,
+      weight: undefined,
+      declaredPrice: undefined,
+      suggestedRetailPrice: undefined,
+      productSpec: '',
+      productUsage: '',
     });
     setIsDialogOpen(true);
   };
@@ -160,6 +186,15 @@ export function ProductCategories() {
       manufacturingLength: category.manufacturingLength,
       manufacturingWidth: category.manufacturingWidth,
       manufacturingHeight: category.manufacturingHeight,
+      // 子分类商品规格字段
+      productLength: category.productLength,
+      productWidth: category.productWidth,
+      productHeight: category.productHeight,
+      weight: category.weight,
+      declaredPrice: category.declaredPrice,
+      suggestedRetailPrice: category.suggestedRetailPrice,
+      productSpec: category.productSpec || '',
+      productUsage: category.productUsage || '',
     });
     setIsDialogOpen(true);
   };
@@ -189,6 +224,15 @@ export function ProductCategories() {
           manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
           manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
           manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
+          // 子分类商品规格字段
+          productLength: isChildCategory ? formData.productLength : undefined,
+          productWidth: isChildCategory ? formData.productWidth : undefined,
+          productHeight: isChildCategory ? formData.productHeight : undefined,
+          weight: isChildCategory ? formData.weight : undefined,
+          declaredPrice: isChildCategory ? formData.declaredPrice : undefined,
+          suggestedRetailPrice: isChildCategory ? formData.suggestedRetailPrice : undefined,
+          productSpec: isChildCategory ? (formData.productSpec.trim() || undefined) : undefined,
+          productUsage: isChildCategory ? (formData.productUsage.trim() || undefined) : undefined,
         };
         await productCategoryService.updateCategoryWithParent(editingCategory.id, updateData);
         toast.success('更新成功');
@@ -206,6 +250,15 @@ export function ProductCategories() {
           manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
           manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
           manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
+          // 子分类商品规格字段
+          productLength: isChildCategory ? formData.productLength : undefined,
+          productWidth: isChildCategory ? formData.productWidth : undefined,
+          productHeight: isChildCategory ? formData.productHeight : undefined,
+          weight: isChildCategory ? formData.weight : undefined,
+          declaredPrice: isChildCategory ? formData.declaredPrice : undefined,
+          suggestedRetailPrice: isChildCategory ? formData.suggestedRetailPrice : undefined,
+          productSpec: isChildCategory ? (formData.productSpec.trim() || undefined) : undefined,
+          productUsage: isChildCategory ? (formData.productUsage.trim() || undefined) : undefined,
         };
         await productCategoryService.createCategoryWithParent(createData);
         toast.success('创建成功');
@@ -746,6 +799,116 @@ export function ProductCategories() {
                   )}
                 </p>
               </div>
+            )}
+
+            {/* 子分类商品规格字段 */}
+            {(formData.parentId || addingChildForParent) && (
+              <>
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-medium mb-3">商品规格（Temu上架用）</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="productLength">商品长度 (cm)</Label>
+                      <Input
+                        id="productLength"
+                        type="number"
+                        step="0.1"
+                        value={formData.productLength || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, productLength: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 15"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="productWidth">商品宽度 (cm)</Label>
+                      <Input
+                        id="productWidth"
+                        type="number"
+                        step="0.1"
+                        value={formData.productWidth || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, productWidth: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 15"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="productHeight">商品高度 (cm)</Label>
+                      <Input
+                        id="productHeight"
+                        type="number"
+                        step="0.1"
+                        value={formData.productHeight || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, productHeight: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 0.4"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="weight">重量 (g)</Label>
+                      <Input
+                        id="weight"
+                        type="number"
+                        value={formData.weight || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, weight: e.target.value ? parseInt(e.target.value) : undefined })
+                        }
+                        placeholder="如: 110"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="declaredPrice">申报价格 (USD)</Label>
+                      <Input
+                        id="declaredPrice"
+                        type="number"
+                        step="0.01"
+                        value={formData.declaredPrice || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, declaredPrice: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 0.83"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="suggestedRetailPrice">建议零售价 (USD)</Label>
+                      <Input
+                        id="suggestedRetailPrice"
+                        type="number"
+                        step="0.01"
+                        value={formData.suggestedRetailPrice || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, suggestedRetailPrice: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 8.5"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="productSpec">商品规格描述</Label>
+                      <Input
+                        id="productSpec"
+                        value={formData.productSpec}
+                        onChange={(e) => setFormData({ ...formData, productSpec: e.target.value })}
+                        placeholder="如: 15×15cm 50张"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="productUsage">商品用途</Label>
+                      <Input
+                        id="productUsage"
+                        value={formData.productUsage}
+                        onChange={(e) => setFormData({ ...formData, productUsage: e.target.value })}
+                        placeholder="如: 手帐装饰、卡片制作"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <Label htmlFor="sortOrder">排序顺序</Label>

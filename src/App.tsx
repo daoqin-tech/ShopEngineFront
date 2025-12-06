@@ -23,6 +23,7 @@ import { TemplateEditor } from "@/pages/TemplateEditor"
 import { ProductListing } from "@/pages/ProductListing"
 import { BatchProductCreator } from "@/pages/BatchProductCreator"
 import { ProductCategories } from "@/pages/ProductCategories"
+import { SystemConfigPage } from "@/pages/SystemConfig"
 import { Toaster } from "sonner"
 
 
@@ -162,6 +163,14 @@ function App() {
             <ProtectedRoute>
               <WorkspaceLayout>
                 <ProductCategories />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/system-config" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <SystemConfigPage />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />

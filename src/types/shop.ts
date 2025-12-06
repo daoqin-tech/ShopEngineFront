@@ -10,41 +10,8 @@ export interface ProductCategory {
   productAttributes: string;    // 产品属性JSON字符串
 }
 
-// 商品规格类型定义
-export interface ProductSpec {
-  id: string;                   // 规格ID (如: '40-sheets-15.2x15.2')
-  name: string;                 // 规格名称 (如: '40张 15.2cm×15.2cm')
-  sheets: number;               // 张数
-  size: string;                 // 尺寸描述 (如: '15.2cm×15.2cm')
-
-  // 物理属性
-  length: number;               // 长度(cm) - 生产规格
-  width: number;                // 宽度(cm) - 生产规格
-  height: number;               // 高度(cm) - 生产规格
-  weight: number;               // 重量(g)
-
-  // 实际尺寸（用于物流，仅纸袋需要）
-  actualLength?: number;        // 实际长度(cm) - 折叠后
-  actualWidth?: number;         // 实际宽度(cm) - 折叠后
-  actualHeight?: number;        // 实际高度(cm) - 折叠后
-
-  // 价格
-  declaredPrice: number;        // 申报价格(人民币)
-  suggestedRetailPrice: number; // 建议零售价(美元)
-
-  // 变种信息
-  variantName: string;          // 变种名称
-  variantAttributeName1: string; // 变种属性名称一
-  variantAttributeValue1: string; // 变种属性值一
-
-  // 库存和发货
-  stock: number;                // 库存
-  shippingTime: number;         // 发货时效(天)
-
-  // 商品规格和用途
-  productSpec: string;          // 商品规格描述
-  productUsage: string;         // 商品用途描述
-}
+// ProductSpec 类型已迁移到数据库 product_categories 表
+// 商品规格数据现在从数据库读取，不再使用硬编码
 
 // 店铺信息类型定义
 export interface ShopInfo {
@@ -66,130 +33,10 @@ export interface ShopInfo {
   isNew?: boolean;              // 是否为新店铺
 }
 
-// 手账纸商品规格数据
-export const JOURNAL_PAPER_SPECS: ProductSpec[] = [
-  {
-    id: 'journal-40-sheets-15.2x15.2',
-    name: '40张 15.2cm×15.2cm',
-    sheets: 40,
-    size: '15.2cm×15.2cm',
-    length: 15.2,
-    width: 15.2,
-    height: 1.0,
-    weight: 90,
-    declaredPrice: 80,
-    suggestedRetailPrice: 12,
-    variantName: '纸',
-    variantAttributeName1: '材质',
-    variantAttributeValue1: '纸',
-    stock: 6666,
-    shippingTime: 9,
-    productSpec: '40张剪贴簿纸,装饰纸,素材纸,材料纸,手帐纸',
-    productUsage: '适用于手工制作、贺卡制作、礼品包装、背景卡垫、纪念相册、背景装饰、复古日记等场景'
-  }
-];
-
-// 装饰纸商品规格数据
-export const DECORATIVE_PAPER_SPECS: ProductSpec[] = [
-  {
-    id: 'decorative-20-sheets-30x30',
-    name: '20张 30cm×30cm',
-    sheets: 20,
-    size: '30cm×30cm',
-    length: 30.0,
-    width: 30.0,
-    height: 0.5,
-    weight: 90,
-    declaredPrice: 100,
-    suggestedRetailPrice: 15,
-    variantName: '纸',
-    variantAttributeName1: '材质',
-    variantAttributeValue1: '纸',
-    stock: 6666,
-    shippingTime: 9,
-    productSpec: '20张装饰纸,手工纸,礼品包装纸,手工材料纸',
-    productUsage: '适用于礼品包装、生日礼物包装、节日礼物装饰、婚礼礼品包装等场合'
-  }
-];
-
-// 日历商品规格数据 (Mock数据)
-export const CALENDAR_SPECS: ProductSpec[] = [
-  {
-    id: 'calendar-single-20x30',
-    name: '2026年日历',
-    sheets: 13,
-    size: '21cm×29.7cm',
-    length: 29.7,
-    width: 21.0,
-    height: 1.0,
-    weight: 90,
-    declaredPrice: 150,
-    suggestedRetailPrice: 18,
-    variantName: '纸',
-    variantAttributeName1: '材质',
-    variantAttributeValue1: '纸',
-    stock: 6666,
-    shippingTime: 9,
-    productSpec: '2026年日历',
-    productUsage: '适用于墙面装饰、日程规划、日期提醒、节日记录、时间管理等用途'
-  },
-];
-
-// 手提纸袋商品规格数据 (Mock数据)
-export const PAPER_BAG_SPECS: ProductSpec[] = [
-  {
-    id: 'paper-bag-27x21',
-    name: '20个 27cm×21cm×11cm',
-    sheets: 20,  // 20张一包
-    size: '27cm×21cm×11cm',  // 打包后的实际尺寸
-    length: 27.0,   // 打包后长度
-    width: 21.0,    // 打包后宽度
-    height: 11.0,   // 打包后高度
-    weight: 700,   // 20张总重 0.7kg = 700g
-    // 实际尺寸（打包后用于物流，与上面相同）
-    actualLength: 27.0,
-    actualWidth: 21.0,
-    actualHeight: 11.0,
-    declaredPrice: 300,  // 300元
-    suggestedRetailPrice: 43,  // 43美元
-    variantName: '纸',
-    variantAttributeName1: '材质',
-    variantAttributeValue1: '纸',
-    stock: 6666,
-    shippingTime: 9,
-    productSpec: '20个手提纸袋',
-    productUsage: '适用于礼品包装、购物携带、生日派对、节日庆典、婚礼伴手礼、商品打包、展会赠品等多种场合'
-  },
-];
-
-// 计划本商品规格数据
-export const PLANNER_SPECS: ProductSpec[] = [
-  {
-    id: 'planner-28x21',
-    name: '1本 28cm×21cm×1cm',
-    sheets: 1,  // 1本
-    size: '28cm×21cm×1cm',
-    length: 28.0,
-    width: 21.0,
-    height: 1.0,
-    weight: 250,  // 250g
-    actualLength: 28.0,
-    actualWidth: 21.0,
-    actualHeight: 1.0,
-    declaredPrice: 100,  // 100元
-    suggestedRetailPrice: 14,  // 100元/7汇率
-    variantName: '白色',
-    variantAttributeName1: '颜色',
-    variantAttributeValue1: '白色',
-    stock: 6666,
-    shippingTime: 9,
-    productSpec: '1本终身计划本',
-    productUsage: '适用于生命计划、日常计划管理、目标设定与追踪、时间安排、任务规划、项目管理、学习计划、工作计划、生活规划等各类计划用途'
-  },
-];
-
-// 兼容性：保留原有的 PRODUCT_SPECS 导出，默认为手账纸规格
-export const PRODUCT_SPECS = JOURNAL_PAPER_SPECS;
+// 商品规格数据已迁移到数据库 product_categories 表
+// 以下硬编码数据已废弃，保留空数组以兼容旧代码（如有遗留引用）
+// JOURNAL_PAPER_SPECS, DECORATIVE_PAPER_SPECS, CALENDAR_SPECS, PAPER_BAG_SPECS, PLANNER_SPECS
+// 请使用 productCategoryService.getCategoryTree() 从数据库获取分类数据
 
 // Temu店铺数据
 export const TEMU_SHOPS: ShopInfo[] = [
@@ -443,3 +290,32 @@ export const PLANNER_CATEGORIES: ProductCategory[] = [
 
 // 兼容性：保留原有的 PRODUCT_CATEGORIES 导出，默认为手账纸分类
 export const PRODUCT_CATEGORIES = JOURNAL_PAPER_CATEGORIES;
+
+// 父分类名称到Temu分类的映射关系
+// TODO: 后续优化为更好的方案
+export const PARENT_CATEGORY_TO_TEMU_MAP: Record<string, ProductCategory[]> = {
+  '手账纸': JOURNAL_PAPER_CATEGORIES,
+  '包装纸': DECORATIVE_PAPER_CATEGORIES,
+  '装饰纸': DECORATIVE_PAPER_CATEGORIES,
+  '竖版日历': CALENDAR_CATEGORIES,
+  '横版日历': CALENDAR_CATEGORIES,
+  '手提纸袋': PAPER_BAG_CATEGORIES,
+  '笔记本': PLANNER_CATEGORIES,
+  '计划本': PLANNER_CATEGORIES,
+};
+
+// 根据父分类名称获取对应的Temu分类
+export function getTemuCategoriesByParentName(parentName: string): ProductCategory[] {
+  // 精确匹配
+  if (PARENT_CATEGORY_TO_TEMU_MAP[parentName]) {
+    return PARENT_CATEGORY_TO_TEMU_MAP[parentName];
+  }
+  // 模糊匹配
+  for (const [key, categories] of Object.entries(PARENT_CATEGORY_TO_TEMU_MAP)) {
+    if (parentName.includes(key)) {
+      return categories;
+    }
+  }
+  // 默认返回手账纸分类
+  return JOURNAL_PAPER_CATEGORIES;
+}

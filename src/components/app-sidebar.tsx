@@ -95,6 +95,10 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
             title: "产品分类",
             url: "/workspace/settings/categories",
           },
+          {
+            title: "系统参数",
+            url: "/workspace/settings/system-config",
+          },
         ],
       },
     ]
