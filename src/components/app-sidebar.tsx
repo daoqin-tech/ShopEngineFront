@@ -32,7 +32,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         isActive: true,
         items: [
           {
-            title: "生成产品图(手账纸业务)",
+            title: "生成产品图",
             url: "/workspace/product-images",
           },
           {

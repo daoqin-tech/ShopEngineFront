@@ -168,5 +168,34 @@ export const productService = {
   regenerateTitles: async (request: RegenerateProductTitlesRequest): Promise<void> => {
     const response = await apiClient.post('/products/regenerate-titles', request)
     return response.data
+  },
+
+  // AI智能排序日历图片
+  sortCalendarImages: async (taskId: string): Promise<CalendarSortResponse> => {
+    const response = await apiClient.post(`/products/${taskId}/sort-calendar`)
+    return response.data
+  },
+
+  // 保存用户手动调整的图片排序
+  saveImageSortOrder: async (taskId: string, imageUrls: string[]): Promise<void> => {
+    await apiClient.post('/products/save-sort-order', { taskId, imageUrls })
   }
+}
+
+// AI日历排序响应
+export interface CalendarSortResponse {
+  taskId: string
+  projectId: string
+  totalImages: number
+  successCount: number
+  failedCount: number
+  results: ImageSortResult[]
+  sortedImages: string[]  // 排序后的图片URL列表
+}
+
+// 单张图片的排序结果
+export interface ImageSortResult {
+  imageId: string
+  sortOrder: number  // 0=封面, 1-12=月份, -1=识别失败
+  month: string      // "cover", "january"~"december", "unknown"
 }
