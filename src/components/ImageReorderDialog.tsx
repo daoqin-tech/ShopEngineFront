@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { GripVertical, Wand2, Loader2 } from 'lucide-react';
+import { GripVertical, Loader2 } from 'lucide-react';
 import { Product, productService } from '@/services/productService';
 import { toast } from 'sonner';
 
@@ -51,7 +51,6 @@ export function ImageReorderDialog({
 }: ImageReorderDialogProps) {
   const [reorderedProducts, setReorderedProducts] = useState<Product[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [isAISorting, setIsAISorting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // 初始化重排序的产品列表
@@ -65,38 +64,6 @@ export function ImageReorderDialog({
       );
     }
   }, [open, products]);
-
-  // AI智能排序处理
-  const handleAISort = async () => {
-    if (!currentProduct?.taskId) {
-      toast.error('无法获取任务ID，无法进行AI排序');
-      return;
-    }
-
-    setIsAISorting(true);
-    try {
-      const result = await productService.sortCalendarImages(currentProduct.taskId);
-
-      if (result.sortedImages && result.sortedImages.length > 0) {
-        // 更新产品的图片顺序
-        const newProducts = [...reorderedProducts];
-        newProducts[0] = {
-          ...newProducts[0],
-          productImages: result.sortedImages
-        };
-        setReorderedProducts(newProducts);
-
-        toast.success(`AI排序完成：识别成功 ${result.successCount} 张，失败 ${result.failedCount} 张`);
-      } else {
-        toast.error('AI排序返回的数据无效');
-      }
-    } catch (error) {
-      console.error('AI排序失败:', error);
-      toast.error(error instanceof Error ? error.message : 'AI排序失败，请手动排序');
-    } finally {
-      setIsAISorting(false);
-    }
-  };
 
   // 简化后只处理一个产品
   const currentProduct = reorderedProducts[0];
@@ -183,37 +150,13 @@ export function ImageReorderDialog({
             </div>
           )}
 
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>
-                调整日历图片顺序
-              </DialogTitle>
-              <DialogDescription>
-                拖拽图片调整日历页面的顺序，或使用AI智能排序
-              </DialogDescription>
-            </div>
-            {/* AI智能排序按钮 */}
-            {isCalendar && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAISort}
-                disabled={isAISorting || !currentProduct?.taskId}
-                className="ml-4 flex-shrink-0"
-              >
-                {isAISorting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    AI排序中...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    AI智能排序
-                  </>
-                )}
-              </Button>
-            )}
+          <div>
+            <DialogTitle>
+              调整日历图片顺序
+            </DialogTitle>
+            <DialogDescription>
+              拖拽图片调整日历页面的顺序，排序将自动保存
+            </DialogDescription>
           </div>
 
           {/* 日历模式：月份说明 */}
@@ -289,7 +232,7 @@ export function ImageReorderDialog({
               >
                 取消导出
               </Button>
-              <Button onClick={handleConfirm} disabled={isSaving || isAISorting}>
+              <Button onClick={handleConfirm} disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
