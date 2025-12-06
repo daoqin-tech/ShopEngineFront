@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Upload, FileImage, Search, Check } from 'lucide-react'
+import { Plus, Upload, FileImage, Search, Check, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { DateTimePicker } from '@/components/ui/date-picker'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { type Template } from '@/types/template'
 import { toast } from 'sonner'
 import { templateService } from '@/services/templateService'
@@ -39,13 +40,16 @@ export function TemplateManagement() {
 
   // 筛选状态
   const [nameFilter, setNameFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [startTime, setStartTime] = useState<Date | undefined>()
   const [endTime, setEndTime] = useState<Date | undefined>()
+  const [filterCategoryTree, setFilterCategoryTree] = useState<ProductCategoryWithChildren[]>([])
 
   // 新建模板对话框状态
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newTemplateName, setNewTemplateName] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
+  const [expandedCategoryId, setExpandedCategoryId] = useState('')
   const [categoryTree, setCategoryTree] = useState<ProductCategoryWithChildren[]>([])
   const [creating, setCreating] = useState(false)
 
@@ -62,6 +66,10 @@ export function TemplateManagement() {
 
       if (nameFilter.trim()) {
         params.name = nameFilter.trim()
+      }
+
+      if (categoryFilter) {
+        params.productCategoryId = categoryFilter
       }
 
       if (startTime) {
@@ -98,10 +106,21 @@ export function TemplateManagement() {
   // 重置筛选
   const handleResetFilters = () => {
     setNameFilter('')
+    setCategoryFilter('')
     setStartTime(undefined)
     setEndTime(undefined)
     setCurrentPage(1)
     loadTemplates(1)
+  }
+
+  // 加载筛选用的分类数据
+  const loadFilterCategories = async () => {
+    try {
+      const data = await productCategoryService.getCategoryTree()
+      setFilterCategoryTree(data)
+    } catch (error) {
+      console.error('加载分类数据失败:', error)
+    }
   }
 
   // 开始编辑模板名称
@@ -196,9 +215,10 @@ export function TemplateManagement() {
     }
   }
 
-  // 初始化加载模板
+  // 初始化加载模板和分类
   useEffect(() => {
     loadTemplates(1)
+    loadFilterCategories()
   }, [])
 
 
@@ -227,6 +247,22 @@ export function TemplateManagement() {
               />
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">产品分类:</label>
+            <Select value={categoryFilter || 'all'} onValueChange={(v) => setCategoryFilter(v === 'all' ? '' : v)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="全部分类" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部分类</SelectItem>
+                {filterCategoryTree.map((parent) => (
+                  <SelectItem key={parent.id} value={parent.id}>
+                    {parent.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">开始时间:</label>
@@ -464,7 +500,7 @@ export function TemplateManagement() {
 
       {/* 新建模板对话框 */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>新建模板</DialogTitle>
             <DialogDescription>
@@ -474,26 +510,70 @@ export function TemplateManagement() {
           <div className="space-y-6 py-4">
             <div className="space-y-3">
               <Label>产品分类 *</Label>
-              {/* 只显示父分类列表 */}
-              <div className="border rounded-lg max-h-[300px] overflow-y-auto">
-                {categoryTree.map((category, index) => (
-                  <div
-                    key={category.id}
-                    onClick={() => setSelectedCategoryId(category.id)}
-                    className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
-                      index > 0 ? 'border-t' : ''
-                    } ${
-                      selectedCategoryId === category.id
-                        ? 'bg-primary text-white'
-                        : 'hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="font-medium">{category.name}</span>
-                    {selectedCategoryId === category.id && (
-                      <Check className="w-4 h-4" />
-                    )}
-                  </div>
-                ))}
+              {/* 树状结构 - 默认收起 */}
+              <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+                {categoryTree.map((category, index) => {
+                  const hasChildren = category.children && category.children.length > 0
+                  const isExpanded = expandedCategoryId === category.id
+                  const hasSelectedChild = category.children?.some(c => c.id === selectedCategoryId)
+
+                  return (
+                    <div key={category.id} className={index > 0 ? 'border-t' : ''}>
+                      {/* 父分类 - 可点击展开/收起 */}
+                      <div
+                        onClick={() => {
+                          if (hasChildren) {
+                            setExpandedCategoryId(isExpanded ? '' : category.id)
+                          }
+                        }}
+                        className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
+                          isExpanded
+                            ? 'bg-primary/10'
+                            : hasSelectedChild
+                              ? 'bg-primary/5'
+                              : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 font-medium text-gray-700">
+                          {hasChildren && (
+                            <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          )}
+                          <span>{category.name}</span>
+                          {hasChildren && (
+                            <span className="text-xs text-gray-400">({category.children!.length})</span>
+                          )}
+                        </div>
+                        {hasSelectedChild && !isExpanded && (
+                          <Check className="w-4 h-4 text-primary" />
+                        )}
+                      </div>
+                      {/* 子分类 - 展开时显示 */}
+                      {hasChildren && isExpanded && (
+                        <div className="px-4 py-2 space-y-1 bg-white">
+                          {category.children!.map((child) => (
+                            <div
+                              key={child.id}
+                              onClick={() => setSelectedCategoryId(child.id)}
+                              className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                                selectedCategoryId === child.id
+                                  ? 'bg-primary text-white'
+                                  : 'hover:bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={selectedCategoryId === child.id ? 'text-white/50' : 'text-gray-300'}>└</span>
+                                <span className="text-sm">{child.name}</span>
+                              </div>
+                              {selectedCategoryId === child.id && (
+                                <Check className="w-4 h-4" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
               {/* 已选择提示 */}
@@ -503,7 +583,17 @@ export function TemplateManagement() {
                   <span className="text-sm">
                     已选择：
                     <span className="font-medium text-primary ml-1">
-                      {categoryTree.find(c => c.id === selectedCategoryId)?.name}
+                      {(() => {
+                        for (const parent of categoryTree) {
+                          if (parent.children) {
+                            const child = parent.children.find(c => c.id === selectedCategoryId)
+                            if (child) {
+                              return `${parent.name} › ${child.name}`
+                            }
+                          }
+                        }
+                        return ''
+                      })()}
                     </span>
                   </span>
                 </div>

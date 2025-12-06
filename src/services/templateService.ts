@@ -10,6 +10,7 @@ export const templateService = {
   // 获取模板列表
   getTemplates: async (params?: {
     name?: string;
+    productCategoryId?: string;  // 产品分类ID
     startTime?: number;  // 秒级时间戳
     endTime?: number;    // 秒级时间戳
     page?: number;
@@ -23,6 +24,7 @@ export const templateService = {
     const response = await apiClient.get('/templates', {
       params: {
         ...(params?.name && { name: params.name }),
+        ...(params?.productCategoryId && { productCategoryId: params.productCategoryId }),
         ...(params?.startTime && { startTime: params.startTime }),
         ...(params?.endTime && { endTime: params.endTime }),
         page: params?.page || 1,
