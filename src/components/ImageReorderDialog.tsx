@@ -174,9 +174,9 @@ export function ImageReorderDialog({
         </DialogHeader>
 
         {/* 主体内容区域 */}
-        <div className="flex-1 overflow-auto py-4">
-          {/* 图片列表 */}
-          <div className="grid grid-cols-4 gap-4">
+        <div className="flex-1 overflow-auto py-2">
+          {/* 图片列表 - 6列布局，图片完整显示 */}
+          <div className="grid grid-cols-6 gap-2">
               {productImages.map((imageUrl, index) => (
                 <div
                   key={`${imageUrl}-${index}`}
@@ -186,26 +186,26 @@ export function ImageReorderDialog({
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(index)}
                   className={`
-                    relative group cursor-move border-2 rounded-lg overflow-hidden
+                    relative group cursor-move border-2 rounded overflow-hidden
                     ${draggedIndex === index ? 'opacity-50 border-blue-500' : 'border-gray-200'}
                     hover:border-blue-400 transition-all
                   `}
                 >
                   {/* 拖拽句柄 */}
-                  <div className="absolute top-2 right-2 z-10 bg-white/90 rounded p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-600" />
+                  <div className="absolute top-1 right-1 z-10 bg-white/90 rounded p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-3 h-3 text-gray-600" />
                   </div>
 
                   {/* 序号标记 */}
-                  <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-sm">
+                  <div className="absolute top-1 left-1 z-10 bg-blue-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
                     {index + 1}
                   </div>
 
-                  {/* 图片 */}
+                  {/* 图片 - 使用 object-contain 显示完整图片 */}
                   <img
                     src={imageUrl}
                     alt={`图片 ${index + 1}`}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-auto object-contain bg-gray-50"
                     draggable={false}
                   />
                 </div>
