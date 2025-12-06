@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { DateTimePicker } from '@/components/ui/date-picker'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Search, ArrowLeft, Image, FileImage, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { coverProjectService, type TemplateSelectionItem, type SimpleImageInfo } from '@/services/coverProjectService'
 import { productCategoryService } from '@/services/productCategoryService'
+import type { ProductCategoryWithChildren } from '@/types/productCategory'
 import { toast } from 'sonner'
 
 export function CoverTaskCreator() {
@@ -31,9 +33,9 @@ export function CoverTaskCreator() {
   const [templates, setTemplates] = useState<TemplateSelectionItem[]>([])
   const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set())
   const [templateSearch, setTemplateSearch] = useState('')
-  const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<string | null>(null)
-  // 分类ID到名称的映射（用于显示分类标签）
-  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({})
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')  // 选中的二级分类ID
+  // 分类树数据（用于下拉选择）
+  const [categoryTree, setCategoryTree] = useState<ProductCategoryWithChildren[]>([])
 
   // 加载状态
   const [loadingAiProjects, setLoadingAiProjects] = useState(true)
@@ -136,16 +138,11 @@ export function CoverTaskCreator() {
     }
   }
 
-  // 获取分类数据，构建ID到名称的映射
+  // 获取分类树数据
   const fetchCategories = async () => {
     try {
-      const categories = await productCategoryService.getAllCategories(true)
-      // 构建分类ID到名称的映射
-      const map: Record<string, string> = {}
-      categories.forEach(cat => {
-        map[cat.id] = cat.name
-      })
-      setCategoryMap(map)
+      const tree = await productCategoryService.getCategoryTree(true)
+      setCategoryTree(tree)
     } catch (err) {
       console.error('Error fetching categories:', err)
     }
@@ -164,23 +161,6 @@ export function CoverTaskCreator() {
     return () => clearTimeout(timer)
   }, [templateSearch])
 
-  // 获取模板的分类名称
-  const getCategoryName = (template: TemplateSelectionItem): string => {
-    if (template.productCategoryId && categoryMap[template.productCategoryId]) {
-      return categoryMap[template.productCategoryId]
-    }
-    return '未分类'
-  }
-
-  // 模板加载完成后，默认选中第一个分组
-  useEffect(() => {
-    if (templates.length > 0 && selectedCategoryGroup === null) {
-      const { categories } = groupedTemplates()
-      if (categories.length > 0) {
-        setSelectedCategoryGroup(categories[0])
-      }
-    }
-  }, [templates])
 
   // 应用筛选 - 重置到第一页
   const handleApplyFilters = () => {
@@ -303,31 +283,12 @@ export function CoverTaskCreator() {
     setIsPanning(false)
   }
 
-  // 按分类分组模板（使用数据库中的 productCategoryId）
-  const groupedTemplates = () => {
-    // 获取所有唯一的分类名称并排序
-    const categorySet = new Set<string>()
-    templates.forEach(t => {
-      const categoryName = getCategoryName(t)
-      categorySet.add(categoryName)
-    })
-    const categories = Array.from(categorySet).sort()
-
-    // 创建分组
-    const groups: Record<string, TemplateSelectionItem[]> = {}
-    categories.forEach(category => {
-      groups[category] = templates.filter(t => getCategoryName(t) === category)
-    })
-
-    return { categories, groups }
-  }
-
-  // 获取当前显示的模板列表
+  // 获取当前显示的模板列表（根据选中的二级分类ID筛选）
   const getFilteredTemplates = () => {
-    if (selectedCategoryGroup === null) {
-      return []
+    if (!selectedCategoryId) {
+      return templates  // 未选择分类时显示所有模板
     }
-    return templates.filter(t => getCategoryName(t) === selectedCategoryGroup)
+    return templates.filter(t => t.productCategoryId === selectedCategoryId)
   }
 
   // 开始生成
@@ -901,30 +862,39 @@ export function CoverTaskCreator() {
               </div>
             </div>
 
-            {/* 标签页分组 */}
-            <div className="px-4 pb-3 overflow-x-auto">
-              <div className="flex items-center gap-2 justify-between">
+            {/* 分类筛选和全选 */}
+            <div className="px-4 pb-3">
+              <div className="flex items-center gap-3 justify-between">
                 <div className="flex items-center gap-2">
-                {groupedTemplates().categories.map(category => {
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => {
-                        setSelectedCategoryGroup(category)
-                        setSelectedTemplates(new Set()) // 切换分组时清空选择
-                      }}
-                      className={`
-                        px-4 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap
-                        ${selectedCategoryGroup === category
-                          ? 'bg-green-100 text-green-700 border border-green-300'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }
-                      `}
-                    >
-                      {category}
-                    </button>
-                  )
-                })}
+                  <label className="text-sm font-medium text-gray-700">产品分类:</label>
+                  <Select
+                    value={selectedCategoryId || 'all'}
+                    onValueChange={(v) => {
+                      setSelectedCategoryId(v === 'all' ? '' : v)
+                      setSelectedTemplates(new Set()) // 切换分类时清空选择
+                    }}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="全部分类" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部分类</SelectItem>
+                      {categoryTree.map((parent) => (
+                        <div key={parent.id}>
+                          {/* 父分类作为分组标题 */}
+                          <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50">
+                            {parent.name}
+                          </div>
+                          {/* 子分类 */}
+                          {parent.children?.map((child) => (
+                            <SelectItem key={child.id} value={child.id} className="pl-6">
+                              {child.name}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {/* 全选按钮 */}
                 <Button
