@@ -24,6 +24,8 @@ import { ProductListing } from "@/pages/ProductListing"
 import { BatchProductCreator } from "@/pages/BatchProductCreator"
 import { ProductCategories } from "@/pages/ProductCategories"
 import { SystemConfigPage } from "@/pages/SystemConfig"
+import { TemuShops } from "@/pages/TemuShops"
+import { TemuCategories } from "@/pages/TemuCategories"
 import { Toaster } from "sonner"
 
 
@@ -155,7 +157,9 @@ function App() {
 
           <Route path="/workspace/batch-upload/create" element={
             <ProtectedRoute>
-              <BatchProductCreator />
+              <WorkspaceLayout>
+                <BatchProductCreator />
+              </WorkspaceLayout>
             </ProtectedRoute>
           } />
 
@@ -171,6 +175,22 @@ function App() {
             <ProtectedRoute>
               <WorkspaceLayout>
                 <SystemConfigPage />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/temu-categories" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuCategories />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/temu-shops" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuShops />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />

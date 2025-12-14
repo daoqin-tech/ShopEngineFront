@@ -3,8 +3,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { ArrowLeft, Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
-import { TEMU_SHOPS, getTemuCategoriesByParentName } from '@/types/shop';
+import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { temuShopService, type TemuShop } from '@/services/temuShopService';
+import { temuCategoryService, type TemuCategory } from '@/services/temuCategoryService';
 import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
@@ -56,6 +57,14 @@ interface BatchProductCreatorProps {}
 
 
 export function BatchProductCreator({}: BatchProductCreatorProps) {
+  // Temu 店铺数据
+  const [temuShops, setTemuShops] = useState<TemuShop[]>([]);
+  const [loadingShops, setLoadingShops] = useState(true);
+
+  // Temu 分类数据（从本地数据库）
+  const [temuCategories, setTemuCategories] = useState<TemuCategory[]>([]);
+  const [loadingTemuCategories, setLoadingTemuCategories] = useState(false);
+
   // 数据库分类数据
   const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([]);
   const [selectedParentId, setSelectedParentId] = useState<string>('');
@@ -71,18 +80,43 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     origin: '中国-湖北省',
   });
 
+  // 表单数据（需要在 useEffect 之前声明，因为会在 useEffect 中使用）
+  const [formData, setFormData] = useState<ProductFormData>({
+    shopAccount: '',
+    productSpec: '',
+    productCategory: '',
+    titleChinese: '',
+    titleEnglish: '',
+    origin: '中国-湖北省',
+  });
+
   // 获取当前选中父分类的子分类列表
   const currentChildCategories = React.useMemo(() => {
     const parent = parentCategories.find(p => p.id === selectedParentId);
     return parent?.children || [];
   }, [parentCategories, selectedParentId]);
 
-  // 获取当前产品类型对应的Temu平台分类
+  // 获取Temu平台分类
   const currentTemuCategories = React.useMemo(() => {
-    const parent = parentCategories.find(p => p.id === selectedParentId);
-    if (!parent) return [];
-    return getTemuCategoriesByParentName(parent.name);
-  }, [parentCategories, selectedParentId]);
+    return temuCategories;
+  }, [temuCategories]);
+
+  // 加载 Temu 店铺数据
+  useEffect(() => {
+    const loadShops = async () => {
+      try {
+        setLoadingShops(true);
+        const response = await temuShopService.getAllShops(true); // 只获取激活的店铺
+        setTemuShops(response.shops);
+      } catch (error) {
+        console.error('Failed to load shops:', error);
+        toast.error('加载店铺数据失败');
+      } finally {
+        setLoadingShops(false);
+      }
+    };
+    loadShops();
+  }, []);
 
   // 加载数据库分类
   useEffect(() => {
@@ -99,6 +133,23 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       }
     };
     loadCategories();
+  }, []);
+
+  // 加载 Temu 分类（从本地数据库）
+  useEffect(() => {
+    const loadTemuCategoriesFromDB = async () => {
+      try {
+        setLoadingTemuCategories(true);
+        const response = await temuCategoryService.getAllCategories(true, true); // activeOnly, leafOnly
+        setTemuCategories(response.categories || []);
+      } catch (error) {
+        console.error('Failed to load temu categories:', error);
+        setTemuCategories([]);
+      } finally {
+        setLoadingTemuCategories(false);
+      }
+    };
+    loadTemuCategoriesFromDB();
   }, []);
 
   // 加载系统配置
@@ -126,15 +177,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     };
     loadTemuConfig();
   }, []);
-
-  const [formData, setFormData] = useState<ProductFormData>({
-    shopAccount: '',
-    productSpec: '',
-    productCategory: '',
-    titleChinese: '',
-    titleEnglish: '',
-    origin: '中国-湖北省',
-  });
 
   const [availableImages, setAvailableImages] = useState<ProductImage[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -325,15 +367,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.history.back()}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
-              </Button>
-              <h1 className="text-2xl font-bold">批量新建商品</h1>
+              <h1 className="text-2xl font-bold">创建商品</h1>
             </div>
             <div className="flex items-center gap-4">
               {selectedProducts.length > 0 && (
@@ -343,7 +377,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
               )}
               <Button
                 onClick={async () => {
-                  const selectedShop = TEMU_SHOPS.find(shop => shop.id === formData.shopAccount);
+                  const selectedShop = temuShops.find(shop => shop.id === formData.shopAccount);
                   if (!selectedShop) {
                     toast.error('请选择店铺');
                     return;
@@ -356,7 +390,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
-                  // Temu平台分类
+                  // 店铺绑定的 Temu 分类
                   const selectedTemuCategory = currentTemuCategories.find(cat => cat.id === formData.productCategory);
                   if (!selectedTemuCategory) {
                     toast.error('请选择商品分类');
@@ -369,14 +403,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
-                    categoryId: selectedTemuCategory.categoryId,  // TEMU平台分类ID
-                    categoryName: selectedTemuCategory.categoryName,
+                    categoryId: String(selectedTemuCategory.catId),  // TEMU平台分类ID
+                    categoryName: selectedTemuCategory.catName,
                     // productCategoryId 不传，让后端从AI项目自动获取
-                    productAttributes: selectedTemuCategory.productAttributes,
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
                     freightTemplateName: selectedShop.freightTemplateName,
-                    operatingSite: selectedShop.operatingSite,
+                    operatingSite: selectedShop.siteName || '',
                     // 从数据库子分类获取商品规格
                     length: selectedChildCategory.productLength || 0,
                     width: selectedChildCategory.productWidth || 0,
@@ -413,7 +446,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     setCreating(false);
                   } catch (error: any) {
                     console.error('批量创建商品失败:', error);
-                    toast.error(error.response?.data?.message || '提交任务失败，请重试');
+                    toast.error(error.response?.data?.message || '创建商品失败，请重试');
                     // 失败后恢复按钮状态
                     setCreating(false);
                   }
@@ -421,7 +454,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 disabled={creating || !formData.shopAccount || !selectedParentId || !formData.productSpec || !formData.productCategory || selectedProducts.length === 0}
                 className="min-w-24"
               >
-                {creating ? '提交中...' : `提交任务 (${selectedProducts.length})`}
+                {creating ? '创建中...' : `创建商品 (${selectedProducts.length})`}
               </Button>
             </div>
           </div>
@@ -448,41 +481,40 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             {/* 店铺选择 - 卡片式 */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">店铺账号 *</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {TEMU_SHOPS.map((shop) => (
-                  <button
-                    key={shop.id}
-                    type="button"
-                    onClick={() => {
-                      updateFormData('shopAccount', shop.id);
-                      // 切换店铺时清空规格和分类选择
-                      updateFormData('productSpec', '');
-                      updateFormData('productCategory', '');
-                    }}
-                    className={`
-                      relative p-4 rounded-md border-2 text-left transition-colors
-                      ${formData.shopAccount === shop.id
-                        ? 'border-primary bg-background'
-                        : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                      }
-                    `}
-                  >
-                    {shop.isNew && (
-                      <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded">
-                        新
-                      </span>
-                    )}
-                    <div className="space-y-1.5">
-                      <div className="font-medium text-sm">
-                        {shop.name}
+              {loadingShops ? (
+                <div className="text-sm text-muted-foreground">加载店铺中...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {temuShops.map((shop) => (
+                    <button
+                      key={shop.id}
+                      type="button"
+                      onClick={() => {
+                        updateFormData('shopAccount', shop.id);
+                        // 切换店铺时清空规格和分类选择
+                        updateFormData('productSpec', '');
+                        updateFormData('productCategory', '');
+                      }}
+                      className={`
+                        relative p-4 rounded-md border-2 text-left transition-colors
+                        ${formData.shopAccount === shop.id
+                          ? 'border-primary bg-background'
+                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                        }
+                      `}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="font-medium text-sm">
+                          {shop.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {shop.businessCode}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {shop.businessCode}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 产品分类选择（选中店铺后显示） - 一级分类 + 二级分类 */}
@@ -540,45 +572,50 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
               </div>
             )}
 
-            {/* Temu商品分类选择（选中产品类型后显示） */}
-            {formData.shopAccount && selectedParentId && (
-              <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Temu商品分类 *
-                </Label>
-                {currentTemuCategories.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">该产品类型暂无对应的Temu分类</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {currentTemuCategories.map((category) => (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => updateFormData('productCategory', category.id)}
-                        className={`
-                          p-4 rounded-md border-2 text-left transition-colors
-                          ${formData.productCategory === category.id
-                            ? 'border-primary bg-background'
-                            : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                          }
-                        `}
-                      >
-                        <div className="space-y-2">
-                          <div className="font-medium text-sm">{category.name}</div>
-                          <div className="text-xs text-muted-foreground line-clamp-2">
-                            {category.categoryName}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-2">
-                            分类ID: {category.categoryId}
-                          </div>
+            {/* Temu商品分类选择 */}
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Temu商品分类 *
+              </Label>
+              {loadingTemuCategories ? (
+                <div className="text-sm text-muted-foreground">加载Temu分类中...</div>
+              ) : currentTemuCategories.length === 0 ? (
+                <div className="text-sm text-muted-foreground">暂无Temu分类，请在Temu分类管理中添加</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {currentTemuCategories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => updateFormData('productCategory', category.id)}
+                      className={`
+                        p-4 rounded-md border-2 text-left transition-colors
+                        ${formData.productCategory === category.id
+                          ? 'border-primary bg-background'
+                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                        }
+                      `}
+                    >
+                      <div className="space-y-2">
+                        <div className="font-medium text-sm flex items-center gap-2">
+                          {category.catName}
+                          {category.label && (
+                            <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-600 rounded">{category.label}</span>
+                          )}
                         </div>
+                        <div className="text-xs text-muted-foreground line-clamp-2">
+                          {category.fullPath || category.catName}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          分类ID: {category.catId}
+                        </div>
+                      </div>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-            )}
           </div>
 
           {/* 2. 商品图选择卡片 */}

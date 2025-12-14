@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Dow
 import { productService, type Product } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import { type ProductCategory } from '@/types/productCategory';
-import { TEMU_SHOPS } from '@/types/shop';
+import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { toast } from 'sonner';
 import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
@@ -23,6 +23,7 @@ export function ProductListing() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [temuShops, setTemuShops] = useState<TemuShop[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 物流信息导出对话框
@@ -112,10 +113,22 @@ export function ProductListing() {
     }
   };
 
+  // 加载 Temu 店铺
+  const fetchTemuShops = async () => {
+    try {
+      const response = await temuShopService.getAllShops();
+      setTemuShops(response.shops);
+    } catch (error: any) {
+      console.error('获取店铺数据失败:', error);
+      // 不显示错误提示，静默失败
+    }
+  };
+
   // 初始加载
   useEffect(() => {
     fetchProducts(1);
     fetchCategories();
+    fetchTemuShops();
   }, []);
 
   // 应用筛选
@@ -169,7 +182,7 @@ export function ProductListing() {
 
   // 根据 shopId 查找店铺名称
   const getShopName = (shopId: string): string => {
-    const shop = TEMU_SHOPS.find(s => s.shopId === shopId);
+    const shop = temuShops.find(s => s.shopId === shopId);
     return shop?.name || '';
   };
 
@@ -530,7 +543,7 @@ export function ProductListing() {
               onChange={(e) => setShopId(e.target.value)}
             >
               <option value="">全部店铺</option>
-              {TEMU_SHOPS.map(shop => (
+              {temuShops.map(shop => (
                 <option key={shop.shopId} value={shop.shopId}>
                   {shop.name}
                 </option>

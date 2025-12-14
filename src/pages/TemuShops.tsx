@@ -1,0 +1,616 @@
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Pencil, Trash2, Store, RefreshCw } from 'lucide-react';
+import { temuShopService, type TemuShop, type CreateTemuShopRequest, type UpdateTemuShopRequest, type TemuSite, type TemuWarehouse, type TemuFreightTemplate } from '@/services/temuShopService';
+import { toast } from 'sonner';
+
+export function TemuShops() {
+  const [shops, setShops] = useState<TemuShop[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editingShop, setEditingShop] = useState<TemuShop | null>(null);
+  const [deletingShop, setDeletingShop] = useState<TemuShop | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // 站点、仓库、运费模板相关状态
+  const [sites, setSites] = useState<TemuSite[]>([]);
+  const [warehouses, setWarehouses] = useState<TemuWarehouse[]>([]);
+  const [freightTemplates, setFreightTemplates] = useState<TemuFreightTemplate[]>([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [loadingFreightTemplates, setLoadingFreightTemplates] = useState(false);
+
+  const [formData, setFormData] = useState<CreateTemuShopRequest>({
+    name: '',
+    shopId: '',
+    type: '全托',
+    businessCode: '',
+    account: '',
+    siteId: undefined,
+    siteName: '',
+    warehouseId: '',
+    warehouseName: '',
+    freightTemplateId: '',
+    freightTemplateName: '',
+    appKey: '',
+    appSecret: '',
+    accessToken: '',
+  });
+
+  // 加载店铺列表
+  const fetchShops = async () => {
+    try {
+      setLoading(true);
+      const response = await temuShopService.getAllShops();
+      setShops(response.shops);
+    } catch (error) {
+      console.error('获取店铺列表失败:', error);
+      toast.error('获取店铺列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchShops();
+    fetchSites();
+  }, []);
+
+  // 加载站点列表
+  const fetchSites = async () => {
+    try {
+      setLoadingSites(true);
+      const response = await temuShopService.getSites();
+      setSites(response.sites);
+    } catch (error) {
+      console.error('获取站点列表失败:', error);
+      // 静默失败，不显示 toast
+    } finally {
+      setLoadingSites(false);
+    }
+  };
+
+  // 加载仓库列表（需要店铺 ID）
+  const fetchWarehouses = async (shopId: string, siteId?: number) => {
+    try {
+      setLoadingWarehouses(true);
+      const response = await temuShopService.getWarehouses(shopId, siteId);
+      setWarehouses(response.warehouses || []);
+    } catch (error) {
+      console.error('获取仓库列表失败:', error);
+      toast.error('获取仓库列表失败，请确保已配置 API 凭证');
+      setWarehouses([]);
+    } finally {
+      setLoadingWarehouses(false);
+    }
+  };
+
+  // 加载运费模板列表（需要店铺 ID）
+  const fetchFreightTemplates = async (shopId: string, siteId?: number) => {
+    try {
+      setLoadingFreightTemplates(true);
+      const response = await temuShopService.getFreightTemplates(shopId, siteId);
+      setFreightTemplates(response.templates || []);
+    } catch (error) {
+      console.error('获取运费模板列表失败:', error);
+      toast.error('获取运费模板列表失败，请确保已配置 API 凭证');
+      setFreightTemplates([]);
+    } finally {
+      setLoadingFreightTemplates(false);
+    }
+  };
+
+  // 打开新建对话框
+  const handleCreate = () => {
+    setEditingShop(null);
+    setFormData({
+      name: '',
+      shopId: '',
+      type: '全托',
+      businessCode: '',
+      account: '',
+      siteId: undefined,
+      siteName: '',
+      warehouseId: '',
+      warehouseName: '',
+      freightTemplateId: '',
+      freightTemplateName: '',
+      appKey: '',
+      appSecret: '',
+      accessToken: '',
+    });
+    setWarehouses([]);
+    setFreightTemplates([]);
+    setShowDialog(true);
+  };
+
+  // 打开编辑对话框
+  const handleEdit = (shop: TemuShop) => {
+    setEditingShop(shop);
+    setFormData({
+      name: shop.name,
+      shopId: shop.shopId,
+      type: shop.type,
+      businessCode: shop.businessCode,
+      account: shop.account,
+      siteId: shop.siteId,
+      siteName: shop.siteName || '',
+      warehouseId: shop.warehouseId || '',
+      warehouseName: shop.warehouseName || '',
+      freightTemplateId: shop.freightTemplateId || '',
+      freightTemplateName: shop.freightTemplateName || '',
+      appKey: '',
+      appSecret: '',
+      accessToken: '',
+    });
+    // 如果已有 API 凭证且已选择站点，加载仓库和运费模板
+    if (shop.hasApiCredentials && shop.siteId) {
+      fetchWarehouses(shop.id, shop.siteId);
+      fetchFreightTemplates(shop.id, shop.siteId);
+    } else {
+      setWarehouses([]);
+      setFreightTemplates([]);
+    }
+    setShowDialog(true);
+  };
+
+  // 提交表单
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.shopId || !formData.businessCode || !formData.account) {
+      toast.error('请填写必填字段');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      if (editingShop) {
+        const updateData: UpdateTemuShopRequest = {
+          ...formData,
+          isActive: editingShop.isActive,
+        };
+        await temuShopService.updateShop(editingShop.id, updateData);
+        toast.success('店铺更新成功');
+      } else {
+        await temuShopService.createShop(formData);
+        toast.success('店铺创建成功');
+      }
+      setShowDialog(false);
+      fetchShops();
+    } catch (error: any) {
+      console.error('保存店铺失败:', error);
+      toast.error(error.response?.data?.message || '保存店铺失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 删除店铺
+  const handleDelete = async () => {
+    if (!deletingShop) return;
+
+    try {
+      await temuShopService.deleteShop(deletingShop.id);
+      toast.success('店铺删除成功');
+      setShowDeleteDialog(false);
+      setDeletingShop(null);
+      fetchShops();
+    } catch (error: any) {
+      console.error('删除店铺失败:', error);
+      toast.error(error.response?.data?.message || '删除店铺失败');
+    }
+  };
+
+  return (
+    <div className="flex-1 p-6">
+      {/* 页面标题 */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Temu 店铺管理</h1>
+          <p className="text-gray-600">管理 Temu 平台店铺信息和 API 配置</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchShops}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            刷新
+          </Button>
+          <Button onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            新建店铺
+          </Button>
+        </div>
+      </div>
+
+      {/* 店铺列表 */}
+      <div className="bg-white rounded-lg border">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-500">加载中...</div>
+          </div>
+        ) : shops.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Store className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">暂无店铺</h3>
+            <p className="text-gray-500 mb-4">点击上方按钮添加第一个店铺</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">店铺名称</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">店铺ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">业务代码</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">账号</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API凭证</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {shops.map((shop) => (
+                  <tr key={shop.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900">{shop.name}</div>
+                      {shop.siteName && (
+                        <div className="text-xs text-gray-500">{shop.siteName}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{shop.shopId}</td>
+                    <td className="px-6 py-4">
+                      <Badge variant={shop.type === '全托' ? 'default' : 'secondary'}>
+                        {shop.type}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{shop.businessCode}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{shop.account}</td>
+                    <td className="px-6 py-4">
+                      <Badge variant={shop.hasApiCredentials ? 'default' : 'outline'}>
+                        {shop.hasApiCredentials ? '已配置' : '未配置'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant={shop.isActive ? 'default' : 'secondary'}>
+                        {shop.isActive ? '启用' : '禁用'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(shop)}
+                          title="编辑店铺"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeletingShop(shop);
+                            setShowDeleteDialog(true);
+                          }}
+                          title="删除店铺"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 新建/编辑对话框 */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{editingShop ? '编辑店铺' : '新建店铺'}</DialogTitle>
+            <DialogDescription>
+              {editingShop ? '修改店铺信息和 API 配置' : '添加新的 Temu 店铺'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            {/* 基本信息 */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Store className="w-4 h-4" />
+                基本信息
+              </h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">店铺名称 *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="例如：道勤旗舰店"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="shopId">店铺ID *</Label>
+                  <Input
+                    id="shopId"
+                    value={formData.shopId}
+                    onChange={(e) => setFormData({ ...formData, shopId: e.target.value })}
+                    placeholder="Temu 平台店铺ID"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="type">店铺类型 *</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: '全托' | '半托') => setFormData({ ...formData, type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="全托">全托</SelectItem>
+                      <SelectItem value="半托">半托</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="businessCode">业务代码 *</Label>
+                  <Input
+                    id="businessCode"
+                    value={formData.businessCode}
+                    onChange={(e) => setFormData({ ...formData, businessCode: e.target.value })}
+                    placeholder="例如：5270"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="account">账号 *</Label>
+                  <Input
+                    id="account"
+                    value={formData.account}
+                    onChange={(e) => setFormData({ ...formData, account: e.target.value })}
+                    placeholder="店铺账号"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 配送设置 */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-4">配送设置</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="site">运营站点</Label>
+                  <Select
+                    value={formData.siteId?.toString() || ''}
+                    onValueChange={(value) => {
+                      const site = sites.find(s => s.siteId.toString() === value);
+                      setFormData({
+                        ...formData,
+                        siteId: site?.siteId,
+                        siteName: site?.siteName || '',
+                        warehouseId: '',
+                        warehouseName: '',
+                        freightTemplateId: '',
+                        freightTemplateName: '',
+                      });
+                      if (editingShop?.hasApiCredentials && site) {
+                        fetchWarehouses(editingShop.id, site.siteId);
+                        fetchFreightTemplates(editingShop.id, site.siteId);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={loadingSites ? 'opacity-50' : ''}>
+                      <SelectValue placeholder={loadingSites ? '加载中...' : '选择站点'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites.map((site) => (
+                        <SelectItem key={site.siteId} value={site.siteId.toString()}>
+                          {site.siteName}
+                          {site.region && <span className="text-gray-500 ml-2">({site.region})</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warehouse">发货仓库</Label>
+                  <Select
+                    value={formData.warehouseId || ''}
+                    onValueChange={(value) => {
+                      const warehouse = warehouses.find(w => w.warehouseId === value);
+                      setFormData({
+                        ...formData,
+                        warehouseId: warehouse?.warehouseId || '',
+                        warehouseName: warehouse?.warehouseName || '',
+                      });
+                    }}
+                    disabled={!editingShop?.hasApiCredentials || warehouses.length === 0}
+                  >
+                    <SelectTrigger className={loadingWarehouses ? 'opacity-50' : ''}>
+                      <SelectValue
+                        placeholder={
+                          loadingWarehouses
+                            ? '加载中...'
+                            : !editingShop?.hasApiCredentials
+                            ? '请先配置 API 凭证'
+                            : warehouses.length === 0
+                            ? '请先选择站点'
+                            : '选择仓库'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses
+                        .filter((warehouse) => warehouse.warehouseId)
+                        .map((warehouse) => (
+                          <SelectItem key={warehouse.warehouseId} value={warehouse.warehouseId}>
+                            {warehouse.warehouseName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {!editingShop && (
+                    <p className="text-xs text-muted-foreground">创建店铺后配置 API 凭证才能选择仓库</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="freightTemplate">运费模板</Label>
+                  <Select
+                    value={formData.freightTemplateId || ''}
+                    onValueChange={(value) => {
+                      const template = freightTemplates.find(t => t.freightTemplateId === value);
+                      setFormData({
+                        ...formData,
+                        freightTemplateId: template?.freightTemplateId || '',
+                        freightTemplateName: template?.templateName || '',
+                      });
+                    }}
+                    disabled={!editingShop?.hasApiCredentials || freightTemplates.length === 0}
+                  >
+                    <SelectTrigger className={loadingFreightTemplates ? 'opacity-50' : ''}>
+                      <SelectValue
+                        placeholder={
+                          loadingFreightTemplates
+                            ? '加载中...'
+                            : !editingShop?.hasApiCredentials
+                            ? '请先配置 API 凭证'
+                            : freightTemplates.length === 0
+                            ? '请先选择站点'
+                            : '选择运费模板'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {freightTemplates
+                        .filter((template) => template.freightTemplateId)
+                        .map((template) => (
+                          <SelectItem key={template.freightTemplateId} value={template.freightTemplateId}>
+                            {template.templateName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {!editingShop && (
+                    <p className="text-xs text-muted-foreground">创建店铺后配置 API 凭证才能选择运费模板</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* API 凭证 */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-4">API 凭证（可选）</h4>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="appKey">App Key</Label>
+                  <Input
+                    id="appKey"
+                    value={formData.appKey}
+                    onChange={(e) => setFormData({ ...formData, appKey: e.target.value })}
+                    placeholder="Temu Open API App Key"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="appSecret">App Secret</Label>
+                  <Input
+                    id="appSecret"
+                    type="password"
+                    value={formData.appSecret}
+                    onChange={(e) => setFormData({ ...formData, appSecret: e.target.value })}
+                    placeholder="Temu Open API App Secret"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accessToken">Access Token</Label>
+                  <Input
+                    id="accessToken"
+                    value={formData.accessToken}
+                    onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
+                    placeholder="Temu Open API Access Token"
+                  />
+                </div>
+              </div>
+              {editingShop && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  留空表示不修改现有的 API 凭证
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除店铺 "{deletingShop?.name}" 吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+    </div>
+  );
+}

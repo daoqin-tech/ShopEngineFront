@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -10,10 +11,76 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { systemConfigService } from '@/services/systemConfigService';
 import type { SystemConfig, CreateSystemConfigRequest, UpdateSystemConfigRequest } from '@/types/systemConfig';
 import { toast } from 'sonner';
+
+// 敏感配置键列表（显示为 ****** ，编辑时不显示原值）
+const SENSITIVE_KEYS = [
+  'temu_api_app_key',
+  'temu_api_app_secret',
+  'temu_api_access_token',
+];
+
+// 检测是否是敏感配置
+const isSensitiveKey = (key: string): boolean => {
+  return SENSITIVE_KEYS.includes(key);
+};
+
+// 检测字符串是否是有效的 JSON
+const isValidJson = (str: string): boolean => {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// 格式化 JSON 字符串
+const formatJson = (str: string): string => {
+  try {
+    return JSON.stringify(JSON.parse(str), null, 2);
+  } catch {
+    return str;
+  }
+};
+
+// JSON 值预览组件
+const JsonValuePreview = ({ value }: { value: string }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const isJson = useMemo(() => isValidJson(value), [value]);
+  const formattedJson = useMemo(() => isJson ? formatJson(value) : value, [value, isJson]);
+
+  if (!isJson) {
+    return <span className="font-mono text-sm">{value}</span>;
+  }
+
+  // 计算预览信息
+  const parsed = JSON.parse(value);
+  const isArray = Array.isArray(parsed);
+  const count = isArray ? parsed.length : Object.keys(parsed).length;
+  const previewText = isArray ? `Array[${count}]` : `Object{${count}}`;
+
+  return (
+    <div className="font-mono text-sm">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+      >
+        {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        <span>{previewText}</span>
+      </button>
+      {expanded && (
+        <pre className="mt-2 p-3 bg-gray-100 rounded-md text-xs overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">
+          {formattedJson}
+        </pre>
+      )}
+    </div>
+  );
+};
 
 export function SystemConfigPage() {
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
@@ -62,7 +129,8 @@ export function SystemConfigPage() {
     setEditingConfig(config);
     setFormData({
       configKey: config.configKey,
-      configValue: config.configValue,
+      // 敏感配置不显示原值，需要用户重新输入
+      configValue: isSensitiveKey(config.configKey) ? '' : config.configValue,
       configType: config.configType || '',
       description: config.description || '',
     });
@@ -75,21 +143,37 @@ export function SystemConfigPage() {
       toast.error('请输入配置键名');
       return;
     }
-    if (!formData.configValue.trim()) {
+
+    // 对于敏感配置，如果编辑时值为空，表示不修改
+    const isSensitive = isSensitiveKey(formData.configKey);
+    const isEditing = !!editingConfig;
+
+    if (!formData.configValue.trim() && !(isSensitive && isEditing)) {
       toast.error('请输入配置值');
       return;
     }
 
     try {
       if (editingConfig) {
-        // 更新
-        const updateData: UpdateSystemConfigRequest = {
-          configValue: formData.configValue.trim(),
-          configType: formData.configType.trim() || undefined,
-          description: formData.description.trim() || undefined,
-        };
-        await systemConfigService.updateConfig(editingConfig.id, updateData);
-        toast.success('更新成功');
+        // 更新 - 敏感配置如果值为空则不更新 configValue
+        if (isSensitive && !formData.configValue.trim()) {
+          // 只更新描述和类型，不更新值
+          const updateData: UpdateSystemConfigRequest = {
+            configValue: editingConfig.configValue, // 保持原值
+            configType: formData.configType.trim() || undefined,
+            description: formData.description.trim() || undefined,
+          };
+          await systemConfigService.updateConfig(editingConfig.id, updateData);
+          toast.success('更新成功（值未修改）');
+        } else {
+          const updateData: UpdateSystemConfigRequest = {
+            configValue: formData.configValue.trim(),
+            configType: formData.configType.trim() || undefined,
+            description: formData.description.trim() || undefined,
+          };
+          await systemConfigService.updateConfig(editingConfig.id, updateData);
+          toast.success('更新成功');
+        }
       } else {
         // 新增
         const createData: CreateSystemConfigRequest = {
@@ -184,7 +268,13 @@ export function SystemConfigPage() {
                           {config.configKey}
                         </code>
                       </td>
-                      <td className="p-3 font-mono">{config.configValue}</td>
+                      <td className="p-3">
+                        {isSensitiveKey(config.configKey) ? (
+                          <span className="font-mono text-sm text-muted-foreground">••••••••••••</span>
+                        ) : (
+                          <JsonValuePreview value={config.configValue} />
+                        )}
+                      </td>
                       <td className="p-3 text-muted-foreground text-sm">
                         {config.description || '-'}
                       </td>
@@ -241,13 +331,37 @@ export function SystemConfigPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="configValue">配置值 *</Label>
-              <Input
+              <div className="flex items-center justify-between">
+                <Label htmlFor="configValue">
+                  配置值 {editingConfig && isSensitiveKey(formData.configKey) ? '' : '*'}
+                </Label>
+                {isValidJson(formData.configValue) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, configValue: formatJson(formData.configValue) })}
+                  >
+                    格式化 JSON
+                  </Button>
+                )}
+              </div>
+              <Textarea
                 id="configValue"
                 value={formData.configValue}
                 onChange={(e) => setFormData({ ...formData, configValue: e.target.value })}
-                placeholder="请输入配置值"
+                placeholder={
+                  editingConfig && isSensitiveKey(formData.configKey)
+                    ? "留空表示保持原值不变，输入新值则更新"
+                    : "请输入配置值（支持 JSON 格式）"
+                }
+                className="font-mono text-sm min-h-[120px]"
               />
+              {editingConfig && isSensitiveKey(formData.configKey) && (
+                <p className="text-xs text-amber-600">
+                  🔒 敏感配置：原值已隐藏。留空将保持原值，输入新值将覆盖原值。
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="configType">配置类型</Label>
