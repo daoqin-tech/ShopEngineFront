@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
-import { temuCategoryService, type TemuCategory } from '@/services/temuCategoryService';
-import { coverProjectService, type TaskInfo, type TemplateSearchItem } from '@/services/coverProjectService';
+import { temuCategoryService, type TemuCategoryGroup, type TemuCategorySimple } from '@/services/temuCategoryService';
+import { coverProjectService, type TaskInfo } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import { systemConfigService } from '@/services/systemConfigService';
@@ -15,9 +15,7 @@ import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectSeparator,
   SelectTrigger,
   SelectValue,
@@ -37,7 +35,7 @@ interface ProductFormData {
 interface SelectedProduct {
   id: string;                // 唯一ID
   taskId: string;           // 任务ID
-  templateName: string;     // 模板名称
+  categoryName: string;     // 产品分类名称
   imageUrl: string;         // 商品图URL
   thumbnailUrl?: string;    // 缩略图URL
   createdAt: string;        // 创建时间
@@ -46,7 +44,7 @@ interface SelectedProduct {
 // 商品图信息
 interface ProductImage {
   taskId: string;
-  templateName: string;
+  categoryName: string;
   images: string[];
   thumbnail?: string;
   createdAt: string;
@@ -61,9 +59,17 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [temuShops, setTemuShops] = useState<TemuShop[]>([]);
   const [loadingShops, setLoadingShops] = useState(true);
 
-  // Temu 分类数据（从本地数据库）
-  const [temuCategories, setTemuCategories] = useState<TemuCategory[]>([]);
+  // Temu 分类数据（从本地数据库，按标签分组）
+  const [temuCategoryGroups, setTemuCategoryGroups] = useState<TemuCategoryGroup[]>([]);
   const [loadingTemuCategories, setLoadingTemuCategories] = useState(false);
+  const [selectedTemuGroupLabel, setSelectedTemuGroupLabel] = useState<string>('');  // 选中的Temu分组
+
+  // 获取选中Temu分组下的分类列表
+  const selectedTemuGroupCategories = React.useMemo(() => {
+    if (!selectedTemuGroupLabel) return [];
+    const group = temuCategoryGroups.find(g => g.label === selectedTemuGroupLabel);
+    return group?.categories || [];
+  }, [temuCategoryGroups, selectedTemuGroupLabel]);
 
   // 数据库分类数据
   const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([]);
@@ -96,10 +102,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     return parent?.children || [];
   }, [parentCategories, selectedParentId]);
 
-  // 获取Temu平台分类
-  const currentTemuCategories = React.useMemo(() => {
-    return temuCategories;
-  }, [temuCategories]);
 
   // 加载 Temu 店铺数据
   useEffect(() => {
@@ -135,16 +137,16 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     loadCategories();
   }, []);
 
-  // 加载 Temu 分类（从本地数据库）
+  // 加载 Temu 分类（从本地数据库，按标签分组）
   useEffect(() => {
     const loadTemuCategoriesFromDB = async () => {
       try {
         setLoadingTemuCategories(true);
-        const response = await temuCategoryService.getAllCategories(true, true); // activeOnly, leafOnly
-        setTemuCategories(response.categories || []);
+        const response = await temuCategoryService.getGroupedCategories();
+        setTemuCategoryGroups(response.groups || []);
       } catch (error) {
         console.error('Failed to load temu categories:', error);
-        setTemuCategories([]);
+        setTemuCategoryGroups([]);
       } finally {
         setLoadingTemuCategories(false);
       }
@@ -182,7 +184,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [previewImages, setPreviewImages] = useState<{ taskId: string; templateName: string; images: string[] } | null>(null);
+  const [previewImages, setPreviewImages] = useState<{ taskId: string; categoryName: string; images: string[] } | null>(null);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -191,13 +193,17 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [jumpPage, setJumpPage] = useState('');
 
   // 筛选状态
-  const [templateFilter, setTemplateFilter] = useState('');
+  const [filterParentId, setFilterParentId] = useState('');  // 筛选用的一级分类
+  const [categoryFilter, setCategoryFilter] = useState('');  // 筛选用的二级分类（可选）
   const [startTime, setStartTime] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState<Date | undefined>();
 
-  // 模板搜索选项状态
-  const [templatesForSearch, setTemplatesForSearch] = useState<TemplateSearchItem[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  // 获取筛选用的子分类列表
+  const filterChildCategories = React.useMemo(() => {
+    if (!filterParentId) return [];
+    const parent = parentCategories.find(p => p.id === filterParentId);
+    return parent?.children || [];
+  }, [parentCategories, filterParentId]);
 
   // 获取可用的商品图（来自CoverGeneration）
   const fetchAvailableImages = async (page: number = currentPage) => {
@@ -209,9 +215,10 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         limit: pageSize || 100
       };
 
-      // 添加模板筛选
-      if (templateFilter && templateFilter !== 'all') {
-        params.templateId = templateFilter;
+      // 添加产品分类筛选（优先使用二级分类，否则用一级分类）
+      const effectiveCategoryId = categoryFilter || filterParentId;
+      if (effectiveCategoryId && effectiveCategoryId !== 'all') {
+        params.categoryId = effectiveCategoryId;
       }
 
       // 添加时间筛选（转换为时间戳）
@@ -229,7 +236,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         ?.filter((task: TaskInfo) => task.status === 'completed' && task.resultImages?.length)
         .map((task: TaskInfo) => ({
           taskId: task.taskId,
-          templateName: task.templateName || '未知模板',
+          categoryName: task.categoryName || '未分类',
           images: task.resultImages || [],
           thumbnail: task.thumbnail,
           createdAt: task.createdAt
@@ -246,20 +253,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     }
   };
 
-  // 获取模板搜索选项
-  const fetchTemplatesForSearch = async () => {
-    try {
-      setLoadingTemplates(true);
-      const templates = await coverProjectService.getTemplatesForSearch();
-      setTemplatesForSearch(templates);
-    } catch (err) {
-      console.error('Error fetching templates for search:', err);
-      toast.error('加载模板选项失败');
-    } finally {
-      setLoadingTemplates(false);
-    }
-  };
-
   // 应用筛选
   const handleApplyFilters = () => {
     setCurrentPage(1);
@@ -268,7 +261,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
   // 重置筛选
   const handleResetFilters = () => {
-    setTemplateFilter('');
+    setFilterParentId('');
+    setCategoryFilter('');
     setStartTime(undefined);
     setEndTime(undefined);
     setCurrentPage(1);
@@ -276,46 +270,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   };
 
   // 初始化时加载数据
-  // 解析模板名称，提取分类信息
-  const parseTemplateName = (name: string): { displayName: string; category: string } => {
-    const match = name.match(/^(.+?)[(（](.+?)[)）]$/)
-    if (match) {
-      return {
-        displayName: match[1].trim(),
-        category: match[2].trim()
-      }
-    }
-    return {
-      displayName: name,
-      category: '其他'
-    }
-  }
-
-  // 按分类分组模板
-  const groupedTemplates = React.useMemo(() => {
-    const groups: { [category: string]: TemplateSearchItem[] } = {}
-    templatesForSearch.forEach(template => {
-      const { category } = parseTemplateName(template.name)
-      if (!groups[category]) {
-        groups[category] = []
-      }
-      groups[category].push(template)
-    })
-    return Object.keys(groups).sort().reduce((acc, category) => {
-      // 对每个分类下的模板按照名称中的数字进行排序
-      acc[category] = groups[category].sort((a, b) => {
-        // 提取模板名称中的数字部分进行比较
-        const numA = parseInt(a.name.match(/\d+/)?.[0] || '0')
-        const numB = parseInt(b.name.match(/\d+/)?.[0] || '0')
-        return numA - numB
-      })
-      return acc
-    }, {} as { [category: string]: TemplateSearchItem[] })
-  }, [templatesForSearch])
-
   React.useEffect(() => {
     fetchAvailableImages(1);
-    fetchTemplatesForSearch();
   }, []);
 
   // 更新表单数据
@@ -337,7 +293,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     const allSelectableProducts: SelectedProduct[] = availableImages.map(imageSet => ({
       id: imageSet.taskId,
       taskId: imageSet.taskId,
-      templateName: imageSet.templateName,
+      categoryName: imageSet.categoryName,
       imageUrl: imageSet.images[0] || '', // 使用第一张图作为代表
       thumbnailUrl: imageSet.thumbnail,
       createdAt: imageSet.createdAt
@@ -390,8 +346,15 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
-                  // 店铺绑定的 Temu 分类
-                  const selectedTemuCategory = currentTemuCategories.find(cat => cat.id === formData.productCategory);
+                  // 从分组中查找选中的 Temu 分类
+                  let selectedTemuCategory: TemuCategorySimple | undefined;
+                  for (const group of temuCategoryGroups) {
+                    const found = group.categories.find(cat => cat.id === formData.productCategory);
+                    if (found) {
+                      selectedTemuCategory = found;
+                      break;
+                    }
+                  }
                   if (!selectedTemuCategory) {
                     toast.error('请选择商品分类');
                     return;
@@ -404,7 +367,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
                     categoryId: String(selectedTemuCategory.catId),  // TEMU平台分类ID
-                    categoryName: selectedTemuCategory.catName,
+                    categoryName: selectedTemuCategory.fullPath.split(' > ').pop() || selectedTemuCategory.fullPath,  // 取最后一级分类名
                     // productCategoryId 不传，让后端从AI项目自动获取
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
@@ -478,13 +441,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
               </div>
             </div>
 
-            {/* 店铺选择 - 卡片式 */}
-            <div className="space-y-3">
+            {/* 店铺选择 */}
+            <div className="space-y-2">
               <Label className="text-sm font-medium">店铺账号 *</Label>
               {loadingShops ? (
                 <div className="text-sm text-muted-foreground">加载店铺中...</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {temuShops.map((shop) => (
                     <button
                       key={shop.id}
@@ -496,21 +459,14 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                         updateFormData('productCategory', '');
                       }}
                       className={`
-                        relative p-4 rounded-md border-2 text-left transition-colors
+                        px-3 py-1.5 rounded-md border text-sm transition-colors
                         ${formData.shopAccount === shop.id
-                          ? 'border-primary bg-background'
-                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
                         }
                       `}
                     >
-                      <div className="space-y-1.5">
-                        <div className="font-medium text-sm">
-                          {shop.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {shop.businessCode}
-                        </div>
-                      </div>
+                      {shop.name}
                     </button>
                   ))}
                 </div>
@@ -519,7 +475,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
             {/* 产品分类选择（选中店铺后显示） - 一级分类 + 二级分类 */}
             {formData.shopAccount && (
-              <div className="space-y-3 pt-4 border-t">
+              <div className="space-y-3 pt-4">
                 <Label className="text-sm font-medium">产品分类 *</Label>
                 {loadingCategories ? (
                   <div className="text-sm text-muted-foreground">加载中...</div>
@@ -573,49 +529,54 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             )}
 
             {/* Temu商品分类选择 */}
-            <div className="space-y-3 pt-4 border-t">
+            <div className="space-y-3 pt-4">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <Package className="w-4 h-4" />
                 Temu商品分类 *
               </Label>
               {loadingTemuCategories ? (
                 <div className="text-sm text-muted-foreground">加载Temu分类中...</div>
-              ) : currentTemuCategories.length === 0 ? (
+              ) : temuCategoryGroups.length === 0 ? (
                 <div className="text-sm text-muted-foreground">暂无Temu分类，请在Temu分类管理中添加</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {currentTemuCategories.map((category) => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => updateFormData('productCategory', category.id)}
-                      className={`
-                        p-4 rounded-md border-2 text-left transition-colors
-                        ${formData.productCategory === category.id
-                          ? 'border-primary bg-background'
-                          : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'
-                        }
-                      `}
-                    >
-                      <div className="space-y-2">
-                        <div className="font-medium text-sm flex items-center gap-2">
-                          {category.catName}
-                          {category.label && (
-                            <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-600 rounded">{category.label}</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground line-clamp-2">
-                          {category.fullPath || category.catName}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-2">
-                          分类ID: {category.catId}
-                        </div>
-                      </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <div className="flex gap-3">
+                  <Select
+                    value={selectedTemuGroupLabel || undefined}
+                    onValueChange={(value) => {
+                      setSelectedTemuGroupLabel(value);
+                      updateFormData('productCategory', ''); // 切换分组时清空分类选择
+                    }}
+                  >
+                    <SelectTrigger className="w-48 h-10">
+                      <SelectValue placeholder="请选择分组" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {temuCategoryGroups.map((group) => (
+                        <SelectItem key={group.label} value={group.label}>
+                          {group.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={formData.productCategory || undefined}
+                    onValueChange={(value) => updateFormData('productCategory', value)}
+                    disabled={!selectedTemuGroupLabel || selectedTemuGroupCategories.length === 0}
+                  >
+                    <SelectTrigger className="w-80 h-10">
+                      <SelectValue placeholder="请选择Temu分类" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedTemuGroupCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.fullPath}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 2. 商品图选择卡片 */}
@@ -647,35 +608,43 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             <div className="bg-gray-50 p-4 border-b">
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">模板:</label>
+                  <label className="text-sm font-medium text-gray-700">产品分类:</label>
                   <Select
-                    value={templateFilter || undefined}
-                    onValueChange={(value) => setTemplateFilter(value || '')}
-                    disabled={loadingTemplates}
+                    value={filterParentId || undefined}
+                    onValueChange={(value) => {
+                      setFilterParentId(value === 'all' ? '' : value || '');
+                      setCategoryFilter(''); // 切换一级分类时清空二级分类
+                    }}
+                    disabled={loadingCategories}
                   >
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="全部模板" />
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="一级分类" />
                     </SelectTrigger>
-                    <SelectContent className="max-h-[400px]">
-                      <SelectItem value="all">全部模板 ({templatesForSearch.length})</SelectItem>
+                    <SelectContent>
+                      <SelectItem value="all">全部</SelectItem>
                       <SelectSeparator />
-                      {Object.entries(groupedTemplates).map(([category, templates], index) => (
-                        <React.Fragment key={category}>
-                          {index > 0 && <SelectSeparator />}
-                          <SelectGroup>
-                            <SelectLabel className="text-xs font-bold text-gray-900 bg-gray-50 px-3 py-2 -mx-1 mb-1">
-                              {category}
-                            </SelectLabel>
-                            {templates.map((template) => {
-                              const { displayName } = parseTemplateName(template.name)
-                              return (
-                                <SelectItem key={template.id} value={template.id} className="pl-6">
-                                  {displayName}
-                                </SelectItem>
-                              )
-                            })}
-                          </SelectGroup>
-                        </React.Fragment>
+                      {parentCategories.map((parent) => (
+                        <SelectItem key={parent.id} value={parent.id}>
+                          {parent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={categoryFilter || undefined}
+                    onValueChange={(value) => setCategoryFilter(value === 'all' ? '' : value || '')}
+                    disabled={!filterParentId || filterChildCategories.length === 0}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="二级分类" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部</SelectItem>
+                      <SelectSeparator />
+                      {filterChildCategories.map((child) => (
+                        <SelectItem key={child.id} value={child.id}>
+                          {child.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -739,7 +708,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                         />
                       </div>
                       <div className="col-span-1">缩略图</div>
-                      <div className="col-span-3">模板名称</div>
+                      <div className="col-span-3">产品分类</div>
                       <div className="col-span-2">图片数量</div>
                       <div className="col-span-3">创建时间</div>
                       <div className="col-span-2">操作</div>
@@ -772,7 +741,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                   const newProduct: SelectedProduct = {
                                     id: imageSet.taskId,
                                     taskId: imageSet.taskId,
-                                    templateName: imageSet.templateName,
+                                    categoryName: imageSet.categoryName,
                                     imageUrl: imageSet.images[0] || '',
                                     thumbnailUrl: imageSet.thumbnail,
                                     createdAt: imageSet.createdAt
@@ -789,7 +758,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                               {imageSet.thumbnail || imageSet.images[0] ? (
                                 <img
                                   src={imageSet.thumbnail || imageSet.images[0]}
-                                  alt={imageSet.templateName}
+                                  alt={imageSet.categoryName}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -800,10 +769,10 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                             </div>
                           </div>
 
-                          {/* 模板名称 */}
+                          {/* 产品分类 */}
                           <div className="col-span-3 flex items-center">
-                            <div className="text-sm text-gray-700 truncate" title={imageSet.templateName}>
-                              {imageSet.templateName}
+                            <div className="text-sm text-gray-700 truncate" title={imageSet.categoryName}>
+                              {imageSet.categoryName}
                             </div>
                           </div>
 
@@ -826,7 +795,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
                                 onClick={() => setPreviewImages({
                                   taskId: imageSet.taskId,
-                                  templateName: imageSet.templateName,
+                                  categoryName: imageSet.categoryName,
                                   images: imageSet.images
                                 })}
                               >
@@ -983,7 +952,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
           >
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-medium">
-                {previewImages.templateName} - 共 {previewImages.images.length} 张图片
+                {previewImages.categoryName} - 共 {previewImages.images.length} 张图片
               </h3>
               <Button
                 size="sm"
@@ -1001,7 +970,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     <div className="aspect-square bg-gray-100 rounded overflow-hidden border-2 border-gray-200">
                       <img
                         src={imageUrl}
-                        alt={`${previewImages.templateName} ${index + 1}`}
+                        alt={`${previewImages.categoryName} ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
                     </div>

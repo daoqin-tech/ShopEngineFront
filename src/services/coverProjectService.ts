@@ -57,6 +57,8 @@ export interface TaskInfo {
   projectName?: string // 项目名称
   templateId?: string  // 模板ID，用于多模板生成
   templateName?: string // 模板名称
+  categoryId?: string   // 产品分类ID
+  categoryName?: string // 产品分类名称
   status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed'
   resultImages?: string[]
   thumbnail?: string   // 缩略图，取ResultImages的第一个
@@ -115,6 +117,9 @@ export const coverProjectService = {
     page?: number
     limit?: number
     status?: string
+    categoryId?: string
+    startTime?: number
+    endTime?: number
   }): Promise<{
     data: TaskInfo[]
     total: number

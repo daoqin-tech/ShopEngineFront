@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, RefreshCw, Search, ChevronRight, Settings2, ArrowLeft, Check, X } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Search, ChevronRight, ArrowLeft, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { temuCategoryService, type TemuCategory, type TemuProductAttribute, type CreateTemuCategoryRequest, type UpdateTemuCategoryRequest } from '@/services/temuCategoryService';
 import { temuCategoryAPIService, type TemuCategoryPath, type TemuAPICategory, type ProductAttributeProperty, type ProductAttributeValue } from '@/services/temuShopCategoryService';
@@ -64,7 +64,6 @@ export function TemuCategories() {
   const [categories, setCategories] = useState<TemuCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showAttributeDialog, setShowAttributeDialog] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<TemuCategory | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -96,10 +95,6 @@ export function TemuCategories() {
   // Temu 站点列表（从系统配置加载）
   const [temuSites, setTemuSites] = useState<TemuSite[]>([]);
 
-  // 属性配置相关状态
-  const [configuringCategory, setConfiguringCategory] = useState<TemuCategory | null>(null);
-  const [attributeJson, setAttributeJson] = useState('');
-  const [configuringLabel, setConfiguringLabel] = useState('');
 
   // 加载分类列表
   const fetchCategories = async () => {
@@ -202,12 +197,6 @@ export function TemuCategories() {
       if (cat) result.push(cat);
     }
     return result;
-  };
-
-  // 获取搜索结果的叶子分类
-  const getLeafFromSearchResult = (path: TemuCategoryPath): TemuAPICategory | null => {
-    const fullPath = getPathFromSearchResult(path);
-    return fullPath.length > 0 ? fullPath[fullPath.length - 1] : null;
   };
 
   // 选择搜索结果
@@ -503,53 +492,6 @@ export function TemuCategories() {
     });
   };
 
-  // 打开属性配置对话框
-  const handleConfigureAttributes = (category: TemuCategory) => {
-    setConfiguringCategory(category);
-    setAttributeJson(category.productAttributes ? JSON.stringify(category.productAttributes, null, 2) : '[]');
-    setConfiguringLabel(category.label || '');
-    setShowAttributeDialog(true);
-  };
-
-  // 保存属性配置
-  const handleSaveAttributes = async () => {
-    if (!configuringCategory) return;
-
-    try {
-      setSubmitting(true);
-      let attributes: TemuProductAttribute[] = [];
-
-      if (attributeJson.trim()) {
-        try {
-          attributes = JSON.parse(attributeJson);
-        } catch (e) {
-          toast.error('JSON 格式错误');
-          return;
-        }
-      }
-
-      const updateData: UpdateTemuCategoryRequest = {
-        catName: configuringCategory.catName,
-        catLevel: configuringCategory.catLevel,
-        parentCatId: configuringCategory.parentCatId,
-        isLeaf: configuringCategory.isLeaf,
-        catType: configuringCategory.catType,
-        fullPath: configuringCategory.fullPath,
-        label: configuringLabel.trim() || undefined,
-        productAttributes: attributes,
-        isActive: configuringCategory.isActive,
-      };
-
-      await temuCategoryService.updateCategory(configuringCategory.id, updateData);
-      setShowAttributeDialog(false);
-      await fetchCategories();
-    } catch (error: any) {
-      console.error('保存属性失败:', error);
-      toast.error(error.response?.data?.message || '保存属性失败');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // 切换分类启用状态
   const handleToggleActive = async (category: TemuCategory) => {
@@ -659,21 +601,20 @@ export function TemuCategories() {
               <TableHead className="w-32">分类名称</TableHead>
               <TableHead className="w-24">标签</TableHead>
               <TableHead>完整路径</TableHead>
-              <TableHead className="w-24">属性数量</TableHead>
               <TableHead className="w-20">状态</TableHead>
-              <TableHead className="w-40 text-right">操作</TableHead>
+              <TableHead className="w-24 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : filteredCategories.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   {searchKeyword || selectedLabel ? '没有找到匹配的分类' : '暂无分类数据，点击"从 Temu 添加"按钮添加分类'}
                 </TableCell>
               </TableRow>
@@ -693,38 +634,23 @@ export function TemuCategories() {
                     {category.fullPath || '-'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={category.productAttributes && category.productAttributes.length > 0 ? 'default' : 'secondary'}>
-                      {category.productAttributes?.length || 0} 个
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
                     <Switch
                       checked={category.isActive}
                       onCheckedChange={() => handleToggleActive(category)}
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleConfigureAttributes(category)}
-                        title="配置产品属性"
-                      >
-                        <Settings2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setDeletingCategory(category);
-                          setShowDeleteDialog(true);
-                        }}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setDeletingCategory(category);
+                        setShowDeleteDialog(true);
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -1112,58 +1038,6 @@ export function TemuCategories() {
               </DialogFooter>
             </>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* 属性配置对话框 */}
-      <Dialog open={showAttributeDialog} onOpenChange={setShowAttributeDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>配置产品属性</DialogTitle>
-            <DialogDescription>
-              分类：{configuringCategory?.catName} (ID: {configuringCategory?.catId})
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            {/* 标签输入 */}
-            <div className="flex items-center gap-4">
-              <Label className="font-medium w-16 shrink-0">标签</Label>
-              <Input
-                placeholder="输入标签，如：日历、挂钟（用于分组筛选）"
-                value={configuringLabel}
-                onChange={(e) => setConfiguringLabel(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-
-            <div className="text-sm text-gray-600">
-              <p>产品属性用于商品上架时填充 Temu 平台的属性字段。</p>
-              <p className="mt-1">格式为 JSON 数组，每个属性包含以下字段：</p>
-              <code className="block mt-2 p-2 bg-gray-100 rounded text-xs">
-                {`[{"propName":"材料","pid":89,"templatePid":909872,"vid":"2491","propValue":"纸","refPid":121}]`}
-              </code>
-            </div>
-
-            <div className="flex-1 overflow-hidden">
-              <Label className="mb-2 block">产品属性 JSON</Label>
-              <textarea
-                className="w-full h-[250px] p-3 border rounded-lg font-mono text-sm resize-none"
-                value={attributeJson}
-                onChange={(e) => setAttributeJson(e.target.value)}
-                placeholder="输入产品属性 JSON 数组..."
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAttributeDialog(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSaveAttributes} disabled={submitting}>
-              {submitting ? '保存中...' : '保存'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

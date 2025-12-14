@@ -45,6 +45,25 @@ export interface TemuCategoryListResponse {
   total: number;
 }
 
+// 简化的分类信息（用于分组展示）
+export interface TemuCategorySimple {
+  id: string;
+  catId: number;
+  fullPath: string;
+}
+
+// 分类分组
+export interface TemuCategoryGroup {
+  label: string;
+  categories: TemuCategorySimple[];
+}
+
+// 分组的分类列表响应
+export interface TemuCategoryGroupedResponse {
+  groups: TemuCategoryGroup[];
+  total: number;
+}
+
 // 创建分类请求
 export interface CreateTemuCategoryRequest {
   catId: number;
@@ -79,6 +98,14 @@ export const temuCategoryService = {
     if (leafOnly) params.leafOnly = 'true';
     const response = await apiClient.get<ApiResponse<TemuCategoryListResponse>>('/temu/categories', { params });
     return (response as unknown as ApiResponse<TemuCategoryListResponse>).data;
+  },
+
+  // 获取按标签分组的分类
+  getGroupedCategories: async (): Promise<TemuCategoryGroupedResponse> => {
+    const response = await apiClient.get<ApiResponse<TemuCategoryGroupedResponse>>('/temu/categories', {
+      params: { grouped: 'true' }
+    });
+    return (response as unknown as ApiResponse<TemuCategoryGroupedResponse>).data;
   },
 
   // 根据 ID 获取分类
