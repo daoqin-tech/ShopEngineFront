@@ -522,7 +522,25 @@ export function getProductCategoryType(category: ProductCategory): ProductCatego
       return ProductCategoryType.CALENDAR_V;
     case 'ST':
       return ProductCategoryType.PAPER_BAG;
-    case 'BJ':
+    // 笔记本类型 - 所有子类型
+    case 'BJ':        // 死亡笔记本
+    case 'BZB':       // 硬核挑战打卡本
+    case 'BZD':       // 阅读计划本
+    case 'BZE':       // 魔法符印手册
+    case 'BZM':       // 温和挑战打卡本
+    case 'BZN':       // 自我关怀/心理健康手账本
+    case 'BZQ':       // 家庭生活管理手账本
+    case 'HN11A':     // 派对策划计划本
+    case 'HN9A':      // 旅行笔记本
+    case 'NWGA':      // 伊斯兰斋月笔记本
+    case 'NWGB':      // 伊斯兰斋月计划手册
+    case 'NWGC':      // 伊斯兰斋月计划本
+    case 'NWGD':      // 健身目标计划本
+    case 'NWGE':      // 心理健康手账本
+    case 'NWGF':      // 基督教祈祷日记本
+    case 'NWGG':      // 精神健康手账本
+    case 'NWGH':      // 理财规划本
+    case 'NYB3A':     // 巫术草药魔法百科手册
       return ProductCategoryType.NOTEBOOK;
     default:
       return ProductCategoryType.NORMAL;
