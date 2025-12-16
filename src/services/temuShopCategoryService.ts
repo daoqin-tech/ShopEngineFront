@@ -97,6 +97,18 @@ export interface ProductAttributesResponse {
   total: number;                            // 属性总数
 }
 
+// 父规格响应
+export interface ParentSpecification {
+  parentSpecId: number;    // 父规格ID
+  parentSpecName: string;  // 父规格名称（如：颜色、型号、尺码）
+}
+
+// 父规格列表响应
+export interface ParentSpecificationsResponse {
+  parentSpecs: ParentSpecification[];  // 父规格列表
+  total: number;                       // 父规格总数
+}
+
 export const temuCategoryAPIService = {
   // 从 Temu API 搜索分类（根据关键词）
   searchCategories: async (searchText: string, siteId?: number): Promise<SearchCategoriesResponse> => {
@@ -129,6 +141,13 @@ export const temuCategoryAPIService = {
     const params = { catId };
     const response = await apiClient.get<ApiResponse<ProductAttributesResponse>>('/temu/api/categories/attributes', { params });
     return (response as unknown as ApiResponse<ProductAttributesResponse>).data;
+  },
+
+  // 从 Temu API 获取父规格列表
+  getParentSpecifications: async (catId: number): Promise<ParentSpecificationsResponse> => {
+    const params = { catId };
+    const response = await apiClient.get<ApiResponse<ParentSpecificationsResponse>>('/temu/api/categories/parent-specs', { params });
+    return (response as unknown as ApiResponse<ParentSpecificationsResponse>).data;
   },
 };
 

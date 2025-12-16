@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-picker';
 import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
-import { temuCategoryService, type TemuCategoryGroup, type TemuCategorySimple } from '@/services/temuCategoryService';
+import { temuTemplateService, type TemuTemplateGroup, type TemuTemplateSimple } from '@/services/temuTemplateService';
 import { coverProjectService, type TaskInfo } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
@@ -59,17 +59,17 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [temuShops, setTemuShops] = useState<TemuShop[]>([]);
   const [loadingShops, setLoadingShops] = useState(true);
 
-  // Temu 分类数据（从本地数据库，按标签分组）
-  const [temuCategoryGroups, setTemuCategoryGroups] = useState<TemuCategoryGroup[]>([]);
-  const [loadingTemuCategories, setLoadingTemuCategories] = useState(false);
+  // Temu 模板数据（从本地数据库，按标签分组）
+  const [temuTemplateGroups, setTemuTemplateGroups] = useState<TemuTemplateGroup[]>([]);
+  const [loadingTemuTemplates, setLoadingTemuTemplates] = useState(false);
   const [selectedTemuGroupLabel, setSelectedTemuGroupLabel] = useState<string>('');  // 选中的Temu分组
 
-  // 获取选中Temu分组下的分类列表
-  const selectedTemuGroupCategories = React.useMemo(() => {
+  // 获取选中Temu分组下的模板列表
+  const selectedTemuGroupTemplates = React.useMemo(() => {
     if (!selectedTemuGroupLabel) return [];
-    const group = temuCategoryGroups.find(g => g.label === selectedTemuGroupLabel);
-    return group?.categories || [];
-  }, [temuCategoryGroups, selectedTemuGroupLabel]);
+    const group = temuTemplateGroups.find(g => g.label === selectedTemuGroupLabel);
+    return group?.templates || [];
+  }, [temuTemplateGroups, selectedTemuGroupLabel]);
 
   // 数据库分类数据
   const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([]);
@@ -137,21 +137,21 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     loadCategories();
   }, []);
 
-  // 加载 Temu 分类（从本地数据库，按标签分组）
+  // 加载 Temu 模板（从本地数据库，按标签分组）
   useEffect(() => {
-    const loadTemuCategoriesFromDB = async () => {
+    const loadTemuTemplatesFromDB = async () => {
       try {
-        setLoadingTemuCategories(true);
-        const response = await temuCategoryService.getGroupedCategories();
-        setTemuCategoryGroups(response.groups || []);
+        setLoadingTemuTemplates(true);
+        const response = await temuTemplateService.getGroupedTemplates();
+        setTemuTemplateGroups(response.groups || []);
       } catch (error) {
-        console.error('Failed to load temu categories:', error);
-        setTemuCategoryGroups([]);
+        console.error('Failed to load temu templates:', error);
+        setTemuTemplateGroups([]);
       } finally {
-        setLoadingTemuCategories(false);
+        setLoadingTemuTemplates(false);
       }
     };
-    loadTemuCategoriesFromDB();
+    loadTemuTemplatesFromDB();
   }, []);
 
   // 加载系统配置
@@ -346,16 +346,16 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
-                  // 从分组中查找选中的 Temu 分类
-                  let selectedTemuCategory: TemuCategorySimple | undefined;
-                  for (const group of temuCategoryGroups) {
-                    const found = group.categories.find(cat => cat.id === formData.productCategory);
+                  // 从分组中查找选中的 Temu 模板
+                  let selectedTemuTemplate: TemuTemplateSimple | undefined;
+                  for (const group of temuTemplateGroups) {
+                    const found = group.templates.find(t => t.id === formData.productCategory);
                     if (found) {
-                      selectedTemuCategory = found;
+                      selectedTemuTemplate = found;
                       break;
                     }
                   }
-                  if (!selectedTemuCategory) {
+                  if (!selectedTemuTemplate) {
                     toast.error('请选择商品分类');
                     return;
                   }
@@ -366,8 +366,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   const submitData = {
                     shopId: selectedShop.shopId,
                     shopAccount: selectedShop.account,
-                    categoryId: String(selectedTemuCategory.catId),  // TEMU平台分类ID
-                    categoryName: selectedTemuCategory.fullPath.split(' > ').pop() || selectedTemuCategory.fullPath,  // 取最后一级分类名
+                    categoryId: String(selectedTemuTemplate.catId),  // TEMU平台分类ID
+                    categoryName: selectedTemuTemplate.fullPath.split(' > ').pop() || selectedTemuTemplate.fullPath,  // 取最后一级分类名
                     // productCategoryId 不传，让后端从AI项目自动获取
                     origin: formData.origin,
                     freightTemplateId: selectedShop.freightTemplateId,
@@ -534,10 +534,10 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 <Package className="w-4 h-4" />
                 Temu商品分类 *
               </Label>
-              {loadingTemuCategories ? (
-                <div className="text-sm text-muted-foreground">加载Temu分类中...</div>
-              ) : temuCategoryGroups.length === 0 ? (
-                <div className="text-sm text-muted-foreground">暂无Temu分类，请在Temu分类管理中添加</div>
+              {loadingTemuTemplates ? (
+                <div className="text-sm text-muted-foreground">加载Temu模板中...</div>
+              ) : temuTemplateGroups.length === 0 ? (
+                <div className="text-sm text-muted-foreground">暂无Temu模板，请在Temu模板管理中添加</div>
               ) : (
                 <div className="flex gap-3">
                   <Select
@@ -551,7 +551,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                       <SelectValue placeholder="请选择分组" />
                     </SelectTrigger>
                     <SelectContent>
-                      {temuCategoryGroups.map((group) => (
+                      {temuTemplateGroups.map((group) => (
                         <SelectItem key={group.label} value={group.label}>
                           {group.label}
                         </SelectItem>
@@ -561,15 +561,15 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   <Select
                     value={formData.productCategory || undefined}
                     onValueChange={(value) => updateFormData('productCategory', value)}
-                    disabled={!selectedTemuGroupLabel || selectedTemuGroupCategories.length === 0}
+                    disabled={!selectedTemuGroupLabel || selectedTemuGroupTemplates.length === 0}
                   >
                     <SelectTrigger className="w-80 h-10">
-                      <SelectValue placeholder="请选择Temu分类" />
+                      <SelectValue placeholder="请选择Temu模板" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedTemuGroupCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.fullPath}
+                      {selectedTemuGroupTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.fullPath}
                         </SelectItem>
                       ))}
                     </SelectContent>

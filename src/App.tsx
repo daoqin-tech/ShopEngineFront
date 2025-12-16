@@ -25,7 +25,7 @@ import { BatchProductCreator } from "@/pages/BatchProductCreator"
 import { ProductCategories } from "@/pages/ProductCategories"
 import { SystemConfigPage } from "@/pages/SystemConfig"
 import { TemuShops } from "@/pages/TemuShops"
-import { TemuCategories } from "@/pages/TemuCategories"
+import { TemuTemplates } from "@/pages/TemuTemplates"
 import { Toaster } from "sonner"
 
 
@@ -179,10 +179,10 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/workspace/settings/temu-categories" element={
+          <Route path="/workspace/settings/temu-templates" element={
             <ProtectedRoute>
               <WorkspaceLayout>
-                <TemuCategories />
+                <TemuTemplates />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />

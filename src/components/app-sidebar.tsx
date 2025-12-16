@@ -101,8 +101,8 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
             url: "/workspace/settings/categories",
           },
           {
-            title: "Temu分类",
-            url: "/workspace/settings/temu-categories",
+            title: "Temu模板",
+            url: "/workspace/settings/temu-templates",
           },
           {
             title: "Temu店铺",
