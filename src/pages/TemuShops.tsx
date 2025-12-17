@@ -29,7 +29,18 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2, Store, RefreshCw } from 'lucide-react';
-import { temuShopService, type TemuShop, type CreateTemuShopRequest, type UpdateTemuShopRequest, type TemuSite, type TemuWarehouse, type TemuFreightTemplate } from '@/services/temuShopService';
+import {
+  temuShopService,
+  type TemuShop,
+  type CreateTemuShopRequest,
+  type UpdateTemuShopRequest,
+  type TemuSite,
+  type TemuWarehouse,
+  type TemuFreightTemplate,
+  type OriginCountry,
+  type OriginRegion,
+  SHIPMENT_LIMIT_OPTIONS
+} from '@/services/temuShopService';
 import { toast } from 'sonner';
 
 export function TemuShops() {
@@ -49,6 +60,10 @@ export function TemuShops() {
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [loadingFreightTemplates, setLoadingFreightTemplates] = useState(false);
 
+  // 产地相关状态
+  const [originCountries, setOriginCountries] = useState<OriginCountry[]>([]);
+  const [originRegions, setOriginRegions] = useState<OriginRegion[]>([]);
+
   const [formData, setFormData] = useState<CreateTemuShopRequest>({
     name: '',
     shopId: '',
@@ -61,6 +76,10 @@ export function TemuShops() {
     warehouseName: '',
     freightTemplateId: '',
     freightTemplateName: '',
+    originCountry: 'CN',
+    originRegion2Id: undefined,
+    originRegionName: '',
+    shipmentLimitSecond: 172800,
     appKey: '',
     appSecret: '',
     accessToken: '',
@@ -83,7 +102,22 @@ export function TemuShops() {
   useEffect(() => {
     fetchShops();
     fetchSites();
+    fetchOriginData();
   }, []);
+
+  // 加载产地枚举数据
+  const fetchOriginData = async () => {
+    try {
+      const [countries, regions] = await Promise.all([
+        temuShopService.getOriginCountries(),
+        temuShopService.getOriginRegions(),
+      ]);
+      setOriginCountries(countries);
+      setOriginRegions(regions);
+    } catch (error) {
+      console.error('获取产地枚举失败:', error);
+    }
+  };
 
   // 加载站点列表
   const fetchSites = async () => {
@@ -144,6 +178,10 @@ export function TemuShops() {
       warehouseName: '',
       freightTemplateId: '',
       freightTemplateName: '',
+      originCountry: 'CN',
+      originRegion2Id: undefined,
+      originRegionName: '',
+      shipmentLimitSecond: 172800,
       appKey: '',
       appSecret: '',
       accessToken: '',
@@ -168,6 +206,10 @@ export function TemuShops() {
       warehouseName: shop.warehouseName || '',
       freightTemplateId: shop.freightTemplateId || '',
       freightTemplateName: shop.freightTemplateName || '',
+      originCountry: shop.originCountry || 'CN',
+      originRegion2Id: shop.originRegion2Id,
+      originRegionName: shop.originRegionName || '',
+      shipmentLimitSecond: shop.shipmentLimitSecond || 172800,
       appKey: '',
       appSecret: '',
       accessToken: '',
@@ -535,6 +577,100 @@ export function TemuShops() {
                   {!editingShop && (
                     <p className="text-xs text-muted-foreground">创建店铺后配置 API 凭证才能选择运费模板</p>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* 产地和发货设置 */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-4">产地和发货设置</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="originCountry">产地国家</Label>
+                  <Select
+                    value={formData.originCountry || 'CN'}
+                    onValueChange={(value) => {
+                      const country = originCountries.find(c => c.code === value);
+                      setFormData({
+                        ...formData,
+                        originCountry: value,
+                        originRegion2Id: undefined,
+                        originRegionName: '',
+                      });
+                      // 如果选择的国家不需要省份，清空省份
+                      if (country && !country.requireRegion) {
+                        setFormData(prev => ({
+                          ...prev,
+                          originRegion2Id: undefined,
+                          originRegionName: '',
+                        }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择国家" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {originCountries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name} ({country.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 当选择中国时显示省份选择 */}
+                {formData.originCountry === 'CN' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="originRegion">产地省份</Label>
+                    <Select
+                      value={formData.originRegion2Id?.toString() || ''}
+                      onValueChange={(value) => {
+                        const region = originRegions.find(r => r.region2Id.toString() === value);
+                        setFormData({
+                          ...formData,
+                          originRegion2Id: region?.region2Id,
+                          originRegionName: region?.name || '',
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择省份" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {originRegions.map((region) => (
+                          <SelectItem key={region.region2Id} value={region.region2Id.toString()}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="shipmentLimit">发货时效</Label>
+                  <Select
+                    value={formData.shipmentLimitSecond?.toString() || '172800'}
+                    onValueChange={(value) => {
+                      setFormData({
+                        ...formData,
+                        shipmentLimitSecond: parseInt(value),
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择发货时效" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SHIPMENT_LIMIT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value.toString()}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

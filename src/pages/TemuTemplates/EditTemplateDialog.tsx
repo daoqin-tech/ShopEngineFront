@@ -22,9 +22,9 @@ interface EditTemplateDialogProps {
   onOpenChange: (open: boolean) => void;
   editingTemplate: TemuTemplate | null;
   loadingEditData: boolean;
-  // Label
-  editLabel: string;
-  setEditLabel: (label: string) => void;
+  // Name
+  editName: string;
+  setEditName: (name: string) => void;
   // Attribute state
   editAttributeFormValues: AttributeFormValue[];
   updateEditAttributeValue: (index: number, value: Partial<AttributeFormValue>) => void;
@@ -37,6 +37,9 @@ interface EditTemplateDialogProps {
   onEditRemoveSpec: (index: number) => void;
   onEditUpdateSpecParent: (index: number, parentSpecId: number) => void;
   onEditUpdateSpecValues: (index: number, valuesStr: string) => void;
+  onEditAddSpecValue: (specIndex: number) => void;
+  onEditRemoveSpecValue: (specIndex: number, valueIndex: number) => void;
+  onEditUpdateSpecValue: (specIndex: number, valueIndex: number, value: string) => void;
   // SKU config state
   editSkuDefaultConfig: TemuSkuDefaultConfig;
   setEditSkuDefaultConfig: (config: TemuSkuDefaultConfig) => void;
@@ -53,8 +56,8 @@ export function EditTemplateDialog({
   onOpenChange,
   editingTemplate,
   loadingEditData,
-  editLabel,
-  setEditLabel,
+  editName,
+  setEditName,
   editAttributeFormValues,
   updateEditAttributeValue,
   editInputMaxSpecNum,
@@ -65,6 +68,9 @@ export function EditTemplateDialog({
   onEditRemoveSpec,
   onEditUpdateSpecParent,
   onEditUpdateSpecValues,
+  onEditAddSpecValue,
+  onEditRemoveSpecValue,
+  onEditUpdateSpecValue,
   editSkuDefaultConfig,
   setEditSkuDefaultConfig,
   editVolumeWeightConfigs,
@@ -90,13 +96,13 @@ export function EditTemplateDialog({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-4 py-4">
-            {/* 标签 */}
+            {/* 模板名称 */}
             <div className="flex items-center gap-3">
-              <Label className="text-sm w-20 shrink-0">标签</Label>
+              <Label className="text-sm w-20 shrink-0">模板名称</Label>
               <Input
-                placeholder="如：日历"
-                value={editLabel}
-                onChange={(e) => setEditLabel(e.target.value)}
+                placeholder="输入模板名称（可选）"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
                 className="max-w-48"
               />
             </div>
@@ -209,22 +215,23 @@ export function EditTemplateDialog({
                     暂未配置规格，点击"添加规格"开始配置
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {editSpecFormValues.map((spec, index) => (
-                      <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1 space-y-2">
+                  <div className="space-y-4">
+                    {editSpecFormValues.map((spec, specIndex) => (
+                      <div key={specIndex} className="border rounded-lg overflow-hidden">
+                        {/* 规格类型选择 */}
+                        <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
                           <div className="flex items-center gap-2">
-                            <Label className="text-sm w-16 shrink-0">规格{index + 1}</Label>
+                            <span className="text-sm font-medium">规格{specIndex + 1}</span>
                             <Select
                               value={spec.parentSpecId > 0 ? spec.parentSpecId.toString() : ''}
-                              onValueChange={(val) => onEditUpdateSpecParent(index, parseInt(val))}
+                              onValueChange={(val) => onEditUpdateSpecParent(specIndex, parseInt(val))}
                             >
-                              <SelectTrigger className="w-40">
-                                <SelectValue placeholder="选择规格类型" />
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue placeholder="选择规格" />
                               </SelectTrigger>
                               <SelectContent>
                                 {editParentSpecs
-                                  .filter(p => !editSpecFormValues.some((s, i) => i !== index && s.parentSpecId === p.parentSpecId))
+                                  .filter(p => !editSpecFormValues.some((s, i) => i !== specIndex && s.parentSpecId === p.parentSpecId))
                                   .map((p) => (
                                     <SelectItem key={p.parentSpecId} value={p.parentSpecId.toString()}>
                                       {p.parentSpecName}
@@ -233,30 +240,76 @@ export function EditTemplateDialog({
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm w-16 shrink-0">规格值</Label>
-                            <Input
-                              placeholder="多个值用逗号分隔，如：红色,蓝色,绿色"
-                              value={spec.specValues.map(v => v.specName).join(',')}
-                              onChange={(e) => onEditUpdateSpecValues(index, e.target.value)}
-                              className="flex-1"
-                            />
-                          </div>
-                          {spec.specValues.length > editSingleSpecValueNum && (
-                            <p className="text-xs text-red-500">
-                              规格值数量超过限制（最多 {editSingleSpecValueNum} 个）
-                            </p>
-                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onEditRemoveSpec(specIndex)}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            删除
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEditRemoveSpec(index)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+
+                        {/* 规格值表格 */}
+                        {spec.parentSpecId > 0 && (
+                          <div>
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-b bg-gray-50/50">
+                                  <th className="text-left text-xs font-medium text-gray-600 px-3 py-2">
+                                    <span className="text-red-500">*</span>{spec.parentSpecName}
+                                  </th>
+                                  <th className="text-right text-xs font-medium text-gray-600 px-3 py-2 w-20">操作</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {spec.specValues.map((specValue, valueIndex) => (
+                                  <tr key={valueIndex} className="border-b last:border-b-0">
+                                    <td className="px-3 py-2">
+                                      <Input
+                                        placeholder={`输入${spec.parentSpecName}值`}
+                                        value={specValue.specName}
+                                        onChange={(e) => onEditUpdateSpecValue(specIndex, valueIndex, e.target.value)}
+                                        className="h-8"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                      <Button
+                                        type="button"
+                                        variant="link"
+                                        size="sm"
+                                        onClick={() => onEditRemoveSpecValue(specIndex, valueIndex)}
+                                        className="text-red-500 hover:text-red-600 h-8 px-2"
+                                      >
+                                        删除
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <div className="px-3 py-2 border-t">
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                onClick={() => onEditAddSpecValue(specIndex)}
+                                disabled={spec.specValues.length >= editSingleSpecValueNum}
+                                className="text-blue-600 hover:text-blue-700 h-8 px-0"
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                添加
+                              </Button>
+                              {spec.specValues.length >= editSingleSpecValueNum && (
+                                <span className="text-xs text-gray-400 ml-2">
+                                  （已达上限 {editSingleSpecValueNum} 个）
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, RefreshCw, Search, ChevronRight, ArrowLeft, X } from 'lucide-react';
+import { Plus, Trash2, Search, ChevronRight, ArrowLeft, X, RefreshCw } from 'lucide-react';
 import type { TemuTemplate, TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import type { TemuCategoryPath, TemuAPICategory, ParentSpecification } from '@/services/temuShopCategoryService';
 import { TemuSite, AttributeFormValue, isMultiSelect } from './types';
@@ -24,6 +24,9 @@ interface AddTemplateDialogProps {
   // Step state
   addStep: 'select' | 'attributes';
   setAddStep: (step: 'select' | 'attributes') => void;
+  // Template name
+  pendingName: string;
+  setPendingName: (name: string) => void;
   // Site selection
   selectedSiteId: number | undefined;
   setSelectedSiteId: (id: number | undefined) => void;
@@ -51,8 +54,6 @@ interface AddTemplateDialogProps {
   fetchingAttributes: boolean;
   attributeFormValues: AttributeFormValue[];
   updateAttributeValue: (index: number, value: Partial<AttributeFormValue>) => void;
-  pendingLabel: string;
-  setPendingLabel: (label: string) => void;
   // Spec state
   inputMaxSpecNum: number;
   singleSpecValueNum: number;
@@ -63,6 +64,9 @@ interface AddTemplateDialogProps {
   onRemoveSpec: (index: number) => void;
   onUpdateSpecParent: (index: number, parentSpecId: number) => void;
   onUpdateSpecValues: (index: number, valuesStr: string) => void;
+  onAddSpecValue: (specIndex: number) => void;
+  onRemoveSpecValue: (specIndex: number, valueIndex: number) => void;
+  onUpdateSpecValue: (specIndex: number, valueIndex: number, value: string) => void;
   // SKU config state
   skuDefaultConfig: TemuSkuDefaultConfig;
   setSkuDefaultConfig: (config: TemuSkuDefaultConfig) => void;
@@ -83,6 +87,10 @@ export function AddTemplateDialog({
   onOpenChange,
   addStep,
   setAddStep,
+  // Template name
+  pendingName,
+  setPendingName,
+  // Temu state
   selectedSiteId,
   setSelectedSiteId,
   temuSites,
@@ -104,8 +112,6 @@ export function AddTemplateDialog({
   fetchingAttributes,
   attributeFormValues,
   updateAttributeValue,
-  pendingLabel,
-  setPendingLabel,
   inputMaxSpecNum,
   singleSpecValueNum,
   parentSpecs,
@@ -115,6 +121,9 @@ export function AddTemplateDialog({
   onRemoveSpec,
   onUpdateSpecParent,
   onUpdateSpecValues,
+  onAddSpecValue,
+  onRemoveSpecValue,
+  onUpdateSpecValue,
   skuDefaultConfig,
   setSkuDefaultConfig,
   volumeWeightConfigs,
@@ -138,20 +147,33 @@ export function AddTemplateDialog({
       <DialogContent className="sm:max-w-6xl max-w-6xl h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {addStep === 'select' ? '从 Temu 平台添加模板' : '填写产品属性'}
+            {addStep === 'select' ? '添加模板' : '填写产品属性'}
           </DialogTitle>
           <DialogDescription>
             {addStep === 'select'
-              ? '搜索或浏览 Temu 平台分类，可选择站点筛选'
-              : `分类：${pendingCategory?.catName}，请填写必填的产品属性`
+              ? '输入模板名称并选择 Temu 平台分类'
+              : `模板名称：${pendingName}，Temu分类：${pendingCategory?.catName}`
             }
           </DialogDescription>
         </DialogHeader>
 
-        {/* 步骤1：选择分类 */}
+        {/* 步骤1：选择Temu分类 */}
         {addStep === 'select' && (
           <>
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+              {/* 模板名称 */}
+              <div className="flex items-center gap-3 mb-4">
+                <Label className="text-sm shrink-0">
+                  <span className="text-red-500">*</span> 模板名称
+                </Label>
+                <Input
+                  placeholder="输入模板名称"
+                  value={pendingName}
+                  onChange={(e) => setPendingName(e.target.value)}
+                  className="max-w-64 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+
               {/* 站点选择和搜索框 */}
               <div className="flex items-center gap-2 mb-4">
                 <Select
@@ -230,7 +252,7 @@ export function AddTemplateDialog({
                       <Button
                         size="sm"
                         onClick={onAddFromBrowse}
-                        disabled={templates.some(c => c.catId === selectedPath[selectedPath.length - 1].catId) || fetchingAttributes}
+                        disabled={!pendingName.trim() || templates.some(c => c.catId === selectedPath[selectedPath.length - 1].catId) || fetchingAttributes}
                       >
                         {templates.some(c => c.catId === selectedPath[selectedPath.length - 1].catId) ? (
                           '已添加'
@@ -362,7 +384,7 @@ export function AddTemplateDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                关闭
+                取消
               </Button>
             </DialogFooter>
           </>
@@ -388,17 +410,6 @@ export function AddTemplateDialog({
 
               {/* 表单内容 */}
               <div className="flex-1 overflow-y-auto space-y-4">
-                {/* 标签 */}
-                <div className="flex items-center gap-3">
-                  <Label className="text-sm w-20 shrink-0">标签</Label>
-                  <Input
-                    placeholder="如：日历"
-                    value={pendingLabel}
-                    onChange={(e) => setPendingLabel(e.target.value)}
-                    className="max-w-48"
-                  />
-                </div>
-
                 {/* Temu 属性 */}
                 {attributeFormValues.map((item, index) => (
                   <div key={item.property.templatePid} className="flex items-start gap-3">
@@ -512,22 +523,23 @@ export function AddTemplateDialog({
                         暂未配置规格，点击"添加规格"开始配置
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {specFormValues.map((spec, index) => (
-                          <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                            <div className="flex-1 space-y-2">
+                      <div className="space-y-4">
+                        {specFormValues.map((spec, specIndex) => (
+                          <div key={specIndex} className="border rounded-lg overflow-hidden">
+                            {/* 规格类型选择 */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
                               <div className="flex items-center gap-2">
-                                <Label className="text-sm w-16 shrink-0">规格{index + 1}</Label>
+                                <span className="text-sm font-medium">规格{specIndex + 1}</span>
                                 <Select
                                   value={spec.parentSpecId > 0 ? spec.parentSpecId.toString() : ''}
-                                  onValueChange={(val) => onUpdateSpecParent(index, parseInt(val))}
+                                  onValueChange={(val) => onUpdateSpecParent(specIndex, parseInt(val))}
                                 >
-                                  <SelectTrigger className="w-40">
-                                    <SelectValue placeholder="选择规格类型" />
+                                  <SelectTrigger className="w-32 h-8">
+                                    <SelectValue placeholder="选择规格" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {parentSpecs
-                                      .filter(p => !specFormValues.some((s, i) => i !== index && s.parentSpecId === p.parentSpecId))
+                                      .filter(p => !specFormValues.some((s, i) => i !== specIndex && s.parentSpecId === p.parentSpecId))
                                       .map((p) => (
                                         <SelectItem key={p.parentSpecId} value={p.parentSpecId.toString()}>
                                           {p.parentSpecName}
@@ -536,30 +548,76 @@ export function AddTemplateDialog({
                                   </SelectContent>
                                 </Select>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Label className="text-sm w-16 shrink-0">规格值</Label>
-                                <Input
-                                  placeholder="多个值用逗号分隔，如：红色,蓝色,绿色"
-                                  value={spec.specValues.map(v => v.specName).join(',')}
-                                  onChange={(e) => onUpdateSpecValues(index, e.target.value)}
-                                  className="flex-1"
-                                />
-                              </div>
-                              {spec.specValues.length > singleSpecValueNum && (
-                                <p className="text-xs text-red-500">
-                                  规格值数量超过限制（最多 {singleSpecValueNum} 个）
-                                </p>
-                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onRemoveSpec(specIndex)}
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8"
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                删除
+                              </Button>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => onRemoveSpec(index)}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                            {/* 规格值表格 */}
+                            {spec.parentSpecId > 0 && (
+                              <div>
+                                <table className="w-full">
+                                  <thead>
+                                    <tr className="border-b bg-gray-50/50">
+                                      <th className="text-left text-xs font-medium text-gray-600 px-3 py-2">
+                                        <span className="text-red-500">*</span>{spec.parentSpecName}
+                                      </th>
+                                      <th className="text-right text-xs font-medium text-gray-600 px-3 py-2 w-20">操作</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {spec.specValues.map((specValue, valueIndex) => (
+                                      <tr key={valueIndex} className="border-b last:border-b-0">
+                                        <td className="px-3 py-2">
+                                          <Input
+                                            placeholder={`输入${spec.parentSpecName}值`}
+                                            value={specValue.specName}
+                                            onChange={(e) => onUpdateSpecValue(specIndex, valueIndex, e.target.value)}
+                                            className="h-8"
+                                          />
+                                        </td>
+                                        <td className="px-3 py-2 text-right">
+                                          <Button
+                                            type="button"
+                                            variant="link"
+                                            size="sm"
+                                            onClick={() => onRemoveSpecValue(specIndex, valueIndex)}
+                                            className="text-red-500 hover:text-red-600 h-8 px-2"
+                                          >
+                                            删除
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                                <div className="px-3 py-2 border-t">
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() => onAddSpecValue(specIndex)}
+                                    disabled={spec.specValues.length >= singleSpecValueNum}
+                                    className="text-blue-600 hover:text-blue-700 h-8 px-0"
+                                  >
+                                    <Plus className="w-4 h-4 mr-1" />
+                                    添加
+                                  </Button>
+                                  {spec.specValues.length >= singleSpecValueNum && (
+                                    <span className="text-xs text-gray-400 ml-2">
+                                      （已达上限 {singleSpecValueNum} 个）
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

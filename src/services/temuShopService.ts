@@ -1,5 +1,29 @@
 import { apiClient } from '@/lib/api';
 
+// 产地国家枚举
+export interface OriginCountry {
+  code: string;          // 国家简称（如 CN）
+  name: string;          // 中文名称
+  nameEn: string;        // 英文名称
+  requireRegion: boolean; // 是否需要填写省份
+}
+
+// 产地省份枚举（中国）
+export interface OriginRegion {
+  region2Id: number;     // 省份ID
+  name: string;          // 省份名称
+}
+
+// 发货时效选项
+export const SHIPMENT_LIMIT_OPTIONS = [
+  { value: 86400, label: '24小时' },
+  { value: 172800, label: '48小时' },
+  { value: 259200, label: '72小时' },
+  { value: 345600, label: '96小时' },
+  { value: 432000, label: '5天' },
+  { value: 604800, label: '7天' },
+];
+
 // Temu 站点类型
 export interface TemuSite {
   siteId: number;
@@ -56,6 +80,12 @@ export interface TemuShop {
   warehouseName?: string;
   freightTemplateId?: string;
   freightTemplateName?: string;
+  // 产地信息
+  originCountry: string;           // 国家简称（默认 CN）
+  originRegion2Id?: number;        // 省份ID（如 43000000000006 = 广东省）
+  originRegionName?: string;       // 省份名称（如：广东省）
+  // 发货时效
+  shipmentLimitSecond?: number;    // 发货时效（秒），默认 172800 = 48小时
   isActive: boolean;
   hasApiCredentials: boolean;
   createdAt: string;
@@ -81,6 +111,13 @@ export interface CreateTemuShopRequest {
   warehouseName?: string;
   freightTemplateId?: string;
   freightTemplateName?: string;
+  // 产地信息
+  originCountry?: string;          // 国家简称（默认 CN）
+  originRegion2Id?: number;        // 省份ID
+  originRegionName?: string;       // 省份名称
+  // 发货时效
+  shipmentLimitSecond?: number;    // 发货时效（秒）
+  // API 凭证
   appKey?: string;
   appSecret?: string;
   accessToken?: string;
@@ -99,6 +136,13 @@ export interface UpdateTemuShopRequest {
   warehouseName?: string;
   freightTemplateId?: string;
   freightTemplateName?: string;
+  // 产地信息
+  originCountry?: string;          // 国家简称（默认 CN）
+  originRegion2Id?: number;        // 省份ID
+  originRegionName?: string;       // 省份名称
+  // 发货时效
+  shipmentLimitSecond?: number;    // 发货时效（秒）
+  // API 凭证
   appKey?: string;
   appSecret?: string;
   accessToken?: string;
@@ -169,5 +213,25 @@ export const temuShopService = {
     }
     const response = await apiClient.get(`/temu/shops/${shopId}/freight-templates`, { params });
     return response.data;
+  },
+
+  // 获取产地国家枚举
+  getOriginCountries: async (): Promise<OriginCountry[]> => {
+    const response = await apiClient.get('/system-configs/temu_origin_countries');
+    try {
+      return JSON.parse(response.data.configValue);
+    } catch {
+      return [];
+    }
+  },
+
+  // 获取产地省份枚举（中国）
+  getOriginRegions: async (): Promise<OriginRegion[]> => {
+    const response = await apiClient.get('/system-configs/temu_origin_regions_cn');
+    try {
+      return JSON.parse(response.data.configValue);
+    } catch {
+      return [];
+    }
   },
 };

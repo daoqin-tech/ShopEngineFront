@@ -1,56 +1,18 @@
 import { apiClient } from '@/lib/api'
 
-// 批量创建商品的请求参数
+// 批量创建商品的请求参数（简化版：大部分信息从数据库自动获取）
 export interface BatchCreateProductRequest {
-  // 店铺信息
+  // 店铺ID（必填）- 店铺账号、运费模板、站点等信息从数据库获取
   shopId: string
-  shopAccount: string
 
-  // 分类信息(生成新货号必填)
-  categoryId: string           // TEMU平台分类ID
-  categoryName?: string
-  // productCategoryId 已删除,由后端从AI项目自动获取
-
-  // 产地
-  origin: string
-
-  // 运费模板
-  freightTemplateId?: string
-  freightTemplateName?: string
-
-  // 经营站点
-  operatingSite?: string
-
-  // 商品尺寸和重量
-  length?: number
-  width?: number
-  height?: number
-  weight?: number
-
-  // 价格
-  declaredPrice?: number
-  suggestedRetailPrice?: number
-
-  // 变种信息
-  variantName?: string
-  variantAttributeName1?: string
-  variantAttributeValue1?: string
-
-  // 库存和发货
-  stock?: number
-  shippingTime?: number
-
-  // 货号前缀
-  productCodePrefix?: string
-
-  // 商品规格
-  productSpec?: string
-
-  // 用途
-  productUsage?: string
-
-  // 任务ID列表（每个任务对应一个商品，后端通过taskId查询图片信息）
+  // 任务ID列表（必填）- 每个任务对应一个商品
   taskIds: string[]
+
+  // 是否上架到 Temu（启用后商品创建完成会自动加入上架队列）
+  enableListing?: boolean
+
+  // Temu 模板 ID（启用上架时必填，包含分类链、规格、属性、SKU配置等）
+  temuTemplateId?: string
 }
 
 // 批量创建商品的响应

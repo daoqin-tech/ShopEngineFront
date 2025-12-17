@@ -10,9 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Settings, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Settings, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import { productCategoryService } from '@/services/productCategoryService';
 import { productCategorySpecService } from '@/services/productCategorySpecService';
+import { temuTemplateService, type TemuTemplate } from '@/services/temuTemplateService';
 import { formatManufacturingSize } from '@/utils/formatUtils';
 import type {
   ProductCategory,
@@ -49,16 +50,14 @@ export function ProductCategories() {
     manufacturingLength: undefined as number | undefined,
     manufacturingWidth: undefined as number | undefined,
     manufacturingHeight: undefined as number | undefined,
-    // 子分类商品规格字段
-    productLength: undefined as number | undefined,
-    productWidth: undefined as number | undefined,
-    productHeight: undefined as number | undefined,
-    weight: undefined as number | undefined,
-    declaredPrice: undefined as number | undefined,
-    suggestedRetailPrice: undefined as number | undefined,
-    productSpec: '',
-    productUsage: '',
+    productSpec: '',        // 商品规格描述
+    productUsage: '',       // 商品用途
+    temuTemplateIds: [] as string[],  // 关联的Temu模板ID列表 - 子分类独有
   });
+
+  // Temu 模板数据
+  const [allTemuTemplates, setAllTemuTemplates] = useState<TemuTemplate[]>([]);
+  const [loadingTemuTemplates, setLoadingTemuTemplates] = useState(false);
 
   // 规格配置相关状态
   const [isSpecDialogOpen, setIsSpecDialogOpen] = useState(false);
@@ -99,6 +98,22 @@ export function ProductCategories() {
     loadCategories();
   }, []);
 
+  // 加载 Temu 模板
+  useEffect(() => {
+    const loadTemuTemplates = async () => {
+      try {
+        setLoadingTemuTemplates(true);
+        const response = await temuTemplateService.getAllTemplates(true, true);
+        setAllTemuTemplates(response.templates || []);
+      } catch (error) {
+        console.error('Failed to load temu templates:', error);
+      } finally {
+        setLoadingTemuTemplates(false);
+      }
+    };
+    loadTemuTemplates();
+  }, []);
+
   // 切换展开/折叠
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -128,14 +143,9 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
-      productLength: undefined,
-      productWidth: undefined,
-      productHeight: undefined,
-      weight: undefined,
-      declaredPrice: undefined,
-      suggestedRetailPrice: undefined,
       productSpec: '',
       productUsage: '',
+      temuTemplateIds: [],
     });
     setIsDialogOpen(true);
   };
@@ -157,15 +167,9 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
-      // 子分类商品规格字段初始化
-      productLength: undefined,
-      productWidth: undefined,
-      productHeight: undefined,
-      weight: undefined,
-      declaredPrice: undefined,
-      suggestedRetailPrice: undefined,
       productSpec: '',
       productUsage: '',
+      temuTemplateIds: [],
     });
     setIsDialogOpen(true);
   };
@@ -186,15 +190,9 @@ export function ProductCategories() {
       manufacturingLength: category.manufacturingLength,
       manufacturingWidth: category.manufacturingWidth,
       manufacturingHeight: category.manufacturingHeight,
-      // 子分类商品规格字段
-      productLength: category.productLength,
-      productWidth: category.productWidth,
-      productHeight: category.productHeight,
-      weight: category.weight,
-      declaredPrice: category.declaredPrice,
-      suggestedRetailPrice: category.suggestedRetailPrice,
       productSpec: category.productSpec || '',
       productUsage: category.productUsage || '',
+      temuTemplateIds: category.temuTemplateIds || [],
     });
     setIsDialogOpen(true);
   };
@@ -224,15 +222,10 @@ export function ProductCategories() {
           manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
           manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
           manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
-          // 子分类商品规格字段
-          productLength: isChildCategory ? formData.productLength : undefined,
-          productWidth: isChildCategory ? formData.productWidth : undefined,
-          productHeight: isChildCategory ? formData.productHeight : undefined,
-          weight: isChildCategory ? formData.weight : undefined,
-          declaredPrice: isChildCategory ? formData.declaredPrice : undefined,
-          suggestedRetailPrice: isChildCategory ? formData.suggestedRetailPrice : undefined,
-          productSpec: isChildCategory ? (formData.productSpec.trim() || undefined) : undefined,
-          productUsage: isChildCategory ? (formData.productUsage.trim() || undefined) : undefined,
+          productSpec: formData.productSpec.trim() || undefined,
+          productUsage: formData.productUsage.trim() || undefined,
+          // 子分类关联Temu模板
+          temuTemplateIds: isChildCategory ? formData.temuTemplateIds : undefined,
         };
         await productCategoryService.updateCategoryWithParent(editingCategory.id, updateData);
         toast.success('更新成功');
@@ -250,15 +243,10 @@ export function ProductCategories() {
           manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
           manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
           manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
-          // 子分类商品规格字段
-          productLength: isChildCategory ? formData.productLength : undefined,
-          productWidth: isChildCategory ? formData.productWidth : undefined,
-          productHeight: isChildCategory ? formData.productHeight : undefined,
-          weight: isChildCategory ? formData.weight : undefined,
-          declaredPrice: isChildCategory ? formData.declaredPrice : undefined,
-          suggestedRetailPrice: isChildCategory ? formData.suggestedRetailPrice : undefined,
-          productSpec: isChildCategory ? (formData.productSpec.trim() || undefined) : undefined,
-          productUsage: isChildCategory ? (formData.productUsage.trim() || undefined) : undefined,
+          productSpec: formData.productSpec.trim() || undefined,
+          productUsage: formData.productUsage.trim() || undefined,
+          // 子分类关联Temu模板
+          temuTemplateIds: isChildCategory ? formData.temuTemplateIds : undefined,
         };
         await productCategoryService.createCategoryWithParent(createData);
         toast.success('创建成功');
@@ -628,7 +616,7 @@ export function ProductCategories() {
         setIsDialogOpen(open);
         if (!open) setAddingChildForParent(null);
       }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
               {editingCategory
@@ -668,34 +656,49 @@ export function ProductCategories() {
               </div>
             </div>
 
-            {/* 子分类独有字段：类型码和尺寸码 */}
+            {/* 子分类：货号与商品配置 */}
             {(formData.parentId || addingChildForParent) && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="typeCode">类型码 *</Label>
-                  <Input
-                    id="typeCode"
-                    value={formData.typeCode}
-                    onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
-                    placeholder="如: BJ-01, BJ-02"
-                    maxLength={10}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    子分类的类型码，用于生成货号
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sizeCode">尺寸码 *</Label>
-                  <Input
-                    id="sizeCode"
-                    value={formData.sizeCode}
-                    onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
-                    placeholder="如: 21"
-                    maxLength={10}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    子分类的尺寸码，用于生成货号
-                  </p>
+              <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
+                <Label className="text-sm font-medium">货号与商品配置</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="typeCode" className="text-xs">类型码</Label>
+                    <Input
+                      id="typeCode"
+                      value={formData.typeCode}
+                      onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
+                      placeholder="如: BJ-01"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="sizeCode" className="text-xs">尺寸码</Label>
+                    <Input
+                      id="sizeCode"
+                      value={formData.sizeCode}
+                      onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
+                      placeholder="如: 21"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="productSpec" className="text-xs">商品规格描述</Label>
+                    <Input
+                      id="productSpec"
+                      value={formData.productSpec}
+                      onChange={(e) => setFormData({ ...formData, productSpec: e.target.value })}
+                      placeholder="如: 21cm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="productUsage" className="text-xs">商品用途</Label>
+                    <Input
+                      id="productUsage"
+                      value={formData.productUsage}
+                      onChange={(e) => setFormData({ ...formData, productUsage: e.target.value })}
+                      placeholder="如: 手账装饰"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -703,40 +706,55 @@ export function ProductCategories() {
             {/* 一级分类/父分类字段 */}
             {!formData.parentId && !addingChildForParent && (
               <>
-                {/* 类型码和尺寸码（一级分类也可以有，兼容现有数据） */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="typeCode">类型码</Label>
-                    <Input
-                      id="typeCode"
-                      value={formData.typeCode}
-                      onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
-                      placeholder="如: SZ, BZ, HR"
-                      maxLength={10}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      用于生成货号（SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋）
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sizeCode">尺寸码</Label>
-                    <Input
-                      id="sizeCode"
-                      value={formData.sizeCode}
-                      onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
-                      placeholder="如: 15, 21, 30, 66"
-                      maxLength={10}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      用于生成货号（15-15cm, 21-21cm, 30-30cm, 66-66cm）
-                    </p>
+                {/* 货号与商品配置 */}
+                <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
+                  <Label className="text-sm font-medium">货号与商品配置</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="typeCode" className="text-xs">类型码</Label>
+                      <Input
+                        id="typeCode"
+                        value={formData.typeCode}
+                        onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
+                        placeholder="如: SZ, BZ, HR"
+                        maxLength={10}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="sizeCode" className="text-xs">尺寸码</Label>
+                      <Input
+                        id="sizeCode"
+                        value={formData.sizeCode}
+                        onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
+                        placeholder="如: 15, 21, 30"
+                        maxLength={10}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="productSpec" className="text-xs">商品规格描述</Label>
+                      <Input
+                        id="productSpec"
+                        value={formData.productSpec}
+                        onChange={(e) => setFormData({ ...formData, productSpec: e.target.value })}
+                        placeholder="如: 21cm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="productUsage" className="text-xs">商品用途</Label>
+                      <Input
+                        id="productUsage"
+                        value={formData.productUsage}
+                        onChange={(e) => setFormData({ ...formData, productUsage: e.target.value })}
+                        placeholder="如: 手账装饰"
+                      />
+                    </div>
                   </div>
                 </div>
                 {/* 生产尺寸（只有一级分类/父分类才有） */}
-                <div>
-                  <Label className="mb-2 block">生产尺寸 (cm)</Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">生产尺寸 (cm)</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
                       <Label htmlFor="manufacturingLength" className="text-xs text-muted-foreground">长度</Label>
                       <Input
                         id="manufacturingLength"
@@ -749,7 +767,7 @@ export function ProductCategories() {
                         placeholder="如: 29.7"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <Label htmlFor="manufacturingWidth" className="text-xs text-muted-foreground">宽度</Label>
                       <Input
                         id="manufacturingWidth"
@@ -762,7 +780,7 @@ export function ProductCategories() {
                         placeholder="如: 21"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <Label htmlFor="manufacturingHeight" className="text-xs text-muted-foreground">高度</Label>
                       <Input
                         id="manufacturingHeight"
@@ -776,139 +794,72 @@ export function ProductCategories() {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    用于PDF导出尺寸（纸类产品高度通常为0）。子分类会继承父分类的生产尺寸。
+                  <p className="text-xs text-muted-foreground">
+                    用于PDF导出尺寸，子分类会继承
                   </p>
                 </div>
               </>
             )}
 
-            {/* 子分类提示：继承父分类的生产尺寸 */}
+            {/* 子分类 Temu 模板关联 */}
             {(formData.parentId || addingChildForParent) && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  💡 子分类会自动继承父分类的生产尺寸
-                  {addingChildForParent && (
-                    <span className="block mt-1">
-                      父分类生产尺寸: {formatManufacturingSize(
-                        addingChildForParent.manufacturingLength,
-                        addingChildForParent.manufacturingWidth,
-                        addingChildForParent.manufacturingHeight
-                      )}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>关联 Temu 模板</Label>
+                  {formData.temuTemplateIds.length > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      已选择 {formData.temuTemplateIds.length} 个
                     </span>
                   )}
-                </p>
-              </div>
-            )}
-
-            {/* 子分类商品规格字段 */}
-            {(formData.parentId || addingChildForParent) && (
-              <>
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-medium mb-3">商品规格（Temu上架用）</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="productLength">商品长度 (cm)</Label>
-                      <Input
-                        id="productLength"
-                        type="number"
-                        step="0.1"
-                        value={formData.productLength || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, productLength: e.target.value ? parseFloat(e.target.value) : undefined })
-                        }
-                        placeholder="如: 15"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="productWidth">商品宽度 (cm)</Label>
-                      <Input
-                        id="productWidth"
-                        type="number"
-                        step="0.1"
-                        value={formData.productWidth || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, productWidth: e.target.value ? parseFloat(e.target.value) : undefined })
-                        }
-                        placeholder="如: 15"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="productHeight">商品高度 (cm)</Label>
-                      <Input
-                        id="productHeight"
-                        type="number"
-                        step="0.1"
-                        value={formData.productHeight || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, productHeight: e.target.value ? parseFloat(e.target.value) : undefined })
-                        }
-                        placeholder="如: 0.4"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="weight">重量 (g)</Label>
-                      <Input
-                        id="weight"
-                        type="number"
-                        value={formData.weight || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, weight: e.target.value ? parseInt(e.target.value) : undefined })
-                        }
-                        placeholder="如: 110"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="declaredPrice">申报价格 (USD)</Label>
-                      <Input
-                        id="declaredPrice"
-                        type="number"
-                        step="0.01"
-                        value={formData.declaredPrice || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, declaredPrice: e.target.value ? parseFloat(e.target.value) : undefined })
-                        }
-                        placeholder="如: 0.83"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="suggestedRetailPrice">建议零售价 (USD)</Label>
-                      <Input
-                        id="suggestedRetailPrice"
-                        type="number"
-                        step="0.01"
-                        value={formData.suggestedRetailPrice || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, suggestedRetailPrice: e.target.value ? parseFloat(e.target.value) : undefined })
-                        }
-                        placeholder="如: 8.5"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="productSpec">商品规格描述</Label>
-                      <Input
-                        id="productSpec"
-                        value={formData.productSpec}
-                        onChange={(e) => setFormData({ ...formData, productSpec: e.target.value })}
-                        placeholder="如: 15×15cm 50张"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="productUsage">商品用途</Label>
-                      <Input
-                        id="productUsage"
-                        value={formData.productUsage}
-                        onChange={(e) => setFormData({ ...formData, productUsage: e.target.value })}
-                        placeholder="如: 手帐装饰、卡片制作"
-                      />
-                    </div>
-                  </div>
                 </div>
-              </>
+                {loadingTemuTemplates ? (
+                  <div className="p-4 text-center text-muted-foreground border rounded-lg">
+                    加载中...
+                  </div>
+                ) : allTemuTemplates.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground border rounded-lg">
+                    暂无可用模板
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-2">
+                      {allTemuTemplates.map((template) => {
+                        const isSelected = formData.temuTemplateIds.includes(template.id);
+                        return (
+                          <div
+                            key={template.id}
+                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted ${
+                              isSelected ? 'bg-primary/10' : ''
+                            }`}
+                            onClick={() => {
+                              if (isSelected) {
+                                setFormData({
+                                  ...formData,
+                                  temuTemplateIds: formData.temuTemplateIds.filter(id => id !== template.id)
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  temuTemplateIds: [...formData.temuTemplateIds, template.id]
+                                });
+                              }
+                            }}
+                          >
+                            <div className={`w-4 h-4 border rounded flex items-center justify-center shrink-0 ${
+                              isSelected ? 'bg-primary border-primary' : 'border-gray-300'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <span className="text-sm truncate">
+                              {template.name || template.catName}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="sortOrder">排序顺序</Label>

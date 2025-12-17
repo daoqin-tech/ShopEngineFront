@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -52,16 +52,13 @@ export function TemuTemplates() {
   const [fetchedAttributeCount, setFetchedAttributeCount] = useState<number>(0);
   const [fetchingAttributes, setFetchingAttributes] = useState(false);
 
-  // 两步流程相关状态：选择分类 -> 填写属性
+  // 两步流程相关状态：选择Temu分类 -> 填写属性
   const [addStep, setAddStep] = useState<'select' | 'attributes'>('select');
   const [pendingCategory, setPendingCategory] = useState<TemuAPICategory | null>(null);
   const [pendingCategoryPath, setPendingCategoryPath] = useState<TemuCategoryPath | null>(null);
   const [attributeProperties, setAttributeProperties] = useState<ProductAttributeProperty[]>([]);
   const [attributeFormValues, setAttributeFormValues] = useState<AttributeFormValue[]>([]);
-  const [pendingLabel, setPendingLabel] = useState<string>('');
-
-  // 标签筛选状态
-  const [selectedLabel, setSelectedLabel] = useState<string>('');
+  const [pendingName, setPendingName] = useState<string>('');
 
   // Temu 站点列表
   const [temuSites, setTemuSites] = useState<TemuSite[]>([]);
@@ -76,7 +73,7 @@ export function TemuTemplates() {
   // 编辑模板相关状态
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemuTemplate | null>(null);
-  const [editLabel, setEditLabel] = useState('');
+  const [editName, setEditName] = useState('');
   const [editSpecFormValues, setEditSpecFormValues] = useState<TemuSpecification[]>([]);
   const [editParentSpecs, setEditParentSpecs] = useState<ParentSpecification[]>([]);
   const [editInputMaxSpecNum, setEditInputMaxSpecNum] = useState<number>(0);
@@ -91,6 +88,9 @@ export function TemuTemplates() {
   // SKU 默认配置状态（编辑模板）
   const [editSkuDefaultConfig, setEditSkuDefaultConfig] = useState<TemuSkuDefaultConfig>({});
   const [editVolumeWeightConfigs, setEditVolumeWeightConfigs] = useState<TemuSpecVolumeWeightConfig[]>([]);
+
+  // 用于防止加载编辑数据时 useEffect 覆盖已加载的配置
+  const isLoadingEditDataRef = useRef(false);
 
   // 根据规格配置生成体积重量配置列表
   const generateVolumeWeightConfigs = (specs: TemuSpecification[]): TemuSpecVolumeWeightConfig[] => {
@@ -158,7 +158,11 @@ export function TemuTemplates() {
   }, [specFormValues]);
 
   // 当编辑模式的规格配置变化时，重新生成体积重量配置
+  // 注意：如果正在加载编辑数据，则不重新生成，以保留从数据库加载的配置
   useEffect(() => {
+    if (isLoadingEditDataRef.current) {
+      return;
+    }
     if (editSpecFormValues.length > 0) {
       const newConfigs = generateVolumeWeightConfigs(editSpecFormValues);
       setEditVolumeWeightConfigs(newConfigs);
@@ -461,7 +465,7 @@ export function TemuTemplates() {
     });
   };
 
-  // 更新规格的子规格值
+  // 更新规格的子规格值（保留兼容性）
   const handleUpdateSpecValues = (index: number, valuesStr: string) => {
     const values = valuesStr.split(',').map(v => v.trim()).filter(v => v);
     setSpecFormValues(prev => {
@@ -469,6 +473,48 @@ export function TemuTemplates() {
       newSpecs[index] = {
         ...newSpecs[index],
         specValues: values.map(v => ({ specName: v })),
+      };
+      return newSpecs;
+    });
+  };
+
+  // 添加单个规格值
+  const handleAddSpecValue = (specIndex: number) => {
+    setSpecFormValues(prev => {
+      const newSpecs = [...prev];
+      if (newSpecs[specIndex].specValues.length >= singleSpecValueNum) {
+        toast.error(`每个规格最多只能添加 ${singleSpecValueNum} 个值`);
+        return prev;
+      }
+      newSpecs[specIndex] = {
+        ...newSpecs[specIndex],
+        specValues: [...newSpecs[specIndex].specValues, { specName: '' }],
+      };
+      return newSpecs;
+    });
+  };
+
+  // 删除单个规格值
+  const handleRemoveSpecValue = (specIndex: number, valueIndex: number) => {
+    setSpecFormValues(prev => {
+      const newSpecs = [...prev];
+      newSpecs[specIndex] = {
+        ...newSpecs[specIndex],
+        specValues: newSpecs[specIndex].specValues.filter((_, i) => i !== valueIndex),
+      };
+      return newSpecs;
+    });
+  };
+
+  // 更新单个规格值
+  const handleUpdateSpecValue = (specIndex: number, valueIndex: number, value: string) => {
+    setSpecFormValues(prev => {
+      const newSpecs = [...prev];
+      const newValues = [...newSpecs[specIndex].specValues];
+      newValues[valueIndex] = { specName: value };
+      newSpecs[specIndex] = {
+        ...newSpecs[specIndex],
+        specValues: newValues,
       };
       return newSpecs;
     });
@@ -559,7 +605,7 @@ export function TemuTemplates() {
         isLeaf: pendingCategory.isLeaf,
         catType: pendingCategory.catType,
         fullPath: fullPath,
-        label: pendingLabel.trim() || undefined,
+        name: pendingName.trim() || undefined,
         productAttributes: productAttributes.length > 0 ? productAttributes : undefined,
         inputMaxSpecNum: inputMaxSpecNum > 0 ? inputMaxSpecNum : undefined,
         singleSpecValueNum: singleSpecValueNum > 0 ? singleSpecValueNum : undefined,
@@ -574,7 +620,7 @@ export function TemuTemplates() {
       setPendingCategoryPath(null);
       setAttributeFormValues([]);
       setFetchedAttributeCount(0);
-      setPendingLabel('');
+      setPendingName('');
       setSpecFormValues([]);
       setSkuDefaultConfig({});
       setShowAddFromTemuDialog(false);
@@ -602,7 +648,7 @@ export function TemuTemplates() {
     setPendingCategoryPath(null);
     setAttributeProperties([]);
     setAttributeFormValues([]);
-    setPendingLabel('');
+    setPendingName('');
     setInputMaxSpecNum(0);
     setSingleSpecValueNum(0);
     setParentSpecs([]);
@@ -640,7 +686,8 @@ export function TemuTemplates() {
         isLeaf: template.isLeaf,
         catType: template.catType,
         fullPath: template.fullPath,
-        label: template.label,
+        name: template.name,
+        productCategoryId: template.productCategoryId,
         productAttributes: template.productAttributes,
         isActive: !template.isActive,
       };
@@ -673,8 +720,11 @@ export function TemuTemplates() {
 
   // 打开编辑对话框
   const handleOpenEditDialog = async (template: TemuTemplate) => {
+    // 设置标志位，防止 useEffect 覆盖从数据库加载的配置
+    isLoadingEditDataRef.current = true;
+
     setEditingTemplate(template);
-    setEditLabel(template.label || '');
+    setEditName(template.name || '');
     setEditSpecFormValues(template.specifications || []);
     setEditInputMaxSpecNum(template.inputMaxSpecNum || 0);
     setEditSingleSpecValueNum(template.singleSpecValueNum || 0);
@@ -688,6 +738,11 @@ export function TemuTemplates() {
     }
     setShowEditDialog(true);
     setLoadingEditData(true);
+
+    // 在下一个事件循环中重置标志位，允许后续用户操作触发 useEffect
+    setTimeout(() => {
+      isLoadingEditDataRef.current = false;
+    }, 0);
 
     try {
       const attrsResponse = await temuCategoryAPIService.getProductAttributes(template.catId);
@@ -782,6 +837,48 @@ export function TemuTemplates() {
     });
   };
 
+  // 添加单个编辑规格值
+  const handleEditAddSpecValue = (specIndex: number) => {
+    setEditSpecFormValues(prev => {
+      const newSpecs = [...prev];
+      if (newSpecs[specIndex].specValues.length >= editSingleSpecValueNum) {
+        toast.error(`每个规格最多只能添加 ${editSingleSpecValueNum} 个值`);
+        return prev;
+      }
+      newSpecs[specIndex] = {
+        ...newSpecs[specIndex],
+        specValues: [...newSpecs[specIndex].specValues, { specName: '' }],
+      };
+      return newSpecs;
+    });
+  };
+
+  // 删除单个编辑规格值
+  const handleEditRemoveSpecValue = (specIndex: number, valueIndex: number) => {
+    setEditSpecFormValues(prev => {
+      const newSpecs = [...prev];
+      newSpecs[specIndex] = {
+        ...newSpecs[specIndex],
+        specValues: newSpecs[specIndex].specValues.filter((_, i) => i !== valueIndex),
+      };
+      return newSpecs;
+    });
+  };
+
+  // 更新单个编辑规格值
+  const handleEditUpdateSpecValue = (specIndex: number, valueIndex: number, value: string) => {
+    setEditSpecFormValues(prev => {
+      const newSpecs = [...prev];
+      const newValues = [...newSpecs[specIndex].specValues];
+      newValues[valueIndex] = { specName: value };
+      newSpecs[specIndex] = {
+        ...newSpecs[specIndex],
+        specValues: newValues,
+      };
+      return newSpecs;
+    });
+  };
+
   // 更新编辑属性表单值
   const updateEditAttributeValue = (index: number, value: Partial<AttributeFormValue>) => {
     setEditAttributeFormValues(prev => {
@@ -862,7 +959,7 @@ export function TemuTemplates() {
         isLeaf: editingTemplate.isLeaf,
         catType: editingTemplate.catType,
         fullPath: editingTemplate.fullPath,
-        label: editLabel.trim() || undefined,
+        name: editName.trim() || undefined,
         productAttributes: productAttributes.length > 0 ? productAttributes : undefined,
         isActive: editingTemplate.isActive,
         inputMaxSpecNum: editInputMaxSpecNum > 0 ? editInputMaxSpecNum : undefined,
@@ -888,23 +985,20 @@ export function TemuTemplates() {
   const handleCloseEditDialog = () => {
     setShowEditDialog(false);
     setEditingTemplate(null);
-    setEditLabel('');
+    setEditName('');
     setEditSpecFormValues([]);
     setEditParentSpecs([]);
     setEditAttributeFormValues([]);
     setEditSkuDefaultConfig({});
   };
 
-  // 获取所有不重复的标签
-  const allLabels = [...new Set(templates.map(c => c.label).filter(Boolean))] as string[];
-
   // 过滤模板
   const filteredTemplates = templates.filter(c => {
     const matchesKeyword = c.catName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       c.fullPath?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      c.name?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
       String(c.catId).includes(searchKeyword);
-    const matchesLabel = !selectedLabel || c.label === selectedLabel;
-    return matchesKeyword && matchesLabel;
+    return matchesKeyword;
   });
 
   return (
@@ -922,35 +1016,22 @@ export function TemuTemplates() {
           </Button>
           <Button onClick={handleOpenAddDialog}>
             <Plus className="mr-2 h-4 w-4" />
-            从 Temu 添加
+            添加模板
           </Button>
         </div>
       </div>
 
-      {/* 搜索框和标签筛选 */}
-      <div className="mb-4 flex gap-4">
+      {/* 搜索框 */}
+      <div className="mb-4">
         <div className="relative w-80">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="搜索模板名称、路径或ID..."
+            placeholder="搜索模板名称、分类名称、路径或ID..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             className="pl-10"
           />
         </div>
-        {allLabels.length > 0 && (
-          <Select value={selectedLabel || 'all'} onValueChange={(v) => setSelectedLabel(v === 'all' ? '' : v)}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="全部标签" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部标签</SelectItem>
-              {allLabels.map(label => (
-                <SelectItem key={label} value={label}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
       </div>
 
       {/* 模板列表 */}
@@ -960,7 +1041,7 @@ export function TemuTemplates() {
             <TableRow>
               <TableHead className="w-20">分类ID</TableHead>
               <TableHead className="w-32">分类名称</TableHead>
-              <TableHead className="w-24">标签</TableHead>
+              <TableHead className="w-32">模板名称</TableHead>
               <TableHead>完整路径</TableHead>
               <TableHead className="w-20">状态</TableHead>
               <TableHead className="w-24 text-right">操作</TableHead>
@@ -976,7 +1057,7 @@ export function TemuTemplates() {
             ) : filteredTemplates.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                  {searchKeyword || selectedLabel ? '没有找到匹配的模板' : '暂无模板数据，点击"从 Temu 添加"按钮添加模板'}
+                  {searchKeyword ? '没有找到匹配的模板' : '暂无模板数据，点击"从 Temu 添加"按钮添加模板'}
                 </TableCell>
               </TableRow>
             ) : (
@@ -985,8 +1066,8 @@ export function TemuTemplates() {
                   <TableCell className="font-mono text-sm">{template.catId}</TableCell>
                   <TableCell className="font-medium">{template.catName}</TableCell>
                   <TableCell>
-                    {template.label ? (
-                      <Badge variant="outline">{template.label}</Badge>
+                    {template.name ? (
+                      <span className="text-gray-700">{template.name}</span>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
@@ -1029,12 +1110,15 @@ export function TemuTemplates() {
         </Table>
       </div>
 
-      {/* 从 Temu 添加模板对话框 */}
+      {/* 添加模板对话框 */}
       <AddTemplateDialog
         open={showAddFromTemuDialog}
         onOpenChange={setShowAddFromTemuDialog}
         addStep={addStep}
         setAddStep={setAddStep}
+        pendingName={pendingName}
+        setPendingName={setPendingName}
+        // Temu 站点和搜索相关
         selectedSiteId={selectedSiteId}
         setSelectedSiteId={setSelectedSiteId}
         temuSites={temuSites}
@@ -1057,8 +1141,6 @@ export function TemuTemplates() {
         fetchingAttributes={fetchingAttributes}
         attributeFormValues={attributeFormValues}
         updateAttributeValue={updateAttributeValue}
-        pendingLabel={pendingLabel}
-        setPendingLabel={setPendingLabel}
         inputMaxSpecNum={inputMaxSpecNum}
         singleSpecValueNum={singleSpecValueNum}
         parentSpecs={parentSpecs}
@@ -1068,6 +1150,9 @@ export function TemuTemplates() {
         onRemoveSpec={handleRemoveSpec}
         onUpdateSpecParent={handleUpdateSpecParent}
         onUpdateSpecValues={handleUpdateSpecValues}
+        onAddSpecValue={handleAddSpecValue}
+        onRemoveSpecValue={handleRemoveSpecValue}
+        onUpdateSpecValue={handleUpdateSpecValue}
         skuDefaultConfig={skuDefaultConfig}
         setSkuDefaultConfig={setSkuDefaultConfig}
         volumeWeightConfigs={volumeWeightConfigs}
@@ -1092,8 +1177,8 @@ export function TemuTemplates() {
         }}
         editingTemplate={editingTemplate}
         loadingEditData={loadingEditData}
-        editLabel={editLabel}
-        setEditLabel={setEditLabel}
+        editName={editName}
+        setEditName={setEditName}
         editAttributeFormValues={editAttributeFormValues}
         updateEditAttributeValue={updateEditAttributeValue}
         editInputMaxSpecNum={editInputMaxSpecNum}
@@ -1104,6 +1189,9 @@ export function TemuTemplates() {
         onEditRemoveSpec={handleEditRemoveSpec}
         onEditUpdateSpecParent={handleEditUpdateSpecParent}
         onEditUpdateSpecValues={handleEditUpdateSpecValues}
+        onEditAddSpecValue={handleEditAddSpecValue}
+        onEditRemoveSpecValue={handleEditRemoveSpecValue}
+        onEditUpdateSpecValue={handleEditUpdateSpecValue}
         editSkuDefaultConfig={editSkuDefaultConfig}
         setEditSkuDefaultConfig={setEditSkuDefaultConfig}
         editVolumeWeightConfigs={editVolumeWeightConfigs}

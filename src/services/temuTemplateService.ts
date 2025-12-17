@@ -36,14 +36,14 @@ export interface TemuSpecification {
 
 // SKU 体积配置
 export interface TemuSkuVolumeConfig {
-  len: number;      // 长度（mm）
-  width: number;    // 宽度（mm）
-  height: number;   // 高度（mm）
+  longestSide: number;   // 最长边（mm）
+  middleSide: number;    // 次长边（mm）
+  shortestSide: number;  // 最短边（mm）
 }
 
 // SKU 重量配置
 export interface TemuSkuWeightConfig {
-  value: number;    // 重量（毫克 mg）
+  weight: number;    // 重量（毫克 mg）
 }
 
 // SKU 敏感属性配置
@@ -52,15 +52,30 @@ export interface TemuSkuSensitiveConfig {
   sensitiveList: number[];  // 敏感类型列表
 }
 
-// 按规格组合的体积重量配置
+// SKU 分类类型
+// single: 单品 - 仅1件商品（如1个碗、1对耳环）
+// sameMultiPack: 同款多件装 - 多件同规格同种类单品（如2个相同的杯子）
+// mixedSet: 混合套装 - 多件不同品类/规格单品（如1个杯子+1个勺子）
+export type SkuClassType = 'single' | 'sameMultiPack' | 'mixedSet';
+
+// 按规格组合的 SKU 配置（包含价格、库存、体积重量等）
 export interface TemuSpecVolumeWeightConfig {
-  specValues: string[];     // 规格值组合（如 ["复古", "纸"]）
-  isSensitive: boolean;     // 是否敏感
-  sensitiveList: number[];  // 敏感类型列表
-  longestSide: number;      // 最长边（mm）
-  middleSide: number;       // 次长边（mm）
-  shortestSide: number;     // 最短边（mm）
-  weight: number;           // 重量（mg）
+  specValues: string[];           // 规格值组合（如 ["复古", "纸"]）
+  // SKU 信息
+  supplierPrice?: number;         // 申报价格/供货价（分，CNY）
+  thumbUrl?: string;              // 预览图/缩略图 URL
+  skuClassType?: SkuClassType;    // SKU 分类（单品/多件装）
+  multiPackQuantity?: number;     // 多件装数量（当 skuClassType 为 multiPack 时）
+  suggestedPrice?: number;        // 建议零售价（分，USD）
+  extCode?: string;               // SKU 货号
+  stockQuantity?: number;         // 库存
+  // 敏感属性与体积重量
+  isSensitive: boolean;           // 是否敏感
+  sensitiveList: number[];        // 敏感类型列表
+  longestSide: number;            // 最长边（mm）
+  middleSide: number;             // 次长边（mm）
+  shortestSide: number;           // 最短边（mm）
+  weight: number;                 // 重量（mg）
 }
 
 // SKU 默认配置（模板级别）
@@ -77,6 +92,8 @@ export interface TemuSkuDefaultConfig {
 // Temu 模板
 export interface TemuTemplate {
   id: string;
+  name?: string;  // 模板名称
+  productCategoryId?: string;  // 产品分类ID（关联 product_categories 表）
   catId: number;
   catName: string;
   catLevel: number;
@@ -84,7 +101,6 @@ export interface TemuTemplate {
   isLeaf: boolean;
   catType?: number;
   fullPath?: string;
-  label?: string;  // 标签，用于分组筛选
   productAttributes?: TemuProductAttribute[];
   inputMaxSpecNum?: number;      // 最大自定义规格数量（0表示不支持自定义规格）
   singleSpecValueNum?: number;   // 单个规格最大值数量
@@ -102,27 +118,10 @@ export interface TemuTemplateListResponse {
   total: number;
 }
 
-// 简化的模板信息（用于分组展示）
-export interface TemuTemplateSimple {
-  id: string;
-  catId: number;
-  fullPath: string;
-}
-
-// 模板分组
-export interface TemuTemplateGroup {
-  label: string;
-  templates: TemuTemplateSimple[];
-}
-
-// 分组的模板列表响应
-export interface TemuTemplateGroupedResponse {
-  groups: TemuTemplateGroup[];
-  total: number;
-}
-
 // 创建模板请求
 export interface CreateTemuTemplateRequest {
+  name?: string;  // 模板名称
+  productCategoryId?: string;  // 产品分类ID
   catId: number;
   catName: string;
   catLevel?: number;
@@ -130,7 +129,6 @@ export interface CreateTemuTemplateRequest {
   isLeaf?: boolean;
   catType?: number;
   fullPath?: string;
-  label?: string;  // 标签，用于分组筛选
   productAttributes?: TemuProductAttribute[];
   inputMaxSpecNum?: number;      // 最大自定义规格数量
   singleSpecValueNum?: number;   // 单个规格最大值数量
@@ -140,13 +138,14 @@ export interface CreateTemuTemplateRequest {
 
 // 更新模板请求
 export interface UpdateTemuTemplateRequest {
+  name?: string;  // 模板名称
+  productCategoryId?: string;  // 产品分类ID
   catName: string;
   catLevel?: number;
   parentCatId?: number;
   isLeaf?: boolean;
   catType?: number;
   fullPath?: string;
-  label?: string;  // 标签，用于分组筛选
   productAttributes?: TemuProductAttribute[];
   inputMaxSpecNum?: number;      // 最大自定义规格数量
   singleSpecValueNum?: number;   // 单个规格最大值数量
@@ -163,14 +162,6 @@ export const temuTemplateService = {
     if (leafOnly) params.leafOnly = 'true';
     const response = await apiClient.get<ApiResponse<TemuTemplateListResponse>>('/temu/templates', { params });
     return (response as unknown as ApiResponse<TemuTemplateListResponse>).data;
-  },
-
-  // 获取按标签分组的模板
-  getGroupedTemplates: async (): Promise<TemuTemplateGroupedResponse> => {
-    const response = await apiClient.get<ApiResponse<TemuTemplateGroupedResponse>>('/temu/templates', {
-      params: { grouped: 'true' }
-    });
-    return (response as unknown as ApiResponse<TemuTemplateGroupedResponse>).data;
   },
 
   // 根据 ID 获取模板
