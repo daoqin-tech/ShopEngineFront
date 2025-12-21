@@ -8,28 +8,31 @@ export interface BatchCreateProductRequest {
   // 任务ID列表（必填）- 每个任务对应一个商品
   taskIds: string[]
 
-  // 是否上架到 Temu（启用后商品创建完成会自动加入上架队列）
-  enableListing?: boolean
-
-  // Temu 模板 ID（启用上架时必填，包含分类链、规格、属性、SKU配置等）
-  temuTemplateId?: string
+  // Temu 模板 ID（必填，包含分类链、规格、属性、SKU配置等）
+  temuTemplateId: string
 }
 
-// 批量创建商品的响应
+// 批量创建商品的响应（异步上架，仅返回入队结果）
 export interface BatchCreateProductResponse {
   success: boolean
   message: string
   data?: {
-    totalCount: number      // 总共创建的商品数量
-    successCount: number    // 成功创建的商品数量
-    failedCount: number     // 失败的商品数量
-    products: {
-      id: string
-      productId?: string    // 平台返回的商品ID
-      status: 'success' | 'failed'
-      error?: string
-    }[]
+    count: number  // 已入队的商品数量
   }
+}
+
+// 上架步骤
+export interface ListingStep {
+  step: 'prepare' | 'generate_title' | 'upload_images' | 'create_spec' | 'upload_goods'
+  status: 'pending' | 'processing' | 'success' | 'failed'
+  at?: string       // 执行时间
+  error?: string    // 错误信息
+  details?: string  // 其他详情
+}
+
+// 上架日志
+export interface ListingLog {
+  steps: ListingStep[]
 }
 
 // 商品列表项
@@ -37,10 +40,10 @@ export interface Product {
   id: string
   taskId: string
   userId: string
-  status: 'pending' | 'success' | 'failed'
+  status: 'pending' | 'queued' | 'processing' | 'listed' | 'failed'
   shopId: string
   shopName?: string
-  shopAccount: string
+  listingLog?: ListingLog
   categoryId: string          // Temu平台分类ID
   categoryName: string        // Temu平台分类名称
   productCategoryId?: string  // 平台分类ID

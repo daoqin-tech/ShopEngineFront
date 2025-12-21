@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +21,6 @@ import {
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, RefreshCw, Search, Pencil } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { temuTemplateService, type TemuTemplate, type TemuProductAttribute, type CreateTemuTemplateRequest, type UpdateTemuTemplateRequest, type TemuSpecification, type TemuSkuDefaultConfig, type TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import { temuCategoryAPIService, type TemuCategoryPath, type TemuAPICategory, type ProductAttributeProperty, type ProductAttributeValue, type ParentSpecification } from '@/services/temuShopCategoryService';
 import { systemConfigService } from '@/services/systemConfigService';
@@ -80,6 +78,17 @@ export function TemuTemplates() {
   const [editSingleSpecValueNum, setEditSingleSpecValueNum] = useState<number>(0);
   const [loadingEditData, setLoadingEditData] = useState(false);
   const [editAttributeFormValues, setEditAttributeFormValues] = useState<AttributeFormValue[]>([]);
+  // 编辑模式下的分类变更状态
+  const [editIsChangingCategory, setEditIsChangingCategory] = useState(false);
+  const [editTemuSearchKeyword, setEditTemuSearchKeyword] = useState('');
+  const [editSearchResults, setEditSearchResults] = useState<TemuCategoryPath[]>([]);
+  const [editSearching, setEditSearching] = useState(false);
+  const [editBrowseColumns, setEditBrowseColumns] = useState<TemuAPICategory[][]>([]);
+  const [editSelectedPath, setEditSelectedPath] = useState<TemuAPICategory[]>([]);
+  const [editLoadingColumn, setEditLoadingColumn] = useState<number | null>(null);
+  const [editIsSearchMode, setEditIsSearchMode] = useState(false);
+  const [editPendingCategory, setEditPendingCategory] = useState<TemuAPICategory | null>(null);
+  const [editFetchingAttributes, setEditFetchingAttributes] = useState(false);
 
   // SKU 默认配置状态（添加模板）
   const [skuDefaultConfig, setSkuDefaultConfig] = useState<TemuSkuDefaultConfig>({});
@@ -888,6 +897,213 @@ export function TemuTemplates() {
     });
   };
 
+  // 编辑模式 - 加载 Temu 分类层级
+  const loadEditTemuCategories = async (parentCatId?: number, columnIndex: number = 0) => {
+    try {
+      setEditLoadingColumn(columnIndex);
+      const response = await temuCategoryAPIService.getCategories(
+        parentCatId,
+        false,
+        selectedSiteId
+      );
+
+      const newColumns = [...editBrowseColumns.slice(0, columnIndex), response.categories || []];
+      setEditBrowseColumns(newColumns);
+
+      if (columnIndex === 0) {
+        setEditSelectedPath([]);
+      }
+    } catch (error: any) {
+      console.error('加载分类失败:', error);
+      toast.error(error.response?.data?.message || '加载分类失败');
+    } finally {
+      setEditLoadingColumn(null);
+    }
+  };
+
+  // 编辑模式 - 搜索 Temu 分类
+  const handleEditTemuSearch = async () => {
+    if (!editTemuSearchKeyword.trim()) return;
+
+    try {
+      setEditSearching(true);
+      setEditSelectedPath([]);
+      const response = await temuCategoryAPIService.searchCategories(
+        editTemuSearchKeyword.trim(),
+        selectedSiteId
+      );
+      const paths = response.categoryPaths || [];
+      setEditSearchResults(paths);
+      setEditIsSearchMode(true);
+    } catch (error: any) {
+      console.error('搜索分类失败:', error);
+      toast.error(error.response?.data?.message || '搜索分类失败');
+    } finally {
+      setEditSearching(false);
+    }
+  };
+
+  // 编辑模式 - 选择搜索结果
+  const handleEditSelectSearchResult = async (path: TemuCategoryPath) => {
+    const fullPath = getPathFromSearchResult(path);
+    const leafCategory = fullPath[fullPath.length - 1];
+
+    if (!leafCategory) return;
+
+    setEditSelectedPath(fullPath);
+
+    if (leafCategory.isLeaf) {
+      setEditPendingCategory(leafCategory);
+    }
+  };
+
+  // 编辑模式 - 清除搜索
+  const handleEditClearSearch = () => {
+    setEditTemuSearchKeyword('');
+    setEditSearchResults([]);
+    setEditIsSearchMode(false);
+    setEditSelectedPath([]);
+    loadEditTemuCategories(undefined, 0);
+  };
+
+  // 编辑模式 - 选择分类
+  const handleEditSelectCategory = async (category: TemuAPICategory, columnIndex: number) => {
+    const newPath = [...editSelectedPath.slice(0, columnIndex), category];
+    setEditSelectedPath(newPath);
+
+    if (!category.isLeaf) {
+      setEditPendingCategory(null);
+
+      if (editIsSearchMode) {
+        const filteredPaths = editSearchResults.filter(path => {
+          for (let i = 0; i <= columnIndex; i++) {
+            const pathCat = path[`cat${i + 1}` as keyof TemuCategoryPath] as TemuAPICategory | undefined;
+            const selectedCat = i === columnIndex ? category : newPath[i];
+            if (!pathCat || pathCat.catId !== selectedCat.catId) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        const newColumns = convertSearchResultsToColumns(filteredPaths);
+        setEditBrowseColumns(newColumns);
+      } else {
+        await loadEditTemuCategories(category.catId, columnIndex + 1);
+      }
+    } else {
+      if (editIsSearchMode) {
+        const filteredPaths = editSearchResults.filter(path => {
+          for (let i = 0; i <= columnIndex; i++) {
+            const pathCat = path[`cat${i + 1}` as keyof TemuCategoryPath] as TemuAPICategory | undefined;
+            const selectedCat = i === columnIndex ? category : newPath[i];
+            if (!pathCat || pathCat.catId !== selectedCat.catId) {
+              return false;
+            }
+          }
+          return true;
+        });
+        const newColumns = convertSearchResultsToColumns(filteredPaths);
+        setEditBrowseColumns(newColumns.slice(0, columnIndex + 1));
+      } else {
+        setEditBrowseColumns(editBrowseColumns.slice(0, columnIndex + 1));
+      }
+
+      setEditPendingCategory(category);
+    }
+  };
+
+  // 编辑模式 - 确认分类变更
+  const handleEditConfirmCategory = async () => {
+    if (!editPendingCategory || !editingTemplate) return;
+
+    try {
+      setEditFetchingAttributes(true);
+
+      // 获取新分类的属性
+      const attrsResponse = await temuCategoryAPIService.getProductAttributes(editPendingCategory.catId);
+
+      // 更新编辑模板的分类信息
+      const newFullPath = editSelectedPath.map(c => c.catName).join(' > ');
+      setEditingTemplate({
+        ...editingTemplate,
+        catId: editPendingCategory.catId,
+        catName: editPendingCategory.catName,
+        catLevel: editPendingCategory.catLevel,
+        parentCatId: editPendingCategory.parentCatId,
+        isLeaf: editPendingCategory.isLeaf,
+        catType: editPendingCategory.catType,
+        fullPath: newFullPath,
+        // 保存分类链
+        cat1Id: editSelectedPath[0]?.catId,
+        cat2Id: editSelectedPath[1]?.catId,
+        cat3Id: editSelectedPath[2]?.catId,
+        cat4Id: editSelectedPath[3]?.catId,
+        cat5Id: editSelectedPath[4]?.catId,
+        cat6Id: editSelectedPath[5]?.catId,
+        cat7Id: editSelectedPath[6]?.catId,
+        cat8Id: editSelectedPath[7]?.catId,
+        cat9Id: editSelectedPath[8]?.catId,
+        cat10Id: editSelectedPath[9]?.catId,
+      });
+
+      // 更新属性表单
+      if (attrsResponse.properties && attrsResponse.properties.length > 0) {
+        const requiredProps = attrsResponse.properties.filter(prop => prop.required);
+        setEditAttributeFormValues(requiredProps.map(prop => ({ property: prop })));
+      } else {
+        setEditAttributeFormValues([]);
+      }
+
+      // 更新规格配置
+      setEditInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
+      setEditSingleSpecValueNum(attrsResponse.singleSpecValueNum ?? 0);
+      setEditSpecFormValues([]);
+      setEditSkuDefaultConfig({});
+      setEditVolumeWeightConfigs([]);
+
+      if (attrsResponse.inputMaxSpecNum && attrsResponse.inputMaxSpecNum > 0) {
+        const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(editPendingCategory.catId);
+        setEditParentSpecs(parentSpecsResponse.parentSpecs || []);
+      } else {
+        setEditParentSpecs([]);
+      }
+
+      // 关闭分类选择模式
+      setEditIsChangingCategory(false);
+      setEditPendingCategory(null);
+      toast.success('分类已变更，请重新填写属性');
+    } catch (error: any) {
+      console.error('获取新分类属性失败:', error);
+      toast.error(error.response?.data?.message || '获取新分类属性失败');
+    } finally {
+      setEditFetchingAttributes(false);
+    }
+  };
+
+  // 编辑模式 - 开始更改分类
+  const handleEditStartChangeCategory = () => {
+    setEditIsChangingCategory(true);
+    setEditTemuSearchKeyword('');
+    setEditSearchResults([]);
+    setEditBrowseColumns([]);
+    setEditSelectedPath([]);
+    setEditIsSearchMode(false);
+    setEditPendingCategory(null);
+    loadEditTemuCategories(undefined, 0);
+  };
+
+  // 编辑模式 - 取消更改分类
+  const handleEditCancelChangeCategory = () => {
+    setEditIsChangingCategory(false);
+    setEditPendingCategory(null);
+    setEditSelectedPath([]);
+    setEditBrowseColumns([]);
+    setEditSearchResults([]);
+    setEditTemuSearchKeyword('');
+    setEditIsSearchMode(false);
+  };
+
   // 保存编辑
   const handleSaveEdit = async () => {
     if (!editingTemplate) return;
@@ -953,12 +1169,24 @@ export function TemuTemplates() {
       } : undefined;
 
       const updateData: UpdateTemuTemplateRequest = {
+        catId: editingTemplate.catId,
         catName: editingTemplate.catName,
         catLevel: editingTemplate.catLevel,
         parentCatId: editingTemplate.parentCatId,
         isLeaf: editingTemplate.isLeaf,
         catType: editingTemplate.catType,
         fullPath: editingTemplate.fullPath,
+        // 分类链
+        cat1Id: editingTemplate.cat1Id,
+        cat2Id: editingTemplate.cat2Id,
+        cat3Id: editingTemplate.cat3Id,
+        cat4Id: editingTemplate.cat4Id,
+        cat5Id: editingTemplate.cat5Id,
+        cat6Id: editingTemplate.cat6Id,
+        cat7Id: editingTemplate.cat7Id,
+        cat8Id: editingTemplate.cat8Id,
+        cat9Id: editingTemplate.cat9Id,
+        cat10Id: editingTemplate.cat10Id,
         name: editName.trim() || undefined,
         productAttributes: productAttributes.length > 0 ? productAttributes : undefined,
         isActive: editingTemplate.isActive,
@@ -990,6 +1218,14 @@ export function TemuTemplates() {
     setEditParentSpecs([]);
     setEditAttributeFormValues([]);
     setEditSkuDefaultConfig({});
+    // 重置分类变更相关状态
+    setEditIsChangingCategory(false);
+    setEditTemuSearchKeyword('');
+    setEditSearchResults([]);
+    setEditBrowseColumns([]);
+    setEditSelectedPath([]);
+    setEditIsSearchMode(false);
+    setEditPendingCategory(null);
   };
 
   // 过滤模板
@@ -1199,6 +1435,31 @@ export function TemuTemplates() {
         onSave={handleSaveEdit}
         onClose={handleCloseEditDialog}
         submitting={submitting}
+        // 分类变更相关
+        editIsChangingCategory={editIsChangingCategory}
+        temuSites={temuSites}
+        selectedSiteId={selectedSiteId}
+        setSelectedSiteId={setSelectedSiteId}
+        editTemuSearchKeyword={editTemuSearchKeyword}
+        setEditTemuSearchKeyword={setEditTemuSearchKeyword}
+        editSearchResults={editSearchResults}
+        editSearching={editSearching}
+        editIsSearchMode={editIsSearchMode}
+        onEditSearch={handleEditTemuSearch}
+        onEditClearSearch={handleEditClearSearch}
+        editBrowseColumns={editBrowseColumns}
+        editSelectedPath={editSelectedPath}
+        editLoadingColumn={editLoadingColumn}
+        onEditSelectCategory={handleEditSelectCategory}
+        onEditLoadCategories={loadEditTemuCategories}
+        editPendingCategory={editPendingCategory}
+        editFetchingAttributes={editFetchingAttributes}
+        onEditSelectSearchResult={handleEditSelectSearchResult}
+        onEditConfirmCategory={handleEditConfirmCategory}
+        onEditStartChangeCategory={handleEditStartChangeCategory}
+        onEditCancelChangeCategory={handleEditCancelChangeCategory}
+        getPathFromSearchResult={getPathFromSearchResult}
+        templates={templates}
       />
 
       {/* 删除确认对话框 */}

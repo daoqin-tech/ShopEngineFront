@@ -62,19 +62,19 @@ const JsonValuePreview = ({ value }: { value: string }) => {
   const parsed = JSON.parse(value);
   const isArray = Array.isArray(parsed);
   const count = isArray ? parsed.length : Object.keys(parsed).length;
-  const previewText = isArray ? `Array[${count}]` : `Object{${count}}`;
+  const previewText = isArray ? `Array [${count}]` : `Object {${count}}`;
 
   return (
-    <div className="font-mono text-sm">
+    <div className="text-sm">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
       >
         {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        <span>{previewText}</span>
+        <span className="font-medium">{previewText}</span>
       </button>
       {expanded && (
-        <pre className="mt-2 p-3 bg-gray-100 rounded-md text-xs overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">
+        <pre className="mt-3 p-4 bg-slate-900 text-slate-100 rounded-lg text-xs leading-relaxed overflow-x-auto max-h-80 overflow-y-auto">
           {formattedJson}
         </pre>
       )}
@@ -220,7 +220,7 @@ export function SystemConfigPage() {
   }, {} as Record<string, SystemConfig[]>);
 
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
+    <div className="container mx-auto py-6 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">系统配置</h1>
@@ -251,13 +251,13 @@ export function SystemConfigPage() {
                   {type === 'temu' ? 'Temu平台配置' : type}
                 </h2>
               </div>
-              <table className="w-full">
+              <table className="w-full table-fixed">
                 <thead>
                   <tr className="border-b bg-muted/20">
-                    <th className="text-left p-3 font-medium">配置键</th>
+                    <th className="text-left p-3 font-medium w-56">配置键</th>
                     <th className="text-left p-3 font-medium">配置值</th>
-                    <th className="text-left p-3 font-medium">描述</th>
-                    <th className="text-center p-3 font-medium w-32">操作</th>
+                    <th className="text-left p-3 font-medium w-48">描述</th>
+                    <th className="text-center p-3 font-medium w-24">操作</th>
                   </tr>
                 </thead>
                 <tbody>

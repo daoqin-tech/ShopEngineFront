@@ -62,11 +62,13 @@ export type SkuClassType = 'single' | 'sameMultiPack' | 'mixedSet';
 export interface TemuSpecVolumeWeightConfig {
   specValues: string[];           // 规格值组合（如 ["复古", "纸"]）
   // SKU 信息
-  supplierPrice?: number;         // 申报价格/供货价（分，CNY）
+  supplierPrice?: number;         // 申报价格/供货价（元）
   thumbUrl?: string;              // 预览图/缩略图 URL
-  skuClassType?: SkuClassType;    // SKU 分类（单品/多件装）
-  multiPackQuantity?: number;     // 多件装数量（当 skuClassType 为 multiPack 时）
-  suggestedPrice?: number;        // 建议零售价（分，USD）
+  skuClassType?: SkuClassType;    // SKU 分类（单品/多件装/混合套装）
+  multiPackQuantity?: number;     // 单品数量（单品默认为1，多件装/套装时必填）
+  pieceUnitCode?: number;         // 单件单位：1=件, 2=双, 3=包
+  individuallyPacked?: number;    // 是否独立包装：0=否, 1=是（同款多件装或混合套装时必填）
+  suggestedPrice?: number;        // 建议零售价（美元）
   extCode?: string;               // SKU 货号
   stockQuantity?: number;         // 库存
   // 敏感属性与体积重量
@@ -101,6 +103,17 @@ export interface TemuTemplate {
   isLeaf: boolean;
   catType?: number;
   fullPath?: string;
+  // 分类链（用于商品上架时的分类ID）
+  cat1Id?: number;
+  cat2Id?: number;
+  cat3Id?: number;
+  cat4Id?: number;
+  cat5Id?: number;
+  cat6Id?: number;
+  cat7Id?: number;
+  cat8Id?: number;
+  cat9Id?: number;
+  cat10Id?: number;
   productAttributes?: TemuProductAttribute[];
   inputMaxSpecNum?: number;      // 最大自定义规格数量（0表示不支持自定义规格）
   singleSpecValueNum?: number;   // 单个规格最大值数量
@@ -129,6 +142,17 @@ export interface CreateTemuTemplateRequest {
   isLeaf?: boolean;
   catType?: number;
   fullPath?: string;
+  // 分类链（用于商品上架时的分类ID）
+  cat1Id?: number;
+  cat2Id?: number;
+  cat3Id?: number;
+  cat4Id?: number;
+  cat5Id?: number;
+  cat6Id?: number;
+  cat7Id?: number;
+  cat8Id?: number;
+  cat9Id?: number;
+  cat10Id?: number;
   productAttributes?: TemuProductAttribute[];
   inputMaxSpecNum?: number;      // 最大自定义规格数量
   singleSpecValueNum?: number;   // 单个规格最大值数量
@@ -140,12 +164,24 @@ export interface CreateTemuTemplateRequest {
 export interface UpdateTemuTemplateRequest {
   name?: string;  // 模板名称
   productCategoryId?: string;  // 产品分类ID
-  catName: string;
+  catId?: number;  // Temu 分类 ID（修改分类时使用）
+  catName?: string;
   catLevel?: number;
   parentCatId?: number;
   isLeaf?: boolean;
   catType?: number;
   fullPath?: string;
+  // 分类链（用于商品上架时的分类ID）
+  cat1Id?: number;
+  cat2Id?: number;
+  cat3Id?: number;
+  cat4Id?: number;
+  cat5Id?: number;
+  cat6Id?: number;
+  cat7Id?: number;
+  cat8Id?: number;
+  cat9Id?: number;
+  cat10Id?: number;
   productAttributes?: TemuProductAttribute[];
   inputMaxSpecNum?: number;      // 最大自定义规格数量
   singleSpecValueNum?: number;   // 单个规格最大值数量

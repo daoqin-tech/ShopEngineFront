@@ -21,7 +21,10 @@ export const SHIPMENT_LIMIT_OPTIONS = [
   { value: 259200, label: '72小时' },
   { value: 345600, label: '96小时' },
   { value: 432000, label: '5天' },
+  { value: 518400, label: '6天' },
   { value: 604800, label: '7天' },
+  { value: 691200, label: '8天' },
+  { value: 777600, label: '9天' },
 ];
 
 // Temu 站点类型
@@ -71,9 +74,8 @@ export interface TemuShop {
   id: string;
   name: string;
   shopId: string;
-  type: '全托' | '半托';
+  isSemiManaged: boolean;          // 是否是半托管店铺（true=半托，false=全托）
   businessCode: string;
-  account: string;
   siteId?: number;
   siteName?: string;
   warehouseId?: string;
@@ -88,6 +90,9 @@ export interface TemuShop {
   shipmentLimitSecond?: number;    // 发货时效（秒），默认 172800 = 48小时
   isActive: boolean;
   hasApiCredentials: boolean;
+  tokenExpireAt?: string;          // Token 过期时间
+  mallId?: number;                 // Temu 平台的 mallId
+  apiScopeList?: string[];         // 已授权的接口列表
   createdAt: string;
   updatedAt: string;
 }
@@ -98,13 +103,11 @@ export interface TemuShopListResponse {
   total: number;
 }
 
-// 创建店铺请求
+// 创建店铺请求（店铺类型由后端通过 API 自动获取）
 export interface CreateTemuShopRequest {
   name: string;
   shopId: string;
-  type: '全托' | '半托';
   businessCode: string;
-  account: string;
   siteId?: number;
   siteName?: string;
   warehouseId?: string;
@@ -123,13 +126,11 @@ export interface CreateTemuShopRequest {
   accessToken?: string;
 }
 
-// 更新店铺请求
+// 更新店铺请求（店铺类型由后端通过 API 自动获取）
 export interface UpdateTemuShopRequest {
   name: string;
   shopId: string;
-  type: '全托' | '半托';
   businessCode: string;
-  account: string;
   siteId?: number;
   siteName?: string;
   warehouseId?: string;
@@ -149,19 +150,29 @@ export interface UpdateTemuShopRequest {
   isActive: boolean;
 }
 
+// 验证 API 凭证请求
+export interface VerifyCredentialsRequest {
+  appKey: string;
+  appSecret: string;
+  accessToken: string;
+}
+
+// 验证 API 凭证响应
+export interface VerifyCredentialsResponse {
+  valid: boolean;              // 凭证是否有效
+  isSemiManaged: boolean;      // 是否是半托管店铺
+  isThriftStore: boolean;      // 是否是二手店
+  mallId: number;              // Temu 平台的 mallId
+  tokenExpireAt: string;       // Token 过期时间
+  apiScopeList: string[];      // 已授权的接口列表
+  errorMessage?: string;       // 错误信息（如果验证失败）
+}
+
 export const temuShopService = {
   // 获取所有店铺
   getAllShops: async (activeOnly = false): Promise<TemuShopListResponse> => {
     const response = await apiClient.get('/temu/shops', {
       params: activeOnly ? { activeOnly: 'true' } : {},
-    });
-    return response.data;
-  },
-
-  // 根据账号获取店铺
-  getShopsByAccount: async (account: string): Promise<TemuShopListResponse> => {
-    const response = await apiClient.get('/temu/shops', {
-      params: { account },
     });
     return response.data;
   },
@@ -217,7 +228,7 @@ export const temuShopService = {
 
   // 获取产地国家枚举
   getOriginCountries: async (): Promise<OriginCountry[]> => {
-    const response = await apiClient.get('/system-configs/temu_origin_countries');
+    const response = await apiClient.get('/system-configs/key/temu_origin_countries');
     try {
       return JSON.parse(response.data.configValue);
     } catch {
@@ -227,11 +238,23 @@ export const temuShopService = {
 
   // 获取产地省份枚举（中国）
   getOriginRegions: async (): Promise<OriginRegion[]> => {
-    const response = await apiClient.get('/system-configs/temu_origin_regions_cn');
+    const response = await apiClient.get('/system-configs/key/temu_origin_regions_cn');
     try {
       return JSON.parse(response.data.configValue);
     } catch {
       return [];
     }
+  },
+
+  // 刷新店铺类型（从 Temu API 获取最新类型）
+  refreshShopType: async (shopId: string): Promise<TemuShop> => {
+    const response = await apiClient.post(`/temu/shops/${shopId}/refresh-type`);
+    return response.data;
+  },
+
+  // 验证 API 凭证（不保存，仅验证并返回店铺信息）
+  verifyCredentials: async (data: VerifyCredentialsRequest): Promise<VerifyCredentialsResponse> => {
+    const response = await apiClient.post('/temu/verify-credentials', data);
+    return response.data;
   },
 };

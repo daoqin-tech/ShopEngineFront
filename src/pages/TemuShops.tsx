@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Store, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Store, RefreshCw, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import {
   temuShopService,
   type TemuShop,
@@ -39,6 +39,7 @@ import {
   type TemuFreightTemplate,
   type OriginCountry,
   type OriginRegion,
+  type VerifyCredentialsResponse,
   SHIPMENT_LIMIT_OPTIONS
 } from '@/services/temuShopService';
 import { toast } from 'sonner';
@@ -51,6 +52,11 @@ export function TemuShops() {
   const [editingShop, setEditingShop] = useState<TemuShop | null>(null);
   const [deletingShop, setDeletingShop] = useState<TemuShop | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshingShopId, setRefreshingShopId] = useState<string | null>(null);
+
+  // 验证凭证相关状态
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<VerifyCredentialsResponse | null>(null);
 
   // 站点、仓库、运费模板相关状态
   const [sites, setSites] = useState<TemuSite[]>([]);
@@ -67,9 +73,7 @@ export function TemuShops() {
   const [formData, setFormData] = useState<CreateTemuShopRequest>({
     name: '',
     shopId: '',
-    type: '全托',
     businessCode: '',
-    account: '',
     siteId: undefined,
     siteName: '',
     warehouseId: '',
@@ -169,9 +173,7 @@ export function TemuShops() {
     setFormData({
       name: '',
       shopId: '',
-      type: '全托',
       businessCode: '',
-      account: '',
       siteId: undefined,
       siteName: '',
       warehouseId: '',
@@ -188,6 +190,7 @@ export function TemuShops() {
     });
     setWarehouses([]);
     setFreightTemplates([]);
+    setVerifyResult(null);
     setShowDialog(true);
   };
 
@@ -197,9 +200,7 @@ export function TemuShops() {
     setFormData({
       name: shop.name,
       shopId: shop.shopId,
-      type: shop.type,
       businessCode: shop.businessCode,
-      account: shop.account,
       siteId: shop.siteId,
       siteName: shop.siteName || '',
       warehouseId: shop.warehouseId || '',
@@ -222,13 +223,20 @@ export function TemuShops() {
       setWarehouses([]);
       setFreightTemplates([]);
     }
+    setVerifyResult(null);
     setShowDialog(true);
   };
 
   // 提交表单
   const handleSubmit = async () => {
-    if (!formData.name || !formData.shopId || !formData.businessCode || !formData.account) {
+    if (!formData.name || !formData.businessCode) {
       toast.error('请填写必填字段');
+      return;
+    }
+
+    // 新建店铺时必须先验证凭证（以获取 shopId/mallId）
+    if (!editingShop && !formData.shopId) {
+      toast.error('请先验证 API 凭证');
       return;
     }
 
@@ -268,6 +276,79 @@ export function TemuShops() {
     } catch (error: any) {
       console.error('删除店铺失败:', error);
       toast.error(error.response?.data?.message || '删除店铺失败');
+    }
+  };
+
+  // 刷新店铺信息（类型和 Token 过期时间）
+  const handleRefreshShopInfo = async (shop: TemuShop) => {
+    if (!shop.hasApiCredentials) {
+      toast.error('请先配置 API 凭证');
+      return;
+    }
+
+    try {
+      setRefreshingShopId(shop.id);
+      await temuShopService.refreshShopType(shop.id);
+      toast.success('店铺信息已更新');
+      fetchShops();
+    } catch (error: any) {
+      console.error('刷新店铺信息失败:', error);
+      toast.error(error.response?.data?.message || '刷新店铺信息失败');
+    } finally {
+      setRefreshingShopId(null);
+    }
+  };
+
+  // 验证 API 凭证
+  const handleVerifyCredentials = async () => {
+    if (!formData.appKey || !formData.appSecret || !formData.accessToken) {
+      toast.error('请填写完整的 API 凭证');
+      return;
+    }
+
+    try {
+      setVerifying(true);
+      setVerifyResult(null);
+      const result = await temuShopService.verifyCredentials({
+        appKey: formData.appKey,
+        appSecret: formData.appSecret,
+        accessToken: formData.accessToken,
+      });
+      setVerifyResult(result);
+      if (result.valid) {
+        // 自动将 mallId 设置为 shopId
+        setFormData(prev => ({
+          ...prev,
+          shopId: result.mallId.toString(),
+        }));
+        toast.success('API 凭证验证成功');
+      } else {
+        toast.error(result.errorMessage || 'API 凭证验证失败');
+      }
+    } catch (error: any) {
+      console.error('验证凭证失败:', error);
+      toast.error(error.response?.data?.message || '验证凭证失败');
+      setVerifyResult(null);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // 格式化 Token 过期时间
+  const formatTokenExpiry = (expireAt?: string) => {
+    if (!expireAt) return null;
+    const expireDate = new Date(expireAt);
+    const now = new Date();
+    const daysLeft = Math.floor((expireDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysLeft < 0) {
+      return { text: '已过期', variant: 'destructive' as const };
+    } else if (daysLeft <= 7) {
+      return { text: `${daysLeft}天后过期`, variant: 'destructive' as const };
+    } else if (daysLeft <= 30) {
+      return { text: `${daysLeft}天后过期`, variant: 'secondary' as const };
+    } else {
+      return { text: `${daysLeft}天后过期`, variant: 'outline' as const };
     }
   };
 
@@ -314,17 +395,18 @@ export function TemuShops() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">店铺名称</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">店铺ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">卖家ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">业务代码</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">账号</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">货号前缀</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API凭证</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {shops.map((shop) => (
+                {shops.map((shop) => {
+                  const tokenExpiry = formatTokenExpiry(shop.tokenExpireAt);
+                  return (
                   <tr key={shop.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="font-medium text-gray-900">{shop.name}</div>
@@ -332,18 +414,40 @@ export function TemuShops() {
                         <div className="text-xs text-gray-500">{shop.siteName}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{shop.shopId}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={shop.type === '全托' ? 'default' : 'secondary'}>
-                        {shop.type}
-                      </Badge>
+                      <div className="text-sm text-gray-900">{shop.mallId || shop.shopId}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={shop.isSemiManaged ? 'secondary' : 'default'}>
+                          {shop.isSemiManaged ? '半托' : '全托'}
+                        </Badge>
+                        {shop.hasApiCredentials && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleRefreshShopInfo(shop)}
+                            disabled={refreshingShopId === shop.id}
+                            title="刷新店铺信息"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${refreshingShopId === shop.id ? 'animate-spin' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{shop.businessCode}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{shop.account}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={shop.hasApiCredentials ? 'default' : 'outline'}>
-                        {shop.hasApiCredentials ? '已配置' : '未配置'}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={shop.hasApiCredentials ? 'default' : 'outline'}>
+                          {shop.hasApiCredentials ? '已配置' : '未配置'}
+                        </Badge>
+                        {shop.hasApiCredentials && tokenExpiry && (
+                          <Badge variant={tokenExpiry.variant} className="text-xs">
+                            {tokenExpiry.text}
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <Badge variant={shop.isActive ? 'default' : 'secondary'}>
@@ -374,7 +478,8 @@ export function TemuShops() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -398,7 +503,7 @@ export function TemuShops() {
                 <Store className="w-4 h-4" />
                 基本信息
               </h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">店铺名称 *</Label>
                   <Input
@@ -410,33 +515,7 @@ export function TemuShops() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="shopId">店铺ID *</Label>
-                  <Input
-                    id="shopId"
-                    value={formData.shopId}
-                    onChange={(e) => setFormData({ ...formData, shopId: e.target.value })}
-                    placeholder="Temu 平台店铺ID"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="type">店铺类型 *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value: '全托' | '半托') => setFormData({ ...formData, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="全托">全托</SelectItem>
-                      <SelectItem value="半托">半托</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="businessCode">业务代码 *</Label>
+                  <Label htmlFor="businessCode">货号前缀 *</Label>
                   <Input
                     id="businessCode"
                     value={formData.businessCode}
@@ -444,17 +523,188 @@ export function TemuShops() {
                     placeholder="例如：5270"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* API 凭证 */}
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-900 mb-4">API 凭证</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="appKey">App Key {!editingShop && '*'}</Label>
+                  <Input
+                    id="appKey"
+                    value={formData.appKey}
+                    onChange={(e) => setFormData({ ...formData, appKey: e.target.value })}
+                    placeholder="Temu Open API App Key"
+                  />
+                </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="account">账号 *</Label>
+                  <Label htmlFor="appSecret">App Secret {!editingShop && '*'}</Label>
                   <Input
-                    id="account"
-                    value={formData.account}
-                    onChange={(e) => setFormData({ ...formData, account: e.target.value })}
-                    placeholder="店铺账号"
+                    id="appSecret"
+                    type="password"
+                    value={formData.appSecret}
+                    onChange={(e) => setFormData({ ...formData, appSecret: e.target.value })}
+                    placeholder="Temu Open API App Secret"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accessToken">Access Token {!editingShop && '*'}</Label>
+                  <Input
+                    id="accessToken"
+                    value={formData.accessToken}
+                    onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
+                    placeholder="Temu Open API Access Token"
                   />
                 </div>
               </div>
+
+              {/* 验证按钮 */}
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleVerifyCredentials}
+                  disabled={verifying || !formData.appKey || !formData.appSecret || !formData.accessToken}
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      验证中...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      验证凭证
+                    </>
+                  )}
+                </Button>
+                {editingShop && (
+                  <span className="text-xs text-muted-foreground ml-3">
+                    留空表示不修改现有凭证
+                  </span>
+                )}
+              </div>
+
+              {/* 验证结果显示 */}
+              {verifyResult && (
+                <div className={`mt-4 p-4 rounded-lg border ${verifyResult.valid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  {verifyResult.valid ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <span className="text-sm text-green-800 font-medium">凭证验证成功</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-white rounded-md p-3 border border-green-100">
+                          <div className="text-xs text-gray-500 mb-1">店铺类型</div>
+                          <Badge variant={verifyResult.isSemiManaged ? 'secondary' : 'default'}>
+                            {verifyResult.isSemiManaged ? '半托管' : '全托管'}
+                          </Badge>
+                        </div>
+                        <div className="bg-white rounded-md p-3 border border-green-100">
+                          <div className="text-xs text-gray-500 mb-1">卖家ID</div>
+                          <div className="font-medium text-gray-900">{verifyResult.mallId}</div>
+                        </div>
+                        <div className="bg-white rounded-md p-3 border border-green-100">
+                          <div className="text-xs text-gray-500 mb-1">Token 有效期</div>
+                          {(() => {
+                            const expiry = formatTokenExpiry(verifyResult.tokenExpireAt);
+                            return expiry ? (
+                              <Badge variant={expiry.variant}>{expiry.text}</Badge>
+                            ) : null;
+                          })()}
+                        </div>
+                        <div className="bg-white rounded-md p-3 border border-green-100">
+                          <div className="text-xs text-gray-500 mb-1">已授权接口</div>
+                          <div className="font-medium text-gray-900">{verifyResult.apiScopeList?.length || 0} 个</div>
+                        </div>
+                      </div>
+                      {verifyResult.apiScopeList && verifyResult.apiScopeList.length > 0 && (
+                        <details className="text-xs">
+                          <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
+                            查看已授权接口列表
+                          </summary>
+                          <div className="mt-2 p-3 bg-white rounded-md border max-h-32 overflow-y-auto">
+                            <div className="flex flex-wrap gap-1">
+                              {verifyResult.apiScopeList.map((scope, index) => (
+                                <span key={index} className="px-2 py-1 bg-gray-100 rounded text-gray-600">
+                                  {scope}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                      <span className="text-sm text-red-800">{verifyResult.errorMessage || '验证失败，请检查凭证是否正确'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 编辑时显示已保存的API信息 */}
+              {editingShop && editingShop.hasApiCredentials && !verifyResult && (
+                <div className="mt-4 p-4 rounded-lg border bg-gray-50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm text-gray-600 font-medium">已保存的 API 信息</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-white rounded-md p-3 border">
+                      <div className="text-xs text-gray-500 mb-1">店铺类型</div>
+                      <Badge variant={editingShop.isSemiManaged ? 'secondary' : 'default'}>
+                        {editingShop.isSemiManaged ? '半托管' : '全托管'}
+                      </Badge>
+                    </div>
+                    {editingShop.mallId && (
+                      <div className="bg-white rounded-md p-3 border">
+                        <div className="text-xs text-gray-500 mb-1">卖家ID</div>
+                        <div className="font-medium text-gray-900">{editingShop.mallId}</div>
+                      </div>
+                    )}
+                    {editingShop.tokenExpireAt && (
+                      <div className="bg-white rounded-md p-3 border">
+                        <div className="text-xs text-gray-500 mb-1">Token 有效期</div>
+                        {(() => {
+                          const expiry = formatTokenExpiry(editingShop.tokenExpireAt);
+                          return expiry ? (
+                            <Badge variant={expiry.variant}>{expiry.text}</Badge>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+                    {editingShop.apiScopeList && editingShop.apiScopeList.length > 0 && (
+                      <div className="bg-white rounded-md p-3 border">
+                        <div className="text-xs text-gray-500 mb-1">已授权接口</div>
+                        <div className="font-medium text-gray-900">{editingShop.apiScopeList.length} 个</div>
+                      </div>
+                    )}
+                  </div>
+                  {editingShop.apiScopeList && editingShop.apiScopeList.length > 0 && (
+                    <details className="text-xs mt-3">
+                      <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
+                        查看已授权接口列表
+                      </summary>
+                      <div className="mt-2 p-3 bg-white rounded-md border max-h-32 overflow-y-auto">
+                        <div className="flex flex-wrap gap-1">
+                          {editingShop.apiScopeList.map((scope, index) => (
+                            <span key={index} className="px-2 py-1 bg-gray-100 rounded text-gray-600">
+                              {scope}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 配送设置 */}
@@ -675,47 +925,6 @@ export function TemuShops() {
               </div>
             </div>
 
-            {/* API 凭证 */}
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-4">API 凭证（可选）</h4>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="appKey">App Key</Label>
-                  <Input
-                    id="appKey"
-                    value={formData.appKey}
-                    onChange={(e) => setFormData({ ...formData, appKey: e.target.value })}
-                    placeholder="Temu Open API App Key"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="appSecret">App Secret</Label>
-                  <Input
-                    id="appSecret"
-                    type="password"
-                    value={formData.appSecret}
-                    onChange={(e) => setFormData({ ...formData, appSecret: e.target.value })}
-                    placeholder="Temu Open API App Secret"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="accessToken">Access Token</Label>
-                  <Input
-                    id="accessToken"
-                    value={formData.accessToken}
-                    onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
-                    placeholder="Temu Open API Access Token"
-                  />
-                </div>
-              </div>
-              {editingShop && (
-                <p className="text-xs text-muted-foreground mt-3">
-                  留空表示不修改现有的 API 凭证
-                </p>
-              )}
-            </div>
           </div>
 
           <DialogFooter>

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Pencil, Search, ChevronRight, X, Check } from 'lucide-react';
 import type { TemuTemplate, TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
-import type { ParentSpecification } from '@/services/temuShopCategoryService';
-import { AttributeFormValue, isMultiSelect } from './types';
+import type { ParentSpecification, TemuCategoryPath, TemuAPICategory } from '@/services/temuShopCategoryService';
+import { TemuSite, AttributeFormValue, isMultiSelect } from './types';
 import { SkuConfigTable } from './SkuConfigTable';
 
 interface EditTemplateDialogProps {
@@ -49,6 +50,31 @@ interface EditTemplateDialogProps {
   onSave: () => void;
   onClose: () => void;
   submitting: boolean;
+  // Category change state
+  editIsChangingCategory: boolean;
+  temuSites: TemuSite[];
+  selectedSiteId: number | undefined;
+  setSelectedSiteId: (id: number | undefined) => void;
+  editTemuSearchKeyword: string;
+  setEditTemuSearchKeyword: (keyword: string) => void;
+  editSearchResults: TemuCategoryPath[];
+  editSearching: boolean;
+  editIsSearchMode: boolean;
+  onEditSearch: () => void;
+  onEditClearSearch: () => void;
+  editBrowseColumns: TemuAPICategory[][];
+  editSelectedPath: TemuAPICategory[];
+  editLoadingColumn: number | null;
+  onEditSelectCategory: (cat: TemuAPICategory, colIndex: number) => void;
+  onEditLoadCategories: (parentCatId: number | undefined, level: number) => void;
+  editPendingCategory: TemuAPICategory | null;
+  editFetchingAttributes: boolean;
+  onEditSelectSearchResult: (path: TemuCategoryPath) => void;
+  onEditConfirmCategory: () => void;
+  onEditStartChangeCategory: () => void;
+  onEditCancelChangeCategory: () => void;
+  getPathFromSearchResult: (path: TemuCategoryPath) => TemuAPICategory[];
+  templates: TemuTemplate[];
 }
 
 export function EditTemplateDialog({
@@ -67,7 +93,7 @@ export function EditTemplateDialog({
   onEditAddSpec,
   onEditRemoveSpec,
   onEditUpdateSpecParent,
-  onEditUpdateSpecValues,
+  onEditUpdateSpecValues: _onEditUpdateSpecValues,
   onEditAddSpecValue,
   onEditRemoveSpecValue,
   onEditUpdateSpecValue,
@@ -78,10 +104,35 @@ export function EditTemplateDialog({
   onSave,
   onClose,
   submitting,
+  // Category change props
+  editIsChangingCategory,
+  temuSites,
+  selectedSiteId,
+  setSelectedSiteId,
+  editTemuSearchKeyword,
+  setEditTemuSearchKeyword,
+  editSearchResults,
+  editSearching,
+  editIsSearchMode,
+  onEditSearch,
+  onEditClearSearch,
+  editBrowseColumns,
+  editSelectedPath,
+  editLoadingColumn,
+  onEditSelectCategory,
+  onEditLoadCategories,
+  editPendingCategory,
+  editFetchingAttributes,
+  onEditSelectSearchResult,
+  onEditConfirmCategory,
+  onEditStartChangeCategory,
+  onEditCancelChangeCategory,
+  getPathFromSearchResult,
+  templates,
 }: EditTemplateDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className={`max-h-[85vh] overflow-hidden flex flex-col ${editIsChangingCategory ? 'sm:max-w-6xl max-w-6xl h-[85vh]' : 'sm:max-w-4xl'}`}>
         <DialogHeader>
           <DialogTitle>编辑模板</DialogTitle>
           <DialogDescription>
@@ -94,8 +145,241 @@ export function EditTemplateDialog({
             <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mr-2" />
             <span className="text-gray-500">加载中...</span>
           </div>
+        ) : editIsChangingCategory ? (
+          /* 分类选择模式 */
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {/* 站点选择和搜索框 */}
+            <div className="flex items-center gap-2 mb-4">
+              <Select
+                value={selectedSiteId?.toString() || 'all'}
+                onValueChange={(value) => {
+                  const newSiteId = value === 'all' ? undefined : parseInt(value);
+                  setSelectedSiteId(newSiteId);
+                  onEditLoadCategories(undefined, 0);
+                }}
+              >
+                <SelectTrigger className="w-32 shadow-none focus:ring-0 focus:ring-offset-0">
+                  <SelectValue placeholder="全部站点" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部站点</SelectItem>
+                  {temuSites.map((site) => (
+                    <SelectItem key={site.siteId} value={site.siteId.toString()}>
+                      {site.siteName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="搜索分类名称..."
+                  value={editTemuSearchKeyword}
+                  onChange={(e) => setEditTemuSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && onEditSearch()}
+                  className="pl-10 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+              <Button onClick={onEditSearch} disabled={editSearching || !editTemuSearchKeyword.trim()}>
+                {editSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+              {editIsSearchMode && (
+                <Button variant="outline" size="icon" onClick={onEditClearSearch}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* 当前选中路径 */}
+            {editSelectedPath.length > 0 && (
+              <div className="mb-3 p-2 bg-gray-50 rounded-lg flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 mb-1">选择的分类：</div>
+                  <div className="flex items-center flex-wrap gap-1">
+                    {editSelectedPath.map((cat, index) => (
+                      <div key={cat.catId} className="flex items-center">
+                        <span className={`text-sm ${index === editSelectedPath.length - 1 ? 'font-medium text-primary' : 'text-gray-600'}`}>
+                          {cat.catName}
+                        </span>
+                        {index < editSelectedPath.length - 1 && (
+                          <ChevronRight className="w-3 h-3 text-gray-400 mx-1" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* 选中叶子分类时显示确认按钮 */}
+                {editPendingCategory?.isLeaf && (
+                  <div className="flex items-center gap-2 ml-4">
+                    {editFetchingAttributes ? (
+                      <span className="text-xs text-blue-600 flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        获取属性中...
+                      </span>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      onClick={onEditConfirmCategory}
+                      disabled={editFetchingAttributes}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      确认选择
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 搜索模式：扁平列表 */}
+            {editIsSearchMode ? (
+              <div className="flex-1 border rounded-lg overflow-hidden flex flex-col min-h-0">
+                <div className="p-2 bg-gray-50 border-b text-xs text-gray-500 font-medium">
+                  搜索结果 ({editSearchResults.length})
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {editSearchResults.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500 py-12">
+                      <Search className="w-8 h-8 mr-3 text-gray-300" />
+                      <span>未找到匹配的分类，请尝试其他关键词</span>
+                    </div>
+                  ) : (
+                    editSearchResults.map((path, index) => {
+                      const fullPath = getPathFromSearchResult(path);
+                      const leafCategory = fullPath[fullPath.length - 1];
+                      const isSelected = editSelectedPath.length > 0 &&
+                        editSelectedPath[editSelectedPath.length - 1]?.catId === leafCategory?.catId;
+                      const isAdded = leafCategory && templates.some(c => c.catId === leafCategory.catId);
+                      const isCurrent = leafCategory && editingTemplate?.catId === leafCategory.catId;
+
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => onEditSelectSearchResult(path)}
+                          className={`px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-gray-50 border-b border-gray-100 ${
+                            isSelected ? 'bg-primary/10' : ''
+                          } ${isCurrent ? 'bg-blue-50' : ''}`}
+                        >
+                          <div className="flex items-center flex-wrap gap-1 flex-1 min-w-0">
+                            {fullPath.map((cat, catIndex) => (
+                              <div key={cat.catId} className="flex items-center">
+                                <span className={`text-sm ${catIndex === fullPath.length - 1 ? 'font-medium text-primary' : 'text-gray-600'}`}>
+                                  {cat.catName}
+                                </span>
+                                {catIndex < fullPath.length - 1 && (
+                                  <ChevronRight className="w-3 h-3 text-gray-400 mx-1" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          {isCurrent && (
+                            <Badge variant="outline" className="text-xs text-blue-600 px-1 ml-2 shrink-0">当前</Badge>
+                          )}
+                          {isAdded && !isCurrent && (
+                            <Badge variant="outline" className="text-xs text-green-600 px-1 ml-2 shrink-0">已添加</Badge>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* 浏览模式：多列分类浏览器 */
+              <div className="flex-1 border rounded-lg overflow-x-auto overflow-y-hidden flex flex-col min-h-0">
+                <div className="flex-1 flex min-h-0 min-w-max">
+                  {editBrowseColumns.length === 0 && editLoadingColumn === 0 ? (
+                    <div className="flex-1 flex items-center justify-center">
+                      <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                      <span className="ml-2 text-gray-500">加载分类中...</span>
+                    </div>
+                  ) : editBrowseColumns.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center">
+                      <Button variant="outline" onClick={() => onEditLoadCategories(undefined, 0)}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        加载分类
+                      </Button>
+                    </div>
+                  ) : (
+                    editBrowseColumns.map((column, colIndex) => (
+                      <div
+                        key={colIndex}
+                        className="w-48 flex-shrink-0 border-r last:border-r-0 flex flex-col min-h-0"
+                      >
+                        <div className="p-2 bg-gray-50 border-b text-xs text-gray-500 font-medium">
+                          {colIndex === 0 ? '一级分类' : `${colIndex + 1}级分类`}
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                          {editLoadingColumn === colIndex ? (
+                            <div className="flex items-center justify-center h-full text-gray-500">
+                              <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                              加载中...
+                            </div>
+                          ) : (
+                            column.map((cat) => {
+                              const isSelected = editSelectedPath[colIndex]?.catId === cat.catId;
+                              const isAdded = templates.some(c => c.catId === cat.catId);
+                              const isCurrent = editingTemplate?.catId === cat.catId;
+
+                              return (
+                                <div
+                                  key={cat.catId}
+                                  onClick={() => onEditSelectCategory(cat, colIndex)}
+                                  className={`px-3 py-2 cursor-pointer flex items-center justify-between text-sm hover:bg-gray-50 border-b border-gray-100 ${
+                                    isSelected ? 'bg-primary/10 text-primary font-medium' : ''
+                                  } ${isCurrent ? 'bg-blue-50' : ''}`}
+                                >
+                                  <span className="truncate flex-1">{cat.catName}</span>
+                                  <div className="flex items-center gap-1 ml-1">
+                                    {isCurrent && (
+                                      <Badge variant="outline" className="text-xs text-blue-600 px-1">当前</Badge>
+                                    )}
+                                    {isAdded && !isCurrent && (
+                                      <Badge variant="outline" className="text-xs text-green-600 px-1">已添加</Badge>
+                                    )}
+                                    {!cat.isLeaf && (
+                                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 取消按钮 */}
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={onEditCancelChangeCategory}>
+                取消更改分类
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {/* 当前分类 */}
+            <div className="flex items-center gap-3">
+              <Label className="text-sm w-20 shrink-0">Temu分类</Label>
+              <div className="flex-1 flex items-center gap-2">
+                <span className="text-sm text-gray-700">
+                  {editingTemplate?.fullPath || editingTemplate?.catName}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onEditStartChangeCategory}
+                  className="h-7 px-2"
+                >
+                  <Pencil className="w-3 h-3 mr-1" />
+                  更改
+                </Button>
+              </div>
+            </div>
+
             {/* 模板名称 */}
             <div className="flex items-center gap-3">
               <Label className="text-sm w-20 shrink-0">模板名称</Label>

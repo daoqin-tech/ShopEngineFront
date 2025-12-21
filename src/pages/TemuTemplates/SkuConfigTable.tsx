@@ -99,18 +99,21 @@ export function SkuConfigTable({
                     />
                   </TableCell>
                   {/* SKU分类 */}
-                  <TableCell className="py-2 text-center">
-                    <div className="flex items-center justify-center gap-1">
+                  <TableCell className="py-2">
+                    <div className="flex flex-col gap-2 min-w-[200px]">
+                      {/* SKU分类选择 */}
                       <Select
                         value={config.skuClassType || 'single'}
                         onValueChange={(value: 'single' | 'sameMultiPack' | 'mixedSet') => {
                           onVolumeWeightConfigChange(index, {
                             skuClassType: value,
-                            multiPackQuantity: value === 'single' ? 1 : (config.multiPackQuantity || 2)
+                            multiPackQuantity: value === 'single' ? 1 : (config.multiPackQuantity || 2),
+                            pieceUnitCode: value === 'mixedSet' ? 1 : (config.pieceUnitCode || 1),
+                            individuallyPacked: value === 'single' ? undefined : (config.individuallyPacked ?? 0)
                           });
                         }}
                       >
-                        <SelectTrigger className="h-7 text-xs w-20">
+                        <SelectTrigger className="h-7 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -119,17 +122,59 @@ export function SkuConfigTable({
                           <SelectItem value="mixedSet">混合套装</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Input
-                        type="text"
-                        placeholder="数量"
-                        value={config.multiPackQuantity || 1}
-                        onChange={(e) => {
-                          const val = e.target.value ? parseInt(e.target.value) : 1;
-                          onVolumeWeightConfigChange(index, { multiPackQuantity: val });
-                        }}
-                        className="w-12 h-7 text-xs text-center"
-                      />
-                      <span className="text-xs text-gray-500">件</span>
+
+                      {/* 单品数量 + 单位 */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">单品数量</span>
+                        <Input
+                          type="text"
+                          placeholder="1"
+                          value={config.multiPackQuantity || 1}
+                          onChange={(e) => {
+                            const val = e.target.value ? parseInt(e.target.value) : 1;
+                            onVolumeWeightConfigChange(index, { multiPackQuantity: val });
+                          }}
+                          className="w-14 h-7 text-xs text-center"
+                          disabled={config.skuClassType === 'single'}
+                        />
+                        {config.skuClassType === 'mixedSet' ? (
+                          <span className="text-xs text-gray-500">件</span>
+                        ) : (
+                          <Select
+                            value={String(config.pieceUnitCode || 1)}
+                            onValueChange={(value) => {
+                              onVolumeWeightConfigChange(index, { pieceUnitCode: parseInt(value) });
+                            }}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-14">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">件</SelectItem>
+                              <SelectItem value="2">双</SelectItem>
+                              <SelectItem value="3">包</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+
+                      {/* 独立包装（同款多件装/混合套装时显示） */}
+                      {(config.skuClassType === 'sameMultiPack' || config.skuClassType === 'mixedSet') && (
+                        <Select
+                          value={config.individuallyPacked !== undefined ? String(config.individuallyPacked) : undefined}
+                          onValueChange={(value) => {
+                            onVolumeWeightConfigChange(index, { individuallyPacked: parseInt(value) });
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs">
+                            <SelectValue placeholder="请选择独立包装" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">是独立包装</SelectItem>
+                            <SelectItem value="0">不是独立包装</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </TableCell>
                   {/* 建议零售价 USD（分） */}

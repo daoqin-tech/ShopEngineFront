@@ -120,7 +120,7 @@ export function AddTemplateDialog({
   onAddSpec,
   onRemoveSpec,
   onUpdateSpecParent,
-  onUpdateSpecValues,
+  onUpdateSpecValues: _onUpdateSpecValues,
   onAddSpecValue,
   onRemoveSpecValue,
   onUpdateSpecValue,

@@ -3,20 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, Download, RefreshCw, X, Image as ImageIcon, Sparkles, Upload } from 'lucide-react';
-import { productService, type Product } from '@/services/productService';
+import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, RefreshCw, X, Image as ImageIcon, Upload, Clock, Loader2, RotateCcw } from 'lucide-react';
+import { productService, type Product, type ListingStep } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import { type ProductCategory } from '@/types/productCategory';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { toast } from 'sonner';
-import { RegenerateTitleDialog } from '@/components/RegenerateTitleDialog';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
 import { LogisticsExportDialog } from '@/components/LogisticsExportDialog';
 import { PdfExportDialog } from '@/components/PdfExportDialog';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
-  exportProductImages as exportProductImagesUtil,
-  exportToExcel as exportToExcelUtil
+  exportProductImages as exportProductImagesUtil
 } from '@/utils/productExportUtils';
 
 export function ProductListing() {
@@ -51,9 +49,6 @@ export function ProductListing() {
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
 
-  // 导出状态
-  const [isRegeneratingTitles, setIsRegeneratingTitles] = useState(false);
-
   // 统一导出对话框状态
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportDialogConfig, setExportDialogConfig] = useState({
@@ -67,9 +62,6 @@ export function ProductListing() {
     totalImages: 0,
     currentProductName: '',
   });
-
-  // 重新生成标题对话框
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
 
   // 获取商品列表
   const fetchProducts = async (page: number = currentPage) => {
@@ -149,40 +141,117 @@ export function ProductListing() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success':
+      case 'listed':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'failed':
         return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'processing':
+        return <RefreshCw className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'queued':
+        return <AlertCircle className="w-5 h-5 text-orange-500" />;
+      case 'pending':
       default:
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+        return <AlertCircle className="w-5 h-5 text-gray-400" />;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'success':
-        return '成功';
+      case 'listed':
+        return '已上架';
       case 'failed':
-        return '失败';
+        return '上架失败';
+      case 'processing':
+        return '上架中';
+      case 'queued':
+        return '排队中';
+      case 'pending':
       default:
-        return '处理中';
+        return '待处理';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'success':
+      case 'listed':
         return 'text-green-600';
       case 'failed':
         return 'text-red-600';
+      case 'processing':
+        return 'text-blue-600';
+      case 'queued':
+        return 'text-orange-600';
+      case 'pending':
       default:
-        return 'text-yellow-600';
+        return 'text-gray-500';
     }
   };
 
-  // 根据 shopId 查找店铺名称
+  // 上架步骤名称映射
+  const stepNameMap: Record<string, string> = {
+    'prepare': '准备',
+    'generate_title': '生成标题',
+    'upload_images': '上传图片',
+    'create_spec': '创建规格',
+    'upload_goods': '上传商品',
+  };
+
+  // 获取步骤状态图标
+  const getStepStatusIcon = (status: string) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="w-3 h-3 text-green-500" />;
+      case 'failed':
+        return <XCircle className="w-3 h-3 text-red-500" />;
+      case 'processing':
+        return <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />;
+      case 'pending':
+      default:
+        return <Clock className="w-3 h-3 text-gray-300" />;
+    }
+  };
+
+  // 渲染上架步骤进度（带文字说明）
+  const renderListingSteps = (steps: ListingStep[] | undefined) => {
+    if (!steps || steps.length === 0) return null;
+
+    return (
+      <div className="flex items-center gap-0.5 mt-1">
+        {steps.map((step, index) => (
+          <div
+            key={step.step}
+            className="flex items-center"
+            title={step.error ? step.error : undefined}
+          >
+            <div className="flex flex-col items-center">
+              {getStepStatusIcon(step.status)}
+              <span className="text-[10px] text-gray-500 mt-0.5 whitespace-nowrap">
+                {stepNameMap[step.step] || step.step}
+              </span>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`w-2 h-0.5 mx-0.5 mt-[-10px] ${step.status === 'success' ? 'bg-green-300' : 'bg-gray-200'}`} />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // 获取失败步骤的错误信息
+  const getFailedStepError = (steps: ListingStep[] | undefined): string | null => {
+    if (!steps) return null;
+    const failedStep = steps.find(s => s.status === 'failed');
+    if (failedStep && failedStep.error) {
+      return failedStep.error;
+    }
+    return null;
+  };
+
+  // 根据 shopId（数据库UUID）查找店铺名称
   const getShopName = (shopId: string): string => {
-    const shop = temuShops.find(s => s.shopId === shopId);
+    // product.shopId 存的是数据库 UUID（id），不是 Temu 的 shopId
+    const shop = temuShops.find(s => s.id === shopId);
     return shop?.name || '';
   };
 
@@ -355,61 +424,20 @@ export function ProductListing() {
     }
   };
 
-  // 导出Excel功能
-  const handleExport = () => {
-    try {
-      if (selectedProductIds.size === 0) {
-        toast.error('请至少选择一个商品');
-        return;
-      }
-
-      const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
-      exportToExcelUtil(selectedProducts, getShopName);
-      toast.success(`成功导出 ${selectedProductIds.size} 个商品`);
-      setSelectedProductIds(new Set());
-    } catch (error) {
-      console.error('导出Excel失败:', error);
-      toast.error(error instanceof Error ? error.message : '导出Excel失败');
-    }
-  };
-
   // 打开物流信息导出对话框
   const handleOpenLogisticsDialog = () => {
     setShowLogisticsDialog(true);
   };
 
-  // 打开重新生成标题对话框
-  const handleOpenRegenerateDialog = () => {
+  // 重新上架商品
+  const handleRelist = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
       return;
     }
-    setShowRegenerateDialog(true);
-  };
 
-  // 确认重新生成商品标题
-  const handleConfirmRegenerateTitles = async (productSpec: string, productUsage: string) => {
-    setIsRegeneratingTitles(true);
-    try {
-      const productIds = Array.from(selectedProductIds);
-      await productService.regenerateTitles({
-        productIds,
-        productSpec,
-        productUsage
-      });
-
-      toast.success(`已提交 ${productIds.length} 个商品的标题重新生成任务，正在后台处理中...`, {
-        description: '商品标题由AI生成，请稍后刷新查看结果',
-        duration: 5000
-      });
-
-      setSelectedProductIds(new Set());
-    } catch (error) {
-      console.error('重新生成标题失败:', error);
-      toast.error(error instanceof Error ? error.message : '重新生成标题失败，请重试');
-    } finally {
-      setIsRegeneratingTitles(false);
-    }
+    // TODO: 后端需要实现批量上架接口
+    toast.info('批量上架功能暂未实现');
   };
 
   return (
@@ -450,15 +478,6 @@ export function ProductListing() {
             导出产品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
-            onClick={handleExport}
-            variant="outline"
-            className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0}
-          >
-            <Download className="w-4 h-4" />
-            导出上架表格 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
-          </Button>
-          <Button
             onClick={handleOpenLogisticsDialog}
             variant="outline"
             className="flex items-center gap-2"
@@ -475,22 +494,13 @@ export function ProductListing() {
             导出产品图PDF
           </Button>
           <Button
-            onClick={handleOpenRegenerateDialog}
+            onClick={handleRelist}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0 || isRegeneratingTitles}
+            disabled={selectedProductIds.size === 0}
           >
-            {isRegeneratingTitles ? (
-              <>
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                生成中...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                重新生成标题 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
-              </>
-            )}
+            <RotateCcw className="w-4 h-4" />
+            重新上架 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button onClick={() => navigate('/workspace/batch-upload/create')} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -622,14 +632,13 @@ export function ProductListing() {
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预览图</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">商品信息</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">老货号</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">新货号</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">店铺</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预览图</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">商品信息</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">货号/店铺</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[280px]">错误信息</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -643,73 +652,89 @@ export function ProductListing() {
                           onChange={() => toggleProductSelection(product.id)}
                         />
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         {product.previewImage ? (
                           <img
                             src={product.previewImage}
                             alt="预览图"
-                            className="w-16 h-16 object-cover rounded border"
+                            className="w-14 h-14 object-cover rounded border"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                          <div className="w-14 h-14 bg-gray-100 rounded border flex items-center justify-center">
                             <span className="text-gray-400 text-xs">无图片</span>
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-gray-900">
+                      <td className="px-4 py-3">
+                        <div className="max-w-[280px]">
+                          <div
+                            className="text-sm font-medium text-gray-900 line-clamp-2 cursor-default"
+                            title={product.nameZh || '未生成标题'}
+                          >
                             {product.nameZh || '未生成标题'}
                           </div>
                           {product.nameEn && (
-                            <div className="text-sm text-gray-500 mt-1">
+                            <div
+                              className="text-xs text-gray-500 mt-1 line-clamp-1 cursor-default"
+                              title={product.nameEn}
+                            >
                               {product.nameEn}
                             </div>
                           )}
                           {product.categoryName && (
-                            <div className="mt-2">
+                            <div className="mt-1">
                               <Badge variant="outline" className="text-xs">{product.categoryName}</Badge>
                             </div>
                           )}
                           {product.productId && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              商品ID: {product.productId}
+                            <div className="text-xs text-gray-400 mt-1">
+                              ID: {product.productId}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {product.productCode || '-'}
+                      <td className="px-4 py-3 text-xs text-gray-900">
+                        <div className="space-y-0.5">
+                          <div><span className="text-gray-500">店铺:</span> {getShopName(product.shopId) || '-'}</div>
+                          <div><span className="text-gray-500">老货号:</span> {product.productCode || '-'}</div>
+                          <div><span className="text-gray-500">新货号:</span> {product.newProductCode || '-'}</div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {product.newProductCode || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {getShopName(product.shopId)}
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center">
                           {getStatusIcon(product.status)}
-                          <span className={`ml-2 text-sm font-medium ${getStatusColor(product.status)}`}>
+                          <span className={`ml-2 text-xs font-medium ${getStatusColor(product.status)}`}>
                             {getStatusText(product.status)}
                           </span>
                         </div>
-                        {product.errorMessage && (
-                          <div className="text-xs text-red-500 mt-1">
-                            {product.errorMessage}
-                          </div>
-                        )}
+                        {/* 上架步骤进度（带文字说明） */}
+                        {renderListingSteps(product.listingLog?.steps)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-xs min-w-[280px]">
+                        {/* 错误信息列 */}
+                        {(() => {
+                          const stepError = getFailedStepError(product.listingLog?.steps);
+                          const error = stepError || product.errorMessage;
+                          if (!error) return <span className="text-gray-400">-</span>;
+                          return (
+                            <div className="text-red-500" title={error}>
+                              <div className="line-clamp-4">
+                                {error}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                         {new Date(product.createdAt).toLocaleString('zh-CN')}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handlePreviewCarouselImages(product)}
-                            className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
+                            className="h-6 px-2 text-blue-500 hover:text-blue-700 text-xs"
                           >
                             商品图
                           </Button>
@@ -717,7 +742,7 @@ export function ProductListing() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handlePreviewProductImages(product)}
-                            className="h-7 px-2 text-green-600 hover:text-green-700 text-xs"
+                            className="h-6 px-2 text-green-600 hover:text-green-700 text-xs"
                           >
                             产品图
                           </Button>
@@ -964,14 +989,6 @@ export function ProductListing() {
           </div>
         </div>
       )}
-
-      {/* 重新生成标题对话框 */}
-      <RegenerateTitleDialog
-        open={showRegenerateDialog}
-        onOpenChange={setShowRegenerateDialog}
-        selectedCount={selectedProductIds.size}
-        onConfirm={handleConfirmRegenerateTitles}
-      />
 
       {/* 统一导出对话框 */}
       <UnifiedExportDialog

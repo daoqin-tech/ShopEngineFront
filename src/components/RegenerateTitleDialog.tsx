@@ -143,20 +143,12 @@ export function RegenerateTitleDialog({
                         <div className="font-medium text-sm">{child.name}</div>
                         <div className="text-xs text-muted-foreground space-y-1">
                           <div>
-                            {child.productLength && child.productWidth ? (
-                              `${child.productLength}×${child.productWidth}${child.productHeight ? `×${child.productHeight}` : ''}cm`
+                            {child.manufacturingLength && child.manufacturingWidth ? (
+                              `${child.manufacturingLength}×${child.manufacturingWidth}${child.manufacturingHeight ? `×${child.manufacturingHeight}` : ''}cm`
                             ) : (
                               child.productSpec || '未设置尺寸'
                             )}
-                            {child.weight && ` • ${child.weight}g`}
                           </div>
-                          {(child.declaredPrice || child.suggestedRetailPrice) && (
-                            <div>
-                              {child.declaredPrice && `¥${child.declaredPrice}`}
-                              {child.declaredPrice && child.suggestedRetailPrice && ' / '}
-                              {child.suggestedRetailPrice && `$${child.suggestedRetailPrice}`}
-                            </div>
-                          )}
                         </div>
                       </div>
                       {selectedSpecId === child.id && (

@@ -334,7 +334,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   const submitData = {
                     shopId: selectedShop.id,        // 使用店铺的数据库ID（而非平台shopId）
                     taskIds,
-                    enableListing: true,            // 启用上架
                     temuTemplateId: selectedTemuTemplate.id,  // Temu 模板 ID
                   };
 
@@ -598,7 +597,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 <div className="bg-white border rounded p-2">
                                   <div className="text-xs text-gray-400 mb-1">尺寸 (长×宽×高)</div>
                                   <div className="text-sm font-medium text-gray-800">
-                                    {(config.longestSide / 10).toFixed(1)} × {(config.middleSide / 10).toFixed(1)} × {(config.shortestSide / 10).toFixed(1)} cm
+                                    {config.longestSide} × {config.middleSide} × {config.shortestSide} cm
                                   </div>
                                 </div>
                               )}
