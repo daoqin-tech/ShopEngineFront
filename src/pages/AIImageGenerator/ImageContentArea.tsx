@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Image as ImageIcon } from 'lucide-react';
+import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Image as ImageIcon, Layers } from 'lucide-react';
 import { PromptStatus, GeneratedImage, Prompt, ReferenceImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
+import { imageTemplateService, ImageTemplateProjectListItem, ImageTemplateListItem, ImageTemplate } from '@/services/imageTemplateService';
 import { toast } from 'sonner';
 
 // PDF页面尺寸配置（单位：mm）
@@ -86,6 +87,16 @@ export function ImageContentArea({
   // 文件上传相关状态
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 单张图片模板替换相关状态
+  const [showTemplateReplaceDialog, setShowTemplateReplaceDialog] = useState(false);
+  const [templateReplaceImage, setTemplateReplaceImage] = useState<GeneratedImage | null>(null);
+  const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
+  const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
+  const [templates, setTemplates] = useState<ImageTemplateListItem[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [isReplacingTemplate, setIsReplacingTemplate] = useState(false);
 
   // 获取可导出的图片
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
@@ -313,6 +324,177 @@ export function ImageContentArea({
       alert(error instanceof Error ? error.message : '文件上传失败，请重试');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // ========== 单张图片模板替换功能 ==========
+
+  // 加载图片到 Image 对象
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        // 尝试不使用 crossOrigin 重新加载
+        const img2 = document.createElement('img');
+        img2.onload = () => resolve(img2);
+        img2.onerror = () => reject(new Error(`图片加载失败: ${url}`));
+        img2.src = url;
+      };
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+    });
+  };
+
+  // 合成图片（将替换图片绘制到模板的指定区域）
+  const compositeImages = async (
+    templateImageUrl: string,
+    regions: Array<{ x: number; y: number; width: number; height: number; order: number }>,
+    replacementImageUrl: string,
+    targetWidth: number,
+    targetHeight: number
+  ): Promise<{ blob: Blob; width: number; height: number }> => {
+    // 加载模板图片
+    const templateImg = await loadImage(templateImageUrl);
+
+    // 创建原始尺寸的 canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = templateImg.width;
+    canvas.height = templateImg.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('无法创建 canvas 上下文');
+
+    // 绘制模板图片作为底图
+    ctx.drawImage(templateImg, 0, 0);
+
+    // 加载替换图片
+    const replaceImg = await loadImage(replacementImageUrl);
+
+    // 按顺序替换区域
+    const sortedRegions = [...regions].sort((a, b) => a.order - b.order);
+    for (const region of sortedRegions) {
+      ctx.drawImage(replaceImg, region.x, region.y, region.width, region.height);
+    }
+
+    // 创建压缩后的 canvas
+    const compressedCanvas = document.createElement('canvas');
+    compressedCanvas.width = targetWidth;
+    compressedCanvas.height = targetHeight;
+    const compressedCtx = compressedCanvas.getContext('2d');
+    if (!compressedCtx) throw new Error('无法创建压缩 canvas 上下文');
+
+    // 将原始图片缩放到目标尺寸
+    compressedCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+
+    // 转换为 blob
+    return new Promise((resolve, reject) => {
+      compressedCanvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve({ blob, width: targetWidth, height: targetHeight });
+          } else {
+            reject(new Error('图片转换失败'));
+          }
+        },
+        'image/jpeg',
+        0.98
+      );
+    });
+  };
+
+  // 打开模板替换对话框
+  const handleOpenTemplateReplace = async (image: GeneratedImage) => {
+    setTemplateReplaceImage(image);
+    setSelectedTemplateProjectId('');
+    setSelectedTemplateId('');
+    setTemplates([]);
+
+    try {
+      const projects = await imageTemplateService.getProjects();
+      setTemplateProjects(projects);
+      setShowTemplateReplaceDialog(true);
+    } catch (err) {
+      toast.error('加载模板项目失败');
+      console.error('Error loading template projects:', err);
+    }
+  };
+
+  // 当选择模板项目时，加载该项目下的模板列表
+  const handleTemplateProjectChange = async (projectId: string) => {
+    setSelectedTemplateProjectId(projectId);
+    setSelectedTemplateId('');
+    setTemplates([]);
+
+    if (!projectId) return;
+
+    setIsLoadingTemplates(true);
+    try {
+      const templateList = await imageTemplateService.getTemplates(projectId);
+      setTemplates(templateList);
+    } catch (err) {
+      toast.error('加载模板列表失败');
+      console.error('Error loading templates:', err);
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  // 执行单张图片模板替换
+  const handleExecuteTemplateReplace = async () => {
+    if (!templateReplaceImage || !selectedTemplateProjectId || !selectedTemplateId) {
+      toast.error('请选择模板');
+      return;
+    }
+
+    setIsReplacingTemplate(true);
+
+    try {
+      // 获取模板项目信息（确定输出尺寸）
+      const templateProject = templateProjects.find(p => p.projectId === selectedTemplateProjectId);
+      if (!templateProject) {
+        toast.error('模板项目不存在');
+        return;
+      }
+
+      // 获取模板详情
+      const templateDetail = await imageTemplateService.getTemplate(selectedTemplateProjectId, selectedTemplateId);
+
+      // 根据模板类型确定输出尺寸
+      const outputWidth = templateProject.type === 'calendar_landscape' ? 1440 : 1024;
+      const outputHeight = templateProject.type === 'calendar_landscape' ? 1120 : 1440;
+
+      // 合成图片
+      const { blob, width, height } = await compositeImages(
+        templateDetail.imageUrl,
+        templateDetail.regions,
+        templateReplaceImage.imageUrl!,
+        outputWidth,
+        outputHeight
+      );
+
+      // 上传合成后的图片
+      const fileName = `template-replaced-${Date.now()}-${templateReplaceImage.id}.jpg`;
+      const file = new File([blob], fileName, { type: 'image/jpeg' });
+      const uploadedUrl = await FileUploadAPI.uploadFile(file);
+
+      // 更新数据库
+      await AIImageSessionsAPI.batchUpdateImages([{
+        imageId: templateReplaceImage.id,
+        imageUrl: uploadedUrl,
+        width,
+        height,
+      }]);
+
+      toast.success('模板替换成功');
+      setShowTemplateReplaceDialog(false);
+      onRefreshImages();
+    } catch (err: any) {
+      toast.error('模板替换失败', {
+        description: err.message || '请稍后再试'
+      });
+      console.error('Error replacing template:', err);
+    } finally {
+      setIsReplacingTemplate(false);
     }
   };
 
@@ -675,6 +857,14 @@ export function ImageContentArea({
                               <Eye className="w-4 h-4 mr-2" />
                               预览
                             </Button>
+                            <Button size="sm" className="bg-blue-500/90 backdrop-blur-sm text-white hover:bg-blue-600 shadow-lg border border-white/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenTemplateReplace(image);
+                              }}>
+                              <Layers className="w-4 h-4 mr-2" />
+                              模板
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -902,6 +1092,137 @@ export function ImageContentArea({
                   <>
                     <Copy className="w-4 h-4 mr-2" />
                     确认复制
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 单张图片模板替换对话框 */}
+      {showTemplateReplaceDialog && templateReplaceImage && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => !isReplacingTemplate && setShowTemplateReplaceDialog(false)}>
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-blue-600" />
+                单张图片模板替换
+              </h2>
+              <Button variant="ghost" size="sm" onClick={() => setShowTemplateReplaceDialog(false)} disabled={isReplacingTemplate}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-6">
+              <div className="grid grid-cols-2 gap-6">
+                {/* 左侧：当前图片预览 */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">当前图片</h3>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                    <img
+                      src={templateReplaceImage.imageUrl}
+                      alt="当前图片"
+                      className="w-full h-auto object-contain"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    {templateReplaceImage.width} × {templateReplaceImage.height}
+                  </p>
+                </div>
+
+                {/* 右侧：模板选择 */}
+                <div className="space-y-4">
+                  {/* 选择模板项目 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">选择模板项目</label>
+                    <select
+                      value={selectedTemplateProjectId}
+                      onChange={(e) => handleTemplateProjectChange(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      disabled={isReplacingTemplate}
+                    >
+                      <option value="">请选择模板项目...</option>
+                      {templateProjects.map((project) => (
+                        <option key={project.projectId} value={project.projectId}>
+                          {project.name} ({project.templateCount} 个模板)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 选择具体模板 */}
+                  {selectedTemplateProjectId && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        选择模板 {isLoadingTemplates && <span className="text-gray-400">(加载中...)</span>}
+                      </label>
+                      {isLoadingTemplates ? (
+                        <div className="flex items-center justify-center h-32 border border-gray-200 rounded-lg">
+                          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1">
+                          {templates.map((template, index) => (
+                            <div
+                              key={template.templateId}
+                              onClick={() => !isReplacingTemplate && setSelectedTemplateId(template.templateId)}
+                              className={`relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
+                                selectedTemplateId === template.templateId
+                                  ? 'border-blue-500 ring-2 ring-blue-200'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              <img
+                                src={template.imageUrl}
+                                alt={`模板 ${index + 1}`}
+                                className="w-full h-auto object-contain"
+                              />
+                              <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/60 text-white text-xs rounded">
+                                {index + 1}
+                              </div>
+                              {selectedTemplateId === template.templateId && (
+                                <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                                  <CheckSquare className="w-6 h-6 text-blue-600" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 提示信息 */}
+                  {selectedTemplateId && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        已选择模板 #{templates.findIndex(t => t.templateId === selectedTemplateId) + 1}，点击下方按钮开始替换
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <Button variant="outline" onClick={() => setShowTemplateReplaceDialog(false)} disabled={isReplacingTemplate}>
+                取消
+              </Button>
+              <Button
+                onClick={handleExecuteTemplateReplace}
+                disabled={!selectedTemplateId || isReplacingTemplate}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isReplacingTemplate ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    替换中...
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-4 h-4 mr-2" />
+                    确认替换
                   </>
                 )}
               </Button>
