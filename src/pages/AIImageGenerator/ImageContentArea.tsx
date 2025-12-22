@@ -5,7 +5,7 @@ import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVerti
 import { PromptStatus, GeneratedImage, Prompt, ReferenceImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
-import { imageTemplateService, ImageTemplateProjectListItem, ImageTemplateListItem, ImageTemplate } from '@/services/imageTemplateService';
+import { imageTemplateService, ImageTemplateProjectListItem, ImageTemplateListItem } from '@/services/imageTemplateService';
 import { toast } from 'sonner';
 
 // PDF页面尺寸配置（单位：mm）
