@@ -68,6 +68,7 @@ export interface TemuSpecVolumeWeightConfig {
   multiPackQuantity?: number;     // 单品数量（单品默认为1，多件装/套装时必填）
   pieceUnitCode?: number;         // 单件单位：1=件, 2=双, 3=包
   individuallyPacked?: number;    // 是否独立包装：0=否, 1=是（同款多件装或混合套装时必填）
+  numberOfPiecesNew?: number;     // 共计内含数量
   suggestedPrice?: number;        // 建议零售价（美元）
   extCode?: string;               // SKU 货号
   stockQuantity?: number;         // 库存

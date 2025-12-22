@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, Info, Tag, Ruler } from 'lucide-react';
+import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, Info, Tag, Ruler, CheckCircle2 } from 'lucide-react';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { temuTemplateService, type TemuTemplate } from '@/services/temuTemplateService';
 import { coverProjectService, type TaskInfo } from '@/services/coverProjectService';
@@ -19,6 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 // 商品信息表单数据
 interface ProductFormData {
@@ -160,6 +169,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [creating, setCreating] = useState(false);
   const [previewImages, setPreviewImages] = useState<{ taskId: string; categoryName: string; images: string[] } | null>(null);
 
+  // 对话框状态
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [createdCount, setCreatedCount] = useState(0);
+
+  const navigate = useNavigate();
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -289,6 +305,45 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     }
   };
 
+  // 执行创建商品
+  const handleCreateProducts = async () => {
+    const selectedShop = temuShops.find(shop => shop.id === formData.shopAccount);
+    const selectedTemuTemplate = allTemuTemplates.find(t => t.id === formData.productCategory);
+
+    if (!selectedShop || !selectedTemuTemplate) {
+      toast.error('请确保已选择店铺和模板');
+      return;
+    }
+
+    // 获取所有已选任务的唯一taskId列表
+    const taskIds = Array.from(new Set(selectedProducts.map(p => p.taskId)));
+
+    const submitData = {
+      shopId: selectedShop.id,
+      taskIds,
+      temuTemplateId: selectedTemuTemplate.id,
+    };
+
+    try {
+      setCreating(true);
+      setShowConfirmDialog(false);
+
+      await productService.batchCreate(submitData);
+
+      // 记录创建数量，显示成功对话框
+      setCreatedCount(taskIds.length);
+      setShowSuccessDialog(true);
+
+      // 清空选择
+      setSelectedProducts([]);
+    } catch (error: any) {
+      console.error('批量创建商品失败:', error);
+      toast.error(error.response?.data?.message || '创建商品失败，请重试');
+    } finally {
+      setCreating(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -306,7 +361,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 </span>
               )}
               <Button
-                onClick={async () => {
+                onClick={() => {
                   const selectedShop = temuShops.find(shop => shop.id === formData.shopAccount);
                   if (!selectedShop) {
                     toast.error('请选择店铺');
@@ -327,37 +382,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
-                  // 获取所有已选任务的唯一taskId列表
-                  const taskIds = Array.from(new Set(selectedProducts.map(p => p.taskId)));
-
-                  // 简化版请求：大部分信息从数据库（店铺、Temu模板、产品分类）自动获取
-                  const submitData = {
-                    shopId: selectedShop.id,        // 使用店铺的数据库ID（而非平台shopId）
-                    taskIds,
-                    temuTemplateId: selectedTemuTemplate.id,  // Temu 模板 ID
-                  };
-
-                  try {
-                    setCreating(true);
-                    await productService.batchCreate(submitData);
-
-                    // 任务已提交成功，停留在当前页面
-                    toast.success(
-                      `已提交 ${taskIds.length} 个商品的创建任务，正在后台处理中...`,
-                      {
-                        description: '商品标题由AI生成，请在商品列表查看进度',
-                        duration: 5000
-                      }
-                    );
-
-                    // 成功后恢复按钮状态
-                    setCreating(false);
-                  } catch (error: any) {
-                    console.error('批量创建商品失败:', error);
-                    toast.error(error.response?.data?.message || '创建商品失败，请重试');
-                    // 失败后恢复按钮状态
-                    setCreating(false);
-                  }
+                  // 显示确认对话框
+                  setShowConfirmDialog(true);
                 }}
                 disabled={creating || !formData.shopAccount || !selectedParentId || !formData.productSpec || !formData.productCategory || selectedProducts.length === 0}
                 className="min-w-24"
@@ -1053,6 +1079,62 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
           </div>
         </div>
       )}
+
+      {/* 确认创建对话框 */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>确认创建商品</DialogTitle>
+            <DialogDescription>
+              即将创建 {selectedProducts.length} 个商品，商品标题将由 AI 自动生成。确定要继续吗？
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">店铺：</span>
+              <span className="font-medium">{temuShops.find(s => s.id === formData.shopAccount)?.name}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">商品数量：</span>
+              <span className="font-medium text-blue-600">{selectedProducts.length} 个</span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={handleCreateProducts} disabled={creating}>
+              {creating ? '创建中...' : '确认创建'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 创建成功对话框 */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
+              创建任务已提交
+            </DialogTitle>
+            <DialogDescription>
+              已成功提交 {createdCount} 个商品的创建任务，正在后台处理中。商品标题由 AI 自动生成，请稍后在商品列表中查看进度。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowSuccessDialog(false)}>
+              继续创建
+            </Button>
+            <Button onClick={() => {
+              setShowSuccessDialog(false);
+              navigate('/workspace/batch-upload');
+            }}>
+              查看商品列表
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

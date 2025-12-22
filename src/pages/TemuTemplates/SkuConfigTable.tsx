@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +12,49 @@ import {
 } from '@/components/ui/table';
 import type { TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import { SENSITIVE_TYPES } from './types';
+
+// 支持小数输入的 Input 组件
+function DecimalInput({
+  value,
+  onChange,
+  className,
+  placeholder = "0"
+}: {
+  value: number | undefined;
+  onChange: (val: number) => void;
+  className?: string;
+  placeholder?: string;
+}) {
+  const [localValue, setLocalValue] = useState<string>('');
+  const [isFocused, setIsFocused] = useState(false);
+
+  const displayValue = isFocused ? localValue : (value || '');
+
+  return (
+    <Input
+      type="text"
+      placeholder={placeholder}
+      value={displayValue}
+      onFocus={() => {
+        setLocalValue(value?.toString() || '');
+        setIsFocused(true);
+      }}
+      onChange={(e) => {
+        const inputValue = e.target.value;
+        // 只允许数字和小数点
+        if (inputValue === '' || /^[0-9]*\.?[0-9]*$/.test(inputValue)) {
+          setLocalValue(inputValue);
+        }
+      }}
+      onBlur={() => {
+        setIsFocused(false);
+        const parsed = parseFloat(localValue);
+        onChange(isNaN(parsed) ? 0 : parsed);
+      }}
+      className={className}
+    />
+  );
+}
 
 interface SkuConfigTableProps {
   specFormValues: TemuSpecification[];
@@ -175,6 +219,24 @@ export function SkuConfigTable({
                           </SelectContent>
                         </Select>
                       )}
+
+                      {/* 共计内含（单品和同款多件装时显示） */}
+                      {config.skuClassType !== 'mixedSet' && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-500 whitespace-nowrap">共计内含</span>
+                          <Input
+                            type="text"
+                            placeholder=""
+                            value={config.numberOfPiecesNew || ''}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseInt(e.target.value) : undefined;
+                              onVolumeWeightConfigChange(index, { numberOfPiecesNew: val });
+                            }}
+                            className="w-14 h-7 text-xs text-center"
+                          />
+                          <span className="text-xs text-gray-500">件</span>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   {/* 建议零售价 USD（分） */}
@@ -270,51 +332,31 @@ export function SkuConfigTable({
                         </div>
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        <Input
-                          type="text"
-                          placeholder="0"
-                          value={config.longestSide || ''}
-                          onChange={(e) => {
-                            const val = e.target.value ? parseInt(e.target.value) : 0;
-                            onVolumeWeightConfigChange(index, { longestSide: val });
-                          }}
-                          className="w-16 h-7 text-xs text-center mx-auto"
+                        <DecimalInput
+                          value={config.longestSide}
+                          onChange={(val) => onVolumeWeightConfigChange(index, { longestSide: val })}
+                          className="w-20 h-7 text-xs text-center mx-auto"
                         />
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        <Input
-                          type="text"
-                          placeholder="0"
-                          value={config.middleSide || ''}
-                          onChange={(e) => {
-                            const val = e.target.value ? parseInt(e.target.value) : 0;
-                            onVolumeWeightConfigChange(index, { middleSide: val });
-                          }}
-                          className="w-16 h-7 text-xs text-center mx-auto"
+                        <DecimalInput
+                          value={config.middleSide}
+                          onChange={(val) => onVolumeWeightConfigChange(index, { middleSide: val })}
+                          className="w-20 h-7 text-xs text-center mx-auto"
                         />
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        <Input
-                          type="text"
-                          placeholder="0"
-                          value={config.shortestSide || ''}
-                          onChange={(e) => {
-                            const val = e.target.value ? parseInt(e.target.value) : 0;
-                            onVolumeWeightConfigChange(index, { shortestSide: val });
-                          }}
-                          className="w-16 h-7 text-xs text-center mx-auto"
+                        <DecimalInput
+                          value={config.shortestSide}
+                          onChange={(val) => onVolumeWeightConfigChange(index, { shortestSide: val })}
+                          className="w-20 h-7 text-xs text-center mx-auto"
                         />
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        <Input
-                          type="text"
-                          placeholder="0"
-                          value={config.weight || ''}
-                          onChange={(e) => {
-                            const val = e.target.value ? parseInt(e.target.value) : 0;
-                            onVolumeWeightConfigChange(index, { weight: val });
-                          }}
-                          className="w-16 h-7 text-xs text-center mx-auto"
+                        <DecimalInput
+                          value={config.weight}
+                          onChange={(val) => onVolumeWeightConfigChange(index, { weight: val })}
+                          className="w-20 h-7 text-xs text-center mx-auto"
                         />
                       </TableCell>
                     </TableRow>
