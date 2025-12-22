@@ -24,6 +24,9 @@ export function ProductListing() {
   // 森梵物流导出对话框
   const [showSenfanExportDialog, setShowSenfanExportDialog] = useState(false);
 
+  // 重新上架状态
+  const [relistLoading, setRelistLoading] = useState(false);
+
   // 选择状态
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
 
@@ -424,15 +427,47 @@ export function ProductListing() {
     }
   };
 
-  // 重新上架商品
+  // 重新上架失败的商品
   const handleRelist = async () => {
     if (selectedProductIds.size === 0) {
       toast.error('请至少选择一个商品');
       return;
     }
 
-    // TODO: 后端需要实现批量上架接口
-    toast.info('批量上架功能暂未实现');
+    // 只允许重新上架失败状态的商品
+    const selectedProducts = products.filter(p => selectedProductIds.has(p.id));
+    const failedProducts = selectedProducts.filter(p => p.status === 'failed');
+
+    if (failedProducts.length === 0) {
+      toast.error('没有选中失败状态的商品，只能重新上架失败的商品');
+      return;
+    }
+
+    if (failedProducts.length !== selectedProducts.length) {
+      toast.warning(`已自动过滤 ${selectedProducts.length - failedProducts.length} 个非失败状态的商品`);
+    }
+
+    setRelistLoading(true);
+    try {
+      const response = await productService.relistProducts(failedProducts.map(p => p.id));
+      if (response.success) {
+        toast.success(response.message);
+        // 刷新列表
+        fetchProducts(currentPage);
+        // 清空选中
+        setSelectedProductIds(new Set());
+      } else {
+        toast.error(response.message);
+        if (response.errors && response.errors.length > 0) {
+          response.errors.forEach(err => toast.error(err));
+        }
+      }
+    } catch (error) {
+      console.error('重新上架失败:', error);
+      toast.error(error instanceof Error ? error.message : '重新上架失败');
+    } finally {
+      setRelistLoading(false);
+    }
   };
 
   return (
@@ -484,10 +519,10 @@ export function ProductListing() {
             onClick={handleRelist}
             variant="outline"
             className="flex items-center gap-2"
-            disabled={selectedProductIds.size === 0}
+            disabled={selectedProductIds.size === 0 || relistLoading}
           >
-            <RotateCcw className="w-4 h-4" />
-            重新上架 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
+            <RotateCcw className={`w-4 h-4 ${relistLoading ? 'animate-spin' : ''}`} />
+            {relistLoading ? '上架中...' : `重新上架 ${selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ''}`}
           </Button>
         </div>
       </div>
@@ -1033,6 +1068,7 @@ export function ProductListing() {
         onOpenChange={setShowSenfanExportDialog}
         getShopName={getShopName}
       />
+
     </div>
   );
 }

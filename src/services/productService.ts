@@ -114,6 +114,20 @@ export interface RegenerateProductTitlesRequest {
   productUsage?: string
 }
 
+// 重新上架商品的请求参数
+export interface RelistProductsRequest {
+  productIds: string[]
+  temuTemplateId: string   // Temu模板ID（必填）
+}
+
+// 重新上架商品的响应
+export interface RelistProductsResponse {
+  success: boolean
+  message: string
+  successCount: number
+  errors: string[]
+}
+
 export const productService = {
   // 批量创建商品
   batchCreate: async (request: BatchCreateProductRequest): Promise<BatchCreateProductResponse> => {
@@ -142,5 +156,11 @@ export const productService = {
   // 保存用户手动调整的图片排序
   saveImageSortOrder: async (taskId: string, imageUrls: string[]): Promise<void> => {
     await apiClient.post('/products/save-sort-order', { taskId, imageUrls })
+  },
+
+  // 重新上架失败的商品（模板ID从数据库读取，无需传入）
+  relistProducts: async (productIds: string[]): Promise<RelistProductsResponse> => {
+    const response = await apiClient.post('/products/relist', { productIds })
+    return response.data
   }
 }
