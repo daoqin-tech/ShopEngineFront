@@ -527,12 +527,12 @@ export function ProductListing() {
             />
           </div>
 
-          {/* Temu ID搜索（组合组件：下拉+输入框） */}
+          {/* Temu ID搜索（组合组件：下拉+输入框融合） */}
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Temu ID:</label>
-            <div className="flex">
+            <div className="flex h-10 rounded-md border border-gray-300 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
               <select
-                className="h-10 px-3 py-2 text-sm bg-white border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                className="h-full px-3 text-sm bg-transparent border-r border-gray-300 rounded-l-md focus:outline-none w-20"
                 value={temuIdType}
                 onChange={(e) => setTemuIdType(e.target.value as 'spu' | 'skc' | 'sku')}
               >
@@ -540,7 +540,8 @@ export function ProductListing() {
                 <option value="skc">SKC</option>
                 <option value="sku">SKU</option>
               </select>
-              <Input
+              <input
+                type="text"
                 placeholder="输入ID"
                 value={temuIdValue}
                 onChange={(e) => setTemuIdValue(e.target.value)}
@@ -549,7 +550,7 @@ export function ProductListing() {
                     handleApplyFilters();
                   }
                 }}
-                className="w-36 rounded-l-none"
+                className="h-full px-3 text-sm bg-transparent border-0 focus:outline-none w-36 rounded-r-md"
               />
             </div>
           </div>
