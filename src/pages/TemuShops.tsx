@@ -58,6 +58,10 @@ export function TemuShops() {
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<VerifyCredentialsResponse | null>(null);
 
+  // 两步保存相关状态：step 1 = 基本信息+凭证, step 2 = 配送设置
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [savedShopId, setSavedShopId] = useState<string | null>(null);
+
   // 站点、仓库、运费模板相关状态
   const [sites, setSites] = useState<TemuSite[]>([]);
   const [warehouses, setWarehouses] = useState<TemuWarehouse[]>([]);
@@ -191,6 +195,8 @@ export function TemuShops() {
     setWarehouses([]);
     setFreightTemplates([]);
     setVerifyResult(null);
+    setCurrentStep(1);
+    setSavedShopId(null);
     setShowDialog(true);
   };
 
@@ -215,11 +221,17 @@ export function TemuShops() {
       appSecret: '',
       accessToken: '',
     });
-    // 如果已有 API 凭证且已选择站点，加载仓库和运费模板
-    if (shop.hasApiCredentials && shop.siteId) {
-      fetchWarehouses(shop.id, shop.siteId);
-      fetchFreightTemplates(shop.id, shop.siteId);
+    // 如果已有 API 凭证，直接进入第二步（配送设置）
+    if (shop.hasApiCredentials) {
+      setCurrentStep(2);
+      setSavedShopId(shop.id);
+      if (shop.siteId) {
+        fetchWarehouses(shop.id, shop.siteId);
+        fetchFreightTemplates(shop.id, shop.siteId);
+      }
     } else {
+      setCurrentStep(1);
+      setSavedShopId(null);
       setWarehouses([]);
       setFreightTemplates([]);
     }
@@ -227,15 +239,15 @@ export function TemuShops() {
     setShowDialog(true);
   };
 
-  // 提交表单
-  const handleSubmit = async () => {
+  // 第一步：保存基本信息 + API 凭证
+  const handleSaveStep1 = async () => {
     if (!formData.name || !formData.businessCode) {
-      toast.error('请填写必填字段');
+      toast.error('请填写店铺名称和货号前缀');
       return;
     }
 
     // 新建店铺时必须先验证凭证（以获取 shopId/mallId）
-    if (!editingShop && !formData.shopId) {
+    if (!editingShop && !verifyResult?.valid) {
       toast.error('请先验证 API 凭证');
       return;
     }
@@ -243,21 +255,62 @@ export function TemuShops() {
     try {
       setSubmitting(true);
       if (editingShop) {
+        // 编辑模式：更新基本信息和凭证
         const updateData: UpdateTemuShopRequest = {
           ...formData,
           isActive: editingShop.isActive,
         };
         await temuShopService.updateShop(editingShop.id, updateData);
-        toast.success('店铺更新成功');
+        toast.success('基本信息保存成功');
+        // 进入第二步
+        setCurrentStep(2);
+        setSavedShopId(editingShop.id);
+        // 刷新店铺信息
+        const response = await temuShopService.getAllShops();
+        const updatedShop = response.shops.find(s => s.id === editingShop.id);
+        if (updatedShop) {
+          setEditingShop(updatedShop);
+        }
       } else {
-        await temuShopService.createShop(formData);
-        toast.success('店铺创建成功');
+        // 新建模式：创建店铺
+        const newShop = await temuShopService.createShop(formData);
+        toast.success('店铺创建成功，请继续配置配送设置');
+        // 进入第二步
+        setCurrentStep(2);
+        setSavedShopId(newShop.id);
+        setEditingShop(newShop);
       }
-      setShowDialog(false);
+      // 刷新列表
       fetchShops();
     } catch (error: any) {
       console.error('保存店铺失败:', error);
       toast.error(error.response?.data?.message || '保存店铺失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 第二步：保存配送设置
+  const handleSaveStep2 = async () => {
+    const shopId = savedShopId || editingShop?.id;
+    if (!shopId) {
+      toast.error('店铺信息丢失，请重新操作');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const updateData: UpdateTemuShopRequest = {
+        ...formData,
+        isActive: editingShop?.isActive ?? true,
+      };
+      await temuShopService.updateShop(shopId, updateData);
+      toast.success('配送设置保存成功');
+      setShowDialog(false);
+      fetchShops();
+    } catch (error: any) {
+      console.error('保存配送设置失败:', error);
+      toast.error(error.response?.data?.message || '保存配送设置失败');
     } finally {
       setSubmitting(false);
     }
@@ -707,7 +760,8 @@ export function TemuShops() {
               )}
             </div>
 
-            {/* 配送设置 */}
+            {/* 配送设置 - 仅在第二步显示 */}
+            {currentStep === 2 && (
             <div className="mb-6">
               <h4 className="text-sm font-semibold text-gray-900 mb-4">配送设置</h4>
               <div className="grid grid-cols-3 gap-4">
@@ -726,9 +780,10 @@ export function TemuShops() {
                         freightTemplateId: '',
                         freightTemplateName: '',
                       });
-                      if (editingShop?.hasApiCredentials && site) {
-                        fetchWarehouses(editingShop.id, site.siteId);
-                        fetchFreightTemplates(editingShop.id, site.siteId);
+                      const shopId = savedShopId || editingShop?.id;
+                      if (shopId && site) {
+                        fetchWarehouses(shopId, site.siteId);
+                        fetchFreightTemplates(shopId, site.siteId);
                       }
                     }}
                   >
@@ -757,15 +812,13 @@ export function TemuShops() {
                         warehouseName: warehouse?.warehouseName || '',
                       });
                     }}
-                    disabled={!editingShop?.hasApiCredentials || warehouses.length === 0}
+                    disabled={warehouses.length === 0}
                   >
                     <SelectTrigger className={loadingWarehouses ? 'opacity-50' : ''}>
                       <SelectValue
                         placeholder={
                           loadingWarehouses
                             ? '加载中...'
-                            : !editingShop?.hasApiCredentials
-                            ? '请先配置 API 凭证'
                             : warehouses.length === 0
                             ? '请先选择站点'
                             : '选择仓库'
@@ -782,9 +835,6 @@ export function TemuShops() {
                         ))}
                     </SelectContent>
                   </Select>
-                  {!editingShop && (
-                    <p className="text-xs text-muted-foreground">创建店铺后配置 API 凭证才能选择仓库</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -799,15 +849,13 @@ export function TemuShops() {
                         freightTemplateName: template?.templateName || '',
                       });
                     }}
-                    disabled={!editingShop?.hasApiCredentials || freightTemplates.length === 0}
+                    disabled={freightTemplates.length === 0}
                   >
                     <SelectTrigger className={loadingFreightTemplates ? 'opacity-50' : ''}>
                       <SelectValue
                         placeholder={
                           loadingFreightTemplates
                             ? '加载中...'
-                            : !editingShop?.hasApiCredentials
-                            ? '请先配置 API 凭证'
                             : freightTemplates.length === 0
                             ? '请先选择站点'
                             : '选择运费模板'
@@ -824,14 +872,13 @@ export function TemuShops() {
                         ))}
                     </SelectContent>
                   </Select>
-                  {!editingShop && (
-                    <p className="text-xs text-muted-foreground">创建店铺后配置 API 凭证才能选择运费模板</p>
-                  )}
                 </div>
               </div>
             </div>
+            )}
 
-            {/* 产地和发货设置 */}
+            {/* 产地和发货设置 - 仅在第二步显示 */}
+            {currentStep === 2 && (
             <div className="mb-6">
               <h4 className="text-sm font-semibold text-gray-900 mb-4">产地和发货设置</h4>
               <div className="grid grid-cols-3 gap-4">
@@ -924,6 +971,25 @@ export function TemuShops() {
                 </div>
               </div>
             </div>
+            )}
+
+            {/* 第一步提示信息 */}
+            {currentStep === 1 && !editingShop && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>第 1 步：</strong>请先填写店铺名称、货号前缀和 API 凭证，验证凭证成功后点击"保存并继续"进入配送设置。
+                </p>
+              </div>
+            )}
+
+            {/* 第二步提示信息 */}
+            {currentStep === 2 && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>第 2 步：</strong>请选择运营站点、发货仓库和运费模板，完成后点击"保存"。
+                </p>
+              </div>
+            )}
 
           </div>
 
@@ -931,9 +997,27 @@ export function TemuShops() {
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               取消
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? '保存中...' : '保存'}
-            </Button>
+            {currentStep === 1 ? (
+              <Button
+                onClick={handleSaveStep1}
+                disabled={submitting || (!editingShop && !verifyResult?.valid)}
+              >
+                {submitting ? '保存中...' : '保存并继续'}
+              </Button>
+            ) : (
+              <>
+                {/* 编辑时可以返回第一步修改凭证 */}
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStep(1)}
+                >
+                  修改凭证
+                </Button>
+                <Button onClick={handleSaveStep2} disabled={submitting}>
+                  {submitting ? '保存中...' : '保存'}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
