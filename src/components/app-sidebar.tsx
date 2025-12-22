@@ -1,8 +1,9 @@
 import * as React from "react"
 import {
-  SquareTerminal,
-  Layers,
   Package,
+  ShoppingCart,
+  Wrench,
+  Layers,
   Settings,
 } from "lucide-react"
 
@@ -21,14 +22,14 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
 export function AppSidebar({ ...props }: AppSidebarProps) {
   const { user } = useAuth()
-  
-  // 导航菜单
+
+  // 导航菜单 - 按工作流程排序
   const getNavItems = () => {
     return [
       {
-        title: "生成产品图和商品图",
+        title: "产品制作",
         url: "/workspace",
-        icon: SquareTerminal,
+        icon: Package,
         isActive: true,
         items: [
           {
@@ -42,21 +43,25 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         ],
       },
       {
-        title: "商品管理",
+        title: "商品上架",
         url: "/workspace/product-management",
-        icon: Package,
+        icon: ShoppingCart,
         isActive: false,
         items: [
           {
-            title: "批量上架(文件版)",
+            title: "创建商品",
+            url: "/workspace/batch-upload/create",
+          },
+          {
+            title: "商品列表",
             url: "/workspace/batch-upload",
           },
         ],
       },
       {
-        title: "图片智能工具",
-        url: "/workspace/image-tools",
-        icon: Layers,
+        title: "辅助工具",
+        url: "/workspace/tools",
+        icon: Wrench,
         isActive: false,
         items: [
           {
@@ -86,7 +91,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         ],
       },
       {
-        title: "系统配置",
+        title: "系统设置",
         url: "/workspace/settings",
         icon: Settings,
         isActive: false,
@@ -94,6 +99,14 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           {
             title: "产品分类",
             url: "/workspace/settings/categories",
+          },
+          {
+            title: "Temu模板",
+            url: "/workspace/settings/temu-templates",
+          },
+          {
+            title: "Temu店铺",
+            url: "/workspace/settings/temu-shops",
           },
           {
             title: "系统参数",

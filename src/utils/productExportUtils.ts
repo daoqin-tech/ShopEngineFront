@@ -5,8 +5,13 @@ import JSZip from 'jszip';
 import { PDFDocument, cmyk } from 'pdf-lib';
 import { Product } from '@/services/productService';
 import { ProductCategory } from '@/types/productCategory';
-import { JOURNAL_PAPER_CATEGORIES, CALENDAR_CATEGORIES, DECORATIVE_PAPER_CATEGORIES, PLANNER_CATEGORIES, PAPER_BAG_CATEGORIES } from '@/types/shop';
 import { imageConversionService } from '@/services/imageConversionService';
+
+// Temu 分类配置类型（用于 Excel 导出时获取产品属性）
+export interface TemuCategoryConfig {
+  catId: string;              // Temu 分类 ID
+  productAttributes: string;  // 产品属性 JSON 字符串
+}
 
 /**
  * 生成日期时间字符串（用于文件名）
@@ -323,20 +328,23 @@ const EXCEL_COLUMNS: ExcelColumnConfig<Product>[] = [
 
 /**
  * 导出Excel
+ * @param products 要导出的产品列表
+ * @param getShopName 获取店铺名称的函数
+ * @param temuCategories 可选的 Temu 分类配置（用于获取产品属性）
  */
 export function exportToExcel(
   products: Product[],
-  getShopName: (shopId: string) => string
+  getShopName: (shopId: string) => string,
+  temuCategories?: TemuCategoryConfig[]
 ): void {
   if (products.length === 0) {
     throw new Error('请至少选择一个商品');
   }
 
-  const allCategories = [...JOURNAL_PAPER_CATEGORIES, ...DECORATIVE_PAPER_CATEGORIES, ...CALENDAR_CATEGORIES, ...PLANNER_CATEGORIES, ...PAPER_BAG_CATEGORIES];
-
   // 使用配置生成导出数据
   const exportData = products.map(product => {
-    const categoryConfig = allCategories.find(c => c.categoryId === product.categoryId);
+    // 从 temuCategories 查找对应的分类配置
+    const categoryConfig = temuCategories?.find(c => c.catId === product.categoryId);
     const ctx = { categoryConfig, getShopName };
     const row: Record<string, string | number> = {};
     EXCEL_COLUMNS.forEach(col => {

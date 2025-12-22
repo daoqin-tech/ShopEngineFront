@@ -10,15 +10,9 @@ export interface ProductCategory {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  // 子分类商品规格字段
-  productLength?: number;       // 商品长度(cm) - 子分类独有
-  productWidth?: number;        // 商品宽度(cm) - 子分类独有
-  productHeight?: number;       // 商品高度(cm) - 子分类独有
-  weight?: number;              // 重量(g) - 子分类独有
-  declaredPrice?: number;       // 申报价格(USD) - 子分类独有
-  suggestedRetailPrice?: number; // 建议零售价(USD) - 子分类独有
-  productSpec?: string;         // 商品规格描述 - 子分类独有
-  productUsage?: string;        // 商品用途描述 - 子分类独有
+  productSpec?: string;         // 商品规格描述（Temu上架用）
+  productUsage?: string;        // 商品用途（Temu上架用）
+  temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
   createdAt: string;
   updatedAt: string;
 }
@@ -34,15 +28,9 @@ export interface CreateProductCategoryRequest {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  // 子分类商品规格字段
-  productLength?: number;       // 商品长度(cm) - 子分类独有
-  productWidth?: number;        // 商品宽度(cm) - 子分类独有
-  productHeight?: number;       // 商品高度(cm) - 子分类独有
-  weight?: number;              // 重量(g) - 子分类独有
-  declaredPrice?: number;       // 申报价格(USD) - 子分类独有
-  suggestedRetailPrice?: number; // 建议零售价(USD) - 子分类独有
-  productSpec?: string;         // 商品规格描述 - 子分类独有
-  productUsage?: string;        // 商品用途描述 - 子分类独有
+  productSpec?: string;         // 商品规格描述（Temu上架用）
+  productUsage?: string;        // 商品用途（Temu上架用）
+  temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
 }
 
 // 更新分类请求
@@ -56,15 +44,9 @@ export interface UpdateProductCategoryRequest {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  // 子分类商品规格字段
-  productLength?: number;       // 商品长度(cm) - 子分类独有
-  productWidth?: number;        // 商品宽度(cm) - 子分类独有
-  productHeight?: number;       // 商品高度(cm) - 子分类独有
-  weight?: number;              // 重量(g) - 子分类独有
-  declaredPrice?: number;       // 申报价格(USD) - 子分类独有
-  suggestedRetailPrice?: number; // 建议零售价(USD) - 子分类独有
-  productSpec?: string;         // 商品规格描述 - 子分类独有
-  productUsage?: string;        // 商品用途描述 - 子分类独有
+  productSpec?: string;         // 商品规格描述（Temu上架用）
+  productUsage?: string;        // 商品用途（Temu上架用）
+  temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
 }
 
 // ============ 父子分类相关类型（新增） ============
