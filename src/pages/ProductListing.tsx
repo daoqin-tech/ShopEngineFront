@@ -39,6 +39,8 @@ export function ProductListing() {
   const [productCategoryId, setProductCategoryId] = useState(''); // 产品分类ID
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
+  const [temuIdType, setTemuIdType] = useState<'spu' | 'skc' | 'sku'>('spu'); // Temu ID类型
+  const [temuIdValue, setTemuIdValue] = useState(''); // Temu ID值
 
   // 图片预览状态
   const [previewImages, setPreviewImages] = useState<{images: string[], title: string} | null>(null);
@@ -75,7 +77,9 @@ export function ProductListing() {
         shopId: shopId || undefined,
         productCategoryId: productCategoryId || undefined,
         startTime: startTimestamp,
-        endTime: endTimestamp
+        endTime: endTimestamp,
+        temuIdType: temuIdValue.trim() ? temuIdType : undefined,
+        temuIdValue: temuIdValue.trim() || undefined
       });
       setProducts(response.data);
       setTotal(response.total);
@@ -130,6 +134,8 @@ export function ProductListing() {
     setProductCategoryId('');
     setStartTime('');
     setEndTime('');
+    setTemuIdType('spu');
+    setTemuIdValue('');
     setPageSize(100);
   };
 
@@ -521,6 +527,33 @@ export function ProductListing() {
             />
           </div>
 
+          {/* Temu ID搜索（组合组件：下拉+输入框） */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Temu ID:</label>
+            <div className="flex">
+              <select
+                className="h-10 px-3 py-2 text-sm bg-white border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-20"
+                value={temuIdType}
+                onChange={(e) => setTemuIdType(e.target.value as 'spu' | 'skc' | 'sku')}
+              >
+                <option value="spu">SPU</option>
+                <option value="skc">SKC</option>
+                <option value="sku">SKU</option>
+              </select>
+              <Input
+                placeholder="输入ID"
+                value={temuIdValue}
+                onChange={(e) => setTemuIdValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleApplyFilters();
+                  }
+                }}
+                className="w-36 rounded-l-none"
+              />
+            </div>
+          </div>
+
           {/* 店铺选择 */}
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700 whitespace-nowrap">店铺:</label>
@@ -663,9 +696,11 @@ export function ProductListing() {
                               <Badge variant="outline" className="text-xs">{product.categoryName}</Badge>
                             </div>
                           )}
-                          {product.productId && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              ID: {product.productId}
+                          {(product.productId || product.temuSkcId || product.temuSkuId) && (
+                            <div className="text-xs text-gray-400 mt-1 space-y-0.5">
+                              {product.productId && <div>SPU: {product.productId}</div>}
+                              {product.temuSkcId && <div>SKC: {product.temuSkcId}</div>}
+                              {product.temuSkuId && <div>SKU: {product.temuSkuId}</div>}
                             </div>
                           )}
                         </div>

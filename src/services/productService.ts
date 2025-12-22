@@ -72,7 +72,9 @@ export interface Product {
   shippingTime: number
   productCode: string
   newProductCode?: string   // 新货号
-  productId?: string        // 平台商品ID
+  productId?: string        // 平台商品ID (SPU ID)
+  temuSkcId?: string        // SKC ID
+  temuSkuId?: string        // SKU ID
   errorMessage?: string
   createdAt: string
   updatedAt: string
@@ -88,6 +90,8 @@ export interface GetProductsRequest {
   productCategoryId?: string  // 产品分类ID（关联product_categories表）
   startTime?: number          // 开始时间（秒级时间戳）
   endTime?: number            // 结束时间（秒级时间戳）
+  temuIdType?: 'spu' | 'skc' | 'sku'  // Temu ID类型
+  temuIdValue?: string        // Temu ID值
 }
 
 // 获取商品列表的响应
