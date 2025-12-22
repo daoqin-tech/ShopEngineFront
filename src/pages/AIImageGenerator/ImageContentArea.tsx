@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Image as ImageIcon, Layers } from 'lucide-react';
+import { MessageSquare, Eye, X, CheckSquare, Square, FileText, Upload, GripVertical, Copy, Trash2, Image as ImageIcon } from 'lucide-react';
+// import { Layers } from 'lucide-react'; // 临时功能已注释
 import { PromptStatus, GeneratedImage, Prompt, ReferenceImage } from './types';
 import { AIImageSessionsAPI } from '@/services/aiImageSessions';
 import { FileUploadAPI } from '@/services/fileUpload';
-import { imageTemplateService, ImageTemplateProjectListItem, ImageTemplateListItem } from '@/services/imageTemplateService';
+// import { imageTemplateService, ImageTemplateProjectListItem, ImageTemplateListItem } from '@/services/imageTemplateService'; // 临时功能已注释
 import { toast } from 'sonner';
 
 // PDF页面尺寸配置（单位：mm）
@@ -88,15 +89,15 @@ export function ImageContentArea({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 单张图片模板替换相关状态
-  const [showTemplateReplaceDialog, setShowTemplateReplaceDialog] = useState(false);
-  const [templateReplaceImage, setTemplateReplaceImage] = useState<GeneratedImage | null>(null);
-  const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
-  const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
-  const [templates, setTemplates] = useState<ImageTemplateListItem[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
-  const [isReplacingTemplate, setIsReplacingTemplate] = useState(false);
+  // 单张图片模板替换相关状态（临时功能，已注释）
+  // const [showTemplateReplaceDialog, setShowTemplateReplaceDialog] = useState(false);
+  // const [templateReplaceImage, setTemplateReplaceImage] = useState<GeneratedImage | null>(null);
+  // const [templateProjects, setTemplateProjects] = useState<ImageTemplateProjectListItem[]>([]);
+  // const [selectedTemplateProjectId, setSelectedTemplateProjectId] = useState<string>('');
+  // const [templates, setTemplates] = useState<ImageTemplateListItem[]>([]);
+  // const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  // const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  // const [isReplacingTemplate, setIsReplacingTemplate] = useState(false);
 
   // 获取可导出的图片
   const completedImages = (historicalImages || []).filter(img => img.status === PromptStatus.COMPLETED);
@@ -327,7 +328,7 @@ export function ImageContentArea({
     }
   };
 
-  // ========== 单张图片模板替换功能 ==========
+  /* ========== 单张图片模板替换功能（临时功能，已注释）==========
 
   // 加载图片到 Image 对象
   const loadImage = (url: string): Promise<HTMLImageElement> => {
@@ -497,6 +498,8 @@ export function ImageContentArea({
       setIsReplacingTemplate(false);
     }
   };
+
+  ========== 单张图片模板替换功能结束 ========== */
 
   // 生成PDF
   const handleGeneratePdf = async () => {
@@ -857,6 +860,7 @@ export function ImageContentArea({
                               <Eye className="w-4 h-4 mr-2" />
                               预览
                             </Button>
+{/* 单张模板替换按钮（临时功能，已注释）
                             <Button size="sm" className="bg-blue-500/90 backdrop-blur-sm text-white hover:bg-blue-600 shadow-lg border border-white/20"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -865,6 +869,7 @@ export function ImageContentArea({
                               <Layers className="w-4 h-4 mr-2" />
                               模板
                             </Button>
+*/}
                           </div>
                         </div>
                       </div>
@@ -1100,7 +1105,7 @@ export function ImageContentArea({
         </div>
       )}
 
-      {/* 单张图片模板替换对话框 */}
+{/* 单张图片模板替换对话框（临时功能，已注释）
       {showTemplateReplaceDialog && templateReplaceImage && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => !isReplacingTemplate && setShowTemplateReplaceDialog(false)}>
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
@@ -1116,7 +1121,6 @@ export function ImageContentArea({
 
             <div className="flex-1 overflow-auto p-6">
               <div className="grid grid-cols-2 gap-6">
-                {/* 左侧：当前图片预览 */}
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 mb-3">当前图片</h3>
                   <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
@@ -1131,9 +1135,7 @@ export function ImageContentArea({
                   </p>
                 </div>
 
-                {/* 右侧：模板选择 */}
                 <div className="space-y-4">
-                  {/* 选择模板项目 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">选择模板项目</label>
                     <select
@@ -1151,7 +1153,6 @@ export function ImageContentArea({
                     </select>
                   </div>
 
-                  {/* 选择具体模板 */}
                   {selectedTemplateProjectId && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1193,7 +1194,6 @@ export function ImageContentArea({
                     </div>
                   )}
 
-                  {/* 提示信息 */}
                   {selectedTemplateId && (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-800">
@@ -1230,6 +1230,7 @@ export function ImageContentArea({
           </div>
         </div>
       )}
+*/}
     </div>
   );
 }
