@@ -179,7 +179,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageSize, setPageSize] = useState<number | ''>(100);
+  const [pageSize, setPageSize] = useState<number | ''>(50);
   const [jumpPage, setJumpPage] = useState('');
 
   // 筛选状态
@@ -202,7 +202,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
       const params: any = {
         page,
-        limit: pageSize || 100
+        limit: pageSize || 50
       };
 
       // 添加产品分类筛选（优先使用二级分类，否则用一级分类）
