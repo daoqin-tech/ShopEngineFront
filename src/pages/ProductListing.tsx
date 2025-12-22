@@ -1,34 +1,28 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, AlertCircle, Plus, ChevronLeft, ChevronRight, RefreshCw, X, Image as ImageIcon, Upload, Clock, Loader2, RotateCcw } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw, X, Image as ImageIcon, Upload, Clock, Loader2, RotateCcw } from 'lucide-react';
 import { productService, type Product, type ListingStep } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import { type ProductCategory } from '@/types/productCategory';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { toast } from 'sonner';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
-import { LogisticsExportDialog } from '@/components/LogisticsExportDialog';
-import { PdfExportDialog } from '@/components/PdfExportDialog';
+import { SenfanExportDialog } from '@/components/SenfanExportDialog';
 import {
   exportCarouselImages as exportCarouselImagesUtil,
   exportProductImages as exportProductImagesUtil
 } from '@/utils/productExportUtils';
 
 export function ProductListing() {
-  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [temuShops, setTemuShops] = useState<TemuShop[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 物流信息导出对话框
-  const [showLogisticsDialog, setShowLogisticsDialog] = useState(false);
-
-  // PDF导出对话框（上传订单表）
-  const [showPdfExportDialog, setShowPdfExportDialog] = useState(false);
+  // 森梵物流导出对话框
+  const [showSenfanExportDialog, setShowSenfanExportDialog] = useState(false);
 
   // 选择状态
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
@@ -424,11 +418,6 @@ export function ProductListing() {
     }
   };
 
-  // 打开物流信息导出对话框
-  const handleOpenLogisticsDialog = () => {
-    setShowLogisticsDialog(true);
-  };
-
   // 重新上架商品
   const handleRelist = async () => {
     if (selectedProductIds.size === 0) {
@@ -445,7 +434,7 @@ export function ProductListing() {
       {/* 页面标题 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">批量上架(文件版)</h1>
+          <h1 className="text-2xl font-bold text-gray-900">商品列表</h1>
           <p className="text-gray-600">商品信息管理</p>
         </div>
         <div className="flex items-center gap-3">
@@ -478,20 +467,12 @@ export function ProductListing() {
             导出产品图 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
           </Button>
           <Button
-            onClick={handleOpenLogisticsDialog}
+            onClick={() => setShowSenfanExportDialog(true)}
             variant="outline"
             className="flex items-center gap-2"
           >
             <Upload className="w-4 h-4" />
-            导出物流信息
-          </Button>
-          <Button
-            onClick={() => setShowPdfExportDialog(true)}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            导出产品图PDF
+            森梵物流导出
           </Button>
           <Button
             onClick={handleRelist}
@@ -501,10 +482,6 @@ export function ProductListing() {
           >
             <RotateCcw className="w-4 h-4" />
             重新上架 {selectedProductIds.size > 0 && `(${selectedProductIds.size})`}
-          </Button>
-          <Button onClick={() => navigate('/workspace/batch-upload/create')} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            批量新建商品
           </Button>
         </div>
       </div>
@@ -1014,17 +991,11 @@ export function ProductListing() {
         onCancel={() => setShowExportDialog(false)}
       />
 
-      {/* 物流信息导出对话框 */}
-      <LogisticsExportDialog
-        open={showLogisticsDialog}
-        onOpenChange={setShowLogisticsDialog}
+      {/* 森梵物流导出对话框 */}
+      <SenfanExportDialog
+        open={showSenfanExportDialog}
+        onOpenChange={setShowSenfanExportDialog}
         getShopName={getShopName}
-      />
-
-      {/* PDF导出对话框（上传订单表） */}
-      <PdfExportDialog
-        open={showPdfExportDialog}
-        onOpenChange={setShowPdfExportDialog}
       />
     </div>
   );

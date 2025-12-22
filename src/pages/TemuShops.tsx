@@ -973,23 +973,6 @@ export function TemuShops() {
             </div>
             )}
 
-            {/* 第一步提示信息 */}
-            {currentStep === 1 && !editingShop && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>第 1 步：</strong>请先填写店铺名称、货号前缀和 API 凭证，验证凭证成功后点击"保存并继续"进入配送设置。
-                </p>
-              </div>
-            )}
-
-            {/* 第二步提示信息 */}
-            {currentStep === 2 && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800">
-                  <strong>第 2 步：</strong>请选择运营站点、发货仓库和运费模板，完成后点击"保存"。
-                </p>
-              </div>
-            )}
 
           </div>
 
