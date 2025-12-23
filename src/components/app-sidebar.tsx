@@ -56,6 +56,10 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
             title: "商品列表",
             url: "/workspace/batch-upload",
           },
+          {
+            title: "活动报名",
+            url: "/workspace/temu-activities",
+          },
         ],
       },
       {
