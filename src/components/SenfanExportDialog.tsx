@@ -52,6 +52,7 @@ export function SenfanExportDialog({
   const [fileName, setFileName] = useState('');
   const [manualInput, setManualInput] = useState('');
   const [skuCount, setSkuCount] = useState(0);
+  const [cachedSkus, setCachedSkus] = useState<string[]>([]); // 缓存解析出的SKU
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
 
@@ -67,6 +68,7 @@ export function SenfanExportDialog({
     setFileName('');
     setManualInput('');
     setSkuCount(0);
+    setCachedSkus([]);
     setProducts([]);
     setCategories([]);
     setCurrentIndex(0);
@@ -150,8 +152,11 @@ export function SenfanExportDialog({
         return;
       }
 
-      setSkuCount(skuSet.size);
-      toast.success(`解析到 ${skuSet.size} 个SKU`);
+      // 缓存解析出的SKU
+      const skuArray = Array.from(skuSet);
+      setCachedSkus(skuArray);
+      setSkuCount(skuArray.length);
+      toast.success(`解析到 ${skuArray.length} 个SKU`);
     } catch (error) {
       console.error('解析文件失败:', error);
       toast.error('解析文件失败');
@@ -164,41 +169,12 @@ export function SenfanExportDialog({
     let skuArray: string[] = [];
 
     if (inputMode === 'file') {
-      if (!fileName) {
+      // 使用缓存的SKU数据
+      if (cachedSkus.length === 0) {
         toast.error('请先上传订单文件');
         return;
       }
-      // 重新读取文件获取SKU（简化处理，实际应该缓存）
-      const fileInput = fileInputRef.current;
-      if (!fileInput?.files?.[0]) {
-        toast.error('请重新上传文件');
-        setFileName('');
-        return;
-      }
-
-      const file = fileInput.files[0];
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
-
-      const firstRow = data[0];
-      const skuColumnKey = Object.keys(firstRow).find(
-        key => key.toUpperCase() === 'SKU' || key.toUpperCase().includes('SKU')
-      );
-
-      if (skuColumnKey) {
-        const skuSet = new Set<string>();
-        data.forEach(row => {
-          const skuValue = row[skuColumnKey];
-          if (skuValue) {
-            const skus = String(skuValue).split(',').map(s => s.trim()).filter(Boolean);
-            skus.forEach(sku => skuSet.add(sku));
-          }
-        });
-        skuArray = Array.from(skuSet);
-      }
+      skuArray = cachedSkus;
     } else {
       // 手动输入模式
       skuArray = parseSkuList(manualInput);
