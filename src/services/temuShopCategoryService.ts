@@ -53,6 +53,7 @@ export interface ProductAttributeValue {
   value: string;         // 属性值（Temu API 返回的字段名是 value）
   specId?: number;       // 规格ID
   lang2Value?: string;   // 多语言属性值
+  parentVidList?: number[];  // 父属性值ID列表（用于值级别的父子依赖）
 }
 
 // 属性分组

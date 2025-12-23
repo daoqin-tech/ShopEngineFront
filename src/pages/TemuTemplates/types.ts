@@ -57,6 +57,62 @@ export const shouldShowAttribute = (
   });
 };
 
+// 过滤属性值：只返回满足父子依赖关系的值
+// parentVidList 定义了值级别的父子依赖：只有当父属性选择了 parentVidList 中的值时，该值才有效
+export const getValidValues = (
+  property: ProductAttributeProperty,
+  allFormValues: AttributeFormValue[],
+  allProperties: ProductAttributeProperty[]
+): ProductAttributeValue[] => {
+  const values = property.values || [];
+
+  // 如果没有父属性，则所有值都有效
+  if (!property.parentTemplatePid) {
+    return values;
+  }
+
+  // 查找父属性（通过 parentTemplatePid 匹配 templatePid）
+  const parentProperty = allProperties.find(
+    p => p.templatePid === property.parentTemplatePid
+  );
+
+  if (!parentProperty) {
+    return values;
+  }
+
+  // 查找父属性的表单值
+  const parentFormValue = allFormValues.find(
+    fv => fv.property.templatePid === property.parentTemplatePid
+  );
+
+  if (!parentFormValue) {
+    return values;
+  }
+
+  // 获取父属性已选择的值的 vid 列表
+  let parentSelectedVids: number[] = [];
+  if (parentFormValue.selectedValue) {
+    parentSelectedVids = [parentFormValue.selectedValue.vid];
+  } else if (parentFormValue.selectedValues && parentFormValue.selectedValues.length > 0) {
+    parentSelectedVids = parentFormValue.selectedValues.map(v => v.vid);
+  }
+
+  // 如果父属性没有选择值，则不显示任何子值
+  if (parentSelectedVids.length === 0) {
+    return [];
+  }
+
+  // 过滤值：只保留 parentVidList 为空或包含父属性选中值的值
+  return values.filter(value => {
+    // 如果没有 parentVidList，则该值对所有父值都有效
+    if (!value.parentVidList || value.parentVidList.length === 0) {
+      return true;
+    }
+    // 检查是否有任一父选中值在 parentVidList 中
+    return parentSelectedVids.some(vid => value.parentVidList!.includes(vid));
+  });
+};
+
 // 敏感属性类型常量
 export const SENSITIVE_TYPES = [
   { id: 110001, name: '纯电' },

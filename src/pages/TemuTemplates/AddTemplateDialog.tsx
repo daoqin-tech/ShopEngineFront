@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, Search, ChevronRight, ArrowLeft, X, RefreshCw } from 'lucide-react';
 import type { TemuTemplate, TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import type { TemuCategoryPath, TemuAPICategory, ParentSpecification } from '@/services/temuShopCategoryService';
-import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute } from './types';
+import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues } from './types';
 import { SkuConfigTable } from './SkuConfigTable';
 
 interface AddTemplateDialogProps {
@@ -417,14 +417,19 @@ export function AddTemplateDialog({
                     return null;
                   }
 
+                  // 获取所有属性用于父子依赖过滤
+                  const allProperties = attributeFormValues.map(fv => fv.property);
+                  // 过滤出满足父子依赖关系的值
+                  const validValues = getValidValues(item.property, attributeFormValues, allProperties);
+
                   return (
                     <div key={item.property.templatePid} className="flex items-start gap-3">
                       <Label className="text-sm w-20 shrink-0 pt-2">{item.property.name}</Label>
                       <div className="flex-1">
-                        {item.property.values && item.property.values.length > 0 ? (
+                        {validValues.length > 0 ? (
                           isMultiSelect(item.property) ? (
                             <div className="grid grid-cols-6 gap-x-2 gap-y-1">
-                              {item.property.values.map((val) => {
+                              {validValues.map((val) => {
                                 const isChecked = item.selectedValues?.some(v => v.vid === val.vid) ?? false;
                                 const isDisabled = !isChecked &&
                                   (item.selectedValues?.length ?? 0) >= (item.property.chooseMaxNum ?? 1);
@@ -465,7 +470,7 @@ export function AddTemplateDialog({
                             <Select
                               value={item.selectedValue?.vid?.toString() || ''}
                               onValueChange={(vid) => {
-                                const selectedVal = item.property.values?.find(v => v.vid.toString() === vid);
+                                const selectedVal = validValues.find(v => v.vid.toString() === vid);
                                 updateAttributeValue(index, {
                                   selectedValue: selectedVal,
                                   selectedValues: undefined,
@@ -477,7 +482,7 @@ export function AddTemplateDialog({
                                 <SelectValue placeholder="请选择" />
                               </SelectTrigger>
                               <SelectContent>
-                                {item.property.values.map((val) => (
+                                {validValues.map((val) => (
                                   <SelectItem key={val.vid} value={val.vid.toString()}>
                                     {val.value}
                                   </SelectItem>
