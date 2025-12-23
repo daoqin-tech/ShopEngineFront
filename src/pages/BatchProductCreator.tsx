@@ -16,7 +16,6 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -183,17 +182,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [jumpPage, setJumpPage] = useState('');
 
   // 筛选状态
-  const [filterParentId, setFilterParentId] = useState('');  // 筛选用的一级分类
-  const [categoryFilter, setCategoryFilter] = useState('');  // 筛选用的二级分类（可选）
   const [startTime, setStartTime] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState<Date | undefined>();
-
-  // 获取筛选用的子分类列表
-  const filterChildCategories = React.useMemo(() => {
-    if (!filterParentId) return [];
-    const parent = parentCategories.find(p => p.id === filterParentId);
-    return parent?.children || [];
-  }, [parentCategories, filterParentId]);
 
   // 获取可用的商品图（来自CoverGeneration）
   const fetchAvailableImages = async (page: number = currentPage) => {
@@ -204,12 +194,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         page,
         limit: pageSize || 50
       };
-
-      // 添加产品分类筛选（优先使用二级分类，否则用一级分类）
-      const effectiveCategoryId = categoryFilter || filterParentId;
-      if (effectiveCategoryId && effectiveCategoryId !== 'all') {
-        params.categoryId = effectiveCategoryId;
-      }
 
       // 添加时间筛选（转换为时间戳）
       if (startTime) {
@@ -251,8 +235,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
   // 重置筛选
   const handleResetFilters = () => {
-    setFilterParentId('');
-    setCategoryFilter('');
     setStartTime(undefined);
     setEndTime(undefined);
     setCurrentPage(1);
@@ -513,21 +495,24 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     该分类未关联Temu模板，请在产品分类管理中配置
                   </div>
                 ) : (
-                  <Select
-                    value={formData.productCategory || undefined}
-                    onValueChange={(value) => updateFormData('productCategory', value)}
-                  >
-                    <SelectTrigger className="w-96 h-10">
-                      <SelectValue placeholder="请选择Temu模板" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredTemuTemplates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name || template.fullPath || template.catName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-wrap gap-2">
+                    {filteredTemuTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => updateFormData('productCategory', template.id)}
+                        className={`
+                          px-3 py-1.5 rounded-md border text-sm transition-colors
+                          ${formData.productCategory === template.id
+                            ? 'border-primary bg-primary/10 text-primary font-medium'
+                            : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                          }
+                        `}
+                      >
+                        {template.name || template.fullPath || template.catName}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -702,48 +687,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
             {/* 筛选器 */}
             <div className="bg-gray-50 p-4 border-b">
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">产品分类:</label>
-                  <Select
-                    value={filterParentId || undefined}
-                    onValueChange={(value) => {
-                      setFilterParentId(value === 'all' ? '' : value || '');
-                      setCategoryFilter(''); // 切换一级分类时清空二级分类
-                    }}
-                    disabled={loadingCategories}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="一级分类" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部</SelectItem>
-                      <SelectSeparator />
-                      {parentCategories.map((parent) => (
-                        <SelectItem key={parent.id} value={parent.id}>
-                          {parent.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={categoryFilter || undefined}
-                    onValueChange={(value) => setCategoryFilter(value === 'all' ? '' : value || '')}
-                    disabled={!filterParentId || filterChildCategories.length === 0}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="二级分类" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">全部</SelectItem>
-                      <SelectSeparator />
-                      {filterChildCategories.map((child) => (
-                        <SelectItem key={child.id} value={child.id}>
-                          {child.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-gray-700">开始时间:</label>
                   <DateTimePicker

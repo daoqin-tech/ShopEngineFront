@@ -88,6 +88,8 @@ export interface TemuShop {
   originRegionName?: string;       // 省份名称（如：广东省）
   // 发货时效
   shipmentLimitSecond?: number;    // 发货时效（秒），默认 172800 = 48小时
+  // 排序
+  sortOrder: number;               // 排序顺序，数字越小越靠前
   isActive: boolean;
   hasApiCredentials: boolean;
   tokenExpireAt?: string;          // Token 过期时间
@@ -120,6 +122,8 @@ export interface CreateTemuShopRequest {
   originRegionName?: string;       // 省份名称
   // 发货时效
   shipmentLimitSecond?: number;    // 发货时效（秒）
+  // 排序
+  sortOrder?: number;              // 排序顺序，数字越小越靠前
   // API 凭证
   appKey?: string;
   appSecret?: string;
@@ -143,6 +147,8 @@ export interface UpdateTemuShopRequest {
   originRegionName?: string;       // 省份名称
   // 发货时效
   shipmentLimitSecond?: number;    // 发货时效（秒）
+  // 排序
+  sortOrder?: number;              // 排序顺序，数字越小越靠前
   // API 凭证
   appKey?: string;
   appSecret?: string;

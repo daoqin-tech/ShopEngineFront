@@ -88,6 +88,7 @@ export interface GetProductsRequest {
   title?: string              // 标题模糊查询（搜索中文标题）
   shopId?: string             // 店铺ID
   productCategoryId?: string  // 产品分类ID（关联product_categories表）
+  status?: string             // 状态筛选（pending/queued/processing/listed/failed）
   startTime?: number          // 开始时间（秒级时间戳）
   endTime?: number            // 结束时间（秒级时间戳）
   temuIdType?: 'spu' | 'skc' | 'sku'  // Temu ID类型

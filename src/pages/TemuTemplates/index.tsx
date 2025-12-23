@@ -1228,14 +1228,21 @@ export function TemuTemplates() {
     setEditPendingCategory(null);
   };
 
-  // 过滤模板
-  const filteredTemplates = templates.filter(c => {
-    const matchesKeyword = c.catName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      c.fullPath?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      c.name?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      String(c.catId).includes(searchKeyword);
-    return matchesKeyword;
-  });
+  // 过滤并按名称排序模板
+  const filteredTemplates = templates
+    .filter(c => {
+      const matchesKeyword = c.catName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        c.fullPath?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        c.name?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        String(c.catId).includes(searchKeyword);
+      return matchesKeyword;
+    })
+    .sort((a, b) => {
+      // 优先按模板名称排序，没有名称则按分类名称排序
+      const nameA = (a.name || a.catName || '').toLowerCase();
+      const nameB = (b.name || b.catName || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'zh-CN');
+    });
 
   return (
     <div className="flex-1 p-6">

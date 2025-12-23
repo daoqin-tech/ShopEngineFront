@@ -88,6 +88,7 @@ export function TemuShops() {
     originRegion2Id: undefined,
     originRegionName: '',
     shipmentLimitSecond: 172800,
+    sortOrder: 0,
     appKey: '',
     appSecret: '',
     accessToken: '',
@@ -188,6 +189,7 @@ export function TemuShops() {
       originRegion2Id: undefined,
       originRegionName: '',
       shipmentLimitSecond: 172800,
+      sortOrder: 0,
       appKey: '',
       appSecret: '',
       accessToken: '',
@@ -217,6 +219,7 @@ export function TemuShops() {
       originRegion2Id: shop.originRegion2Id,
       originRegionName: shop.originRegionName || '',
       shipmentLimitSecond: shop.shipmentLimitSecond || 172800,
+      sortOrder: shop.sortOrder || 0,
       appKey: '',
       appSecret: '',
       accessToken: '',
@@ -556,7 +559,7 @@ export function TemuShops() {
                 <Store className="w-4 h-4" />
                 基本信息
               </h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">店铺名称 *</Label>
                   <Input
@@ -574,6 +577,17 @@ export function TemuShops() {
                     value={formData.businessCode}
                     onChange={(e) => setFormData({ ...formData, businessCode: e.target.value })}
                     placeholder="例如：5270"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sortOrder">排序</Label>
+                  <Input
+                    id="sortOrder"
+                    type="number"
+                    value={formData.sortOrder ?? 0}
+                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                    placeholder="数字越小越靠前"
                   />
                 </div>
               </div>

@@ -40,6 +40,7 @@ export function ProductListing() {
   const [title, setTitle] = useState(''); // 标题模糊搜索
   const [shopId, setShopId] = useState(''); // 店铺ID
   const [productCategoryId, setProductCategoryId] = useState(''); // 产品分类ID
+  const [status, setStatus] = useState(''); // 状态筛选
   const [startTime, setStartTime] = useState(''); // 开始时间（datetime-local格式）
   const [endTime, setEndTime] = useState(''); // 结束时间（datetime-local格式）
   const [temuIdType, setTemuIdType] = useState<'spu' | 'skc' | 'sku'>('spu'); // Temu ID类型
@@ -79,6 +80,7 @@ export function ProductListing() {
         title: title.trim() || undefined,
         shopId: shopId || undefined,
         productCategoryId: productCategoryId || undefined,
+        status: status || undefined,
         startTime: startTimestamp,
         endTime: endTimestamp,
         temuIdType: temuIdValue.trim() ? temuIdType : undefined,
@@ -135,6 +137,7 @@ export function ProductListing() {
     setTitle('');
     setShopId('');
     setProductCategoryId('');
+    setStatus('');
     setStartTime('');
     setEndTime('');
     setTemuIdType('spu');
@@ -621,6 +624,23 @@ export function ProductListing() {
                   {category.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* 状态选择 */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">状态:</label>
+            <select
+              className="h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-28"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="">全部</option>
+              <option value="pending">待处理</option>
+              <option value="queued">排队中</option>
+              <option value="processing">上架中</option>
+              <option value="listed">已上架</option>
+              <option value="failed">上架失败</option>
             </select>
           </div>
 
