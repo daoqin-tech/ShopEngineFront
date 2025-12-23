@@ -109,6 +109,14 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     return allTemuTemplates.find(t => t.id === formData.productCategory) || null;
   }, [allTemuTemplates, formData.productCategory]);
 
+  // 获取当前选中的二级分类名称（用于筛选商品图）
+  const selectedCategoryName = React.useMemo(() => {
+    if (!selectedParentId || !formData.productSpec) return '';
+    const parent = parentCategories.find(p => p.id === selectedParentId);
+    const selectedChild = parent?.children?.find(c => c.id === formData.productSpec);
+    return selectedChild?.name || '';
+  }, [parentCategories, selectedParentId, formData.productSpec]);
+
 
   // 加载 Temu 店铺数据
   useEffect(() => {
@@ -186,7 +194,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [endTime, setEndTime] = useState<Date | undefined>();
 
   // 获取可用的商品图（来自CoverGeneration）
-  const fetchAvailableImages = async (page: number = currentPage) => {
+  const fetchAvailableImages = async (page: number = currentPage, categoryName?: string) => {
     try {
       setLoading(true);
 
@@ -194,6 +202,11 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         page,
         limit: pageSize || 50
       };
+
+      // 添加分类筛选
+      if (categoryName) {
+        params.categoryName = categoryName;
+      }
 
       // 添加时间筛选（转换为时间戳）
       if (startTime) {
@@ -230,7 +243,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 应用筛选
   const handleApplyFilters = () => {
     setCurrentPage(1);
-    fetchAvailableImages(1);
+    fetchAvailableImages(1, selectedCategoryName);
   };
 
   // 重置筛选
@@ -238,13 +251,17 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     setStartTime(undefined);
     setEndTime(undefined);
     setCurrentPage(1);
-    fetchAvailableImages(1);
+    fetchAvailableImages(1, selectedCategoryName);
   };
 
-  // 初始化时加载数据
-  React.useEffect(() => {
-    fetchAvailableImages(1);
-  }, []);
+  // 当选择二级分类时，自动筛选商品图
+  useEffect(() => {
+    if (selectedCategoryName) {
+      setCurrentPage(1);
+      setSelectedProducts([]); // 切换分类时清空已选
+      fetchAvailableImages(1, selectedCategoryName);
+    }
+  }, [selectedCategoryName]);
 
   // 更新表单数据
   const updateFormData = (field: keyof ProductFormData, value: string) => {
@@ -335,6 +352,10 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold">创建商品</h1>
+              <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full">
+                <Sparkles className="w-4 h-4" />
+                <span className="font-medium">商品标题将由AI自动生成</span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               {selectedProducts.length > 0 && (
@@ -377,154 +398,175 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         </div>
       </div>
 
-      {/* 主内容 - 卡片分组布局 */}
+      {/* 主内容 */}
       <div className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-
-          {/* 1. 基本信息卡片 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
-                <Package className="w-5 h-5 text-blue-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">基本信息</h2>
-              <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full">
-                <Sparkles className="w-4 h-4" />
-                <span className="font-medium">商品标题将由AI自动生成</span>
-              </div>
-            </div>
-
-            {/* 店铺选择 */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">店铺账号 *</Label>
-              {loadingShops ? (
-                <div className="text-sm text-muted-foreground">加载店铺中...</div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {temuShops.map((shop) => (
-                    <button
-                      key={shop.id}
-                      type="button"
-                      onClick={() => {
-                        updateFormData('shopAccount', shop.id);
-                        // 切换店铺时清空规格和分类选择
-                        updateFormData('productSpec', '');
-                        updateFormData('productCategory', '');
-                      }}
-                      className={`
-                        px-3 py-1.5 rounded-md border text-sm transition-colors
-                        ${formData.shopAccount === shop.id
-                          ? 'border-primary bg-primary/10 text-primary font-medium'
-                          : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                        }
-                      `}
-                    >
-                      {shop.name}
-                    </button>
-                  ))}
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            {/* 配置区域 */}
+            <div className="p-6 border-b">
+              <div className="space-y-4">
+                {/* 第一行：店铺选择 */}
+                <div className="flex items-center gap-4">
+                  <Label className="text-sm font-medium w-20 shrink-0">店铺账号</Label>
+                  {loadingShops ? (
+                    <div className="text-sm text-muted-foreground">加载店铺中...</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {temuShops.map((shop) => (
+                        <button
+                          key={shop.id}
+                          type="button"
+                          onClick={() => {
+                            updateFormData('shopAccount', shop.id);
+                            // 切换店铺时清空规格和分类选择
+                            updateFormData('productSpec', '');
+                            updateFormData('productCategory', '');
+                            setSelectedParentId('');
+                          }}
+                          className={`
+                            px-3 py-1.5 rounded-md border text-sm transition-colors
+                            ${formData.shopAccount === shop.id
+                              ? 'border-primary bg-primary/10 text-primary font-medium'
+                              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                            }
+                          `}
+                        >
+                          {shop.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* 第二行：产品分类选择（选中店铺后显示） */}
+                {formData.shopAccount && (
+                  <div className="flex items-center gap-4">
+                    <Label className="text-sm font-medium w-20 shrink-0">产品分类</Label>
+                    {loadingCategories ? (
+                      <div className="text-sm text-muted-foreground">加载中...</div>
+                    ) : (
+                      <div className="flex gap-3">
+                        <Select
+                          value={selectedParentId}
+                          onValueChange={(value) => {
+                            setSelectedParentId(value);
+                            // 自动选择第一个二级分类
+                            const parent = parentCategories.find(p => p.id === value);
+                            const firstChild = parent?.children?.[0];
+                            if (firstChild) {
+                              updateFormData('productSpec', firstChild.id);
+                            } else {
+                              updateFormData('productSpec', '');
+                            }
+                            updateFormData('productCategory', '');
+                          }}
+                        >
+                          <SelectTrigger className="w-40 h-9">
+                            <SelectValue placeholder="一级分类" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {parentCategories.map((parent) => (
+                              <SelectItem key={parent.id} value={parent.id}>
+                                {parent.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={formData.productSpec}
+                          onValueChange={(value) => {
+                            updateFormData('productSpec', value);
+                            updateFormData('productCategory', '');
+                          }}
+                          disabled={!selectedParentId || currentChildCategories.length === 0}
+                        >
+                          <SelectTrigger className="w-40 h-9">
+                            <SelectValue placeholder="二级分类" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {currentChildCategories.map((child) => (
+                              <SelectItem key={child.id} value={child.id}>
+                                {child.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 第三行：Temu模板选择（选中二级分类后显示） */}
+                {formData.productSpec && (
+                  <div className="flex items-start gap-4">
+                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">Temu模板</Label>
+                    {loadingTemuTemplates ? (
+                      <div className="text-sm text-muted-foreground">加载Temu模板中...</div>
+                    ) : filteredTemuTemplates.length === 0 ? (
+                      <div className="text-sm text-orange-600">
+                        该分类未关联Temu模板，请在产品分类管理中配置
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {filteredTemuTemplates.map((template) => (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() => updateFormData('productCategory', template.id)}
+                            className={`
+                              px-3 py-1.5 rounded-md border text-sm transition-colors
+                              ${formData.productCategory === template.id
+                                ? 'border-primary bg-primary/10 text-primary font-medium'
+                                : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                              }
+                            `}
+                          >
+                            {template.name || template.fullPath || template.catName}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 第四行：时间筛选 */}
+                {formData.productSpec && (
+                  <div className="flex items-center gap-4">
+                    <Label className="text-sm font-medium w-20 shrink-0">时间筛选</Label>
+                    <div className="flex items-center gap-3">
+                      <DateTimePicker
+                        date={startTime}
+                        onDateChange={setStartTime}
+                        placeholder="开始时间"
+                        className="w-44"
+                      />
+                      <span className="text-gray-400">-</span>
+                      <DateTimePicker
+                        date={endTime}
+                        onDateChange={setEndTime}
+                        placeholder="结束时间"
+                        className="w-44"
+                      />
+                      <Button size="sm" onClick={handleApplyFilters}>
+                        搜索
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={handleResetFilters}>
+                        重置
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* 产品分类选择（选中店铺后显示） - 一级分类 + 二级分类 */}
-            {formData.shopAccount && (
-              <div className="space-y-3 pt-4">
-                <Label className="text-sm font-medium">产品分类 *</Label>
-                {loadingCategories ? (
-                  <div className="text-sm text-muted-foreground">加载中...</div>
-                ) : (
-                  <div className="flex gap-3">
-                    <Select
-                      value={selectedParentId}
-                      onValueChange={(value) => {
-                        setSelectedParentId(value);
-                        // 自动选择第一个二级分类
-                        const parent = parentCategories.find(p => p.id === value);
-                        const firstChild = parent?.children?.[0];
-                        if (firstChild) {
-                          updateFormData('productSpec', firstChild.id);
-                        } else {
-                          updateFormData('productSpec', '');
-                        }
-                        updateFormData('productCategory', '');
-                      }}
-                    >
-                      <SelectTrigger className="w-48 h-10">
-                        <SelectValue placeholder="请选择一级分类" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {parentCategories.map((parent) => (
-                          <SelectItem key={parent.id} value={parent.id}>
-                            {parent.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={formData.productSpec}
-                      onValueChange={(value) => updateFormData('productSpec', value)}
-                      disabled={!selectedParentId || currentChildCategories.length === 0}
-                    >
-                      <SelectTrigger className="w-48 h-10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {currentChildCategories.map((child) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Temu模板选择（选中二级分类后显示） */}
-            {formData.productSpec && (
-              <div className="space-y-3 pt-4">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  Temu模板 *
-                </Label>
-                {loadingTemuTemplates ? (
-                  <div className="text-sm text-muted-foreground">加载Temu模板中...</div>
-                ) : filteredTemuTemplates.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-orange-600">
-                    该分类未关联Temu模板，请在产品分类管理中配置
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {filteredTemuTemplates.map((template) => (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => updateFormData('productCategory', template.id)}
-                        className={`
-                          px-3 py-1.5 rounded-md border text-sm transition-colors
-                          ${formData.productCategory === template.id
-                            ? 'border-primary bg-primary/10 text-primary font-medium'
-                            : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                          }
-                        `}
-                      >
-                        {template.name || template.fullPath || template.catName}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* 选中模板的详细信息展示 */}
             {selectedTemuTemplate && (
-              <div className="mt-6 border rounded-lg bg-blue-50/50 overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-100/50 border-b">
+              <div className="border-b bg-blue-50/50">
+                <div className="flex items-center gap-2 px-6 py-2.5 bg-blue-100/50 border-b">
                   <Info className="w-4 h-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-800">模板详情</span>
                 </div>
-                <div className="p-4 space-y-4">
+                <div className="p-4 px-6 space-y-3">
                   {/* 分类路径 */}
                   <div className="flex items-start gap-3">
                     <Tag className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
@@ -657,324 +699,305 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* 2. 商品图选择卡片 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between p-6 border-b">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 bg-orange-100 rounded-lg">
-                  <Images className="w-5 h-5 text-orange-600" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">选择商品图片</h2>
-                <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full">
-                  <ImageIcon className="w-4 h-4" />
-                  <span className="font-medium">一个任务的多张图片对应一个商品</span>
-                </div>
-              </div>
-              {selectedProducts.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearAllSelections}
-                  className="text-gray-600 hover:text-red-600 hover:border-red-300"
-                >
-                  清空选择
-                </Button>
-              )}
-            </div>
-
-            {/* 筛选器 */}
-            <div className="bg-gray-50 p-4 border-b">
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">开始时间:</label>
-                  <DateTimePicker
-                    date={startTime}
-                    onDateChange={setStartTime}
-                    placeholder="选择开始时间"
-                    className="w-48"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">结束时间:</label>
-                  <DateTimePicker
-                    date={endTime}
-                    onDateChange={setEndTime}
-                    placeholder="选择结束时间"
-                    className="w-48"
-                  />
-                </div>
-                <Button onClick={handleApplyFilters} className="px-6">
-                  搜索
-                </Button>
-                <Button variant="outline" onClick={handleResetFilters}>
-                  重置
-                </Button>
-              </div>
-            </div>
-
-            {/* 任务列表容器 - 可滚动 */}
-            <div className="flex-1 overflow-hidden">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-gray-500">加载中...</div>
-                </div>
-              ) : availableImages.length === 0 ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <Images className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-600 mb-2">还没有可用的商品图</h2>
-                    <p className="text-gray-500 mb-6">请先在套图生成页面生成商品图</p>
+            {/* 商品图列表 */}
+            {formData.productSpec ? (
+              <div className="flex-1 overflow-hidden">
+                {/* 列表头部 */}
+                <div className="flex items-center justify-between px-6 py-3 border-b bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <Images className="w-5 h-5 text-orange-600" />
+                    <span className="font-medium text-gray-900">选择商品图片</span>
+                    <span className="text-sm text-gray-500">
+                      （{selectedCategoryName} 分类下共 {total} 个任务）
+                    </span>
                   </div>
+                  {selectedProducts.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearAllSelections}
+                      className="text-gray-600 hover:text-red-600 hover:border-red-300"
+                    >
+                      清空选择
+                    </Button>
+                  )}
                 </div>
-              ) : (
-                <div className="overflow-auto">
-                  <div className="bg-white border-l border-r">
-                    {/* 表头 */}
-                    <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-5">
-                      <div className="col-span-1 flex items-center">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                          checked={availableImages.length > 0 && availableImages.every(imageSet =>
-                            selectedProducts.some(p => p.taskId === imageSet.taskId)
-                          )}
-                          onChange={toggleSelectAll}
-                        />
+
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">加载中...</div>
+                  </div>
+                ) : availableImages.length === 0 ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <Images className="w-12 h-12 text-gray-400" />
                       </div>
-                      <div className="col-span-1">缩略图</div>
-                      <div className="col-span-3">产品分类</div>
-                      <div className="col-span-2">图片数量</div>
-                      <div className="col-span-3">创建时间</div>
-                      <div className="col-span-2">操作</div>
+                      <h2 className="text-xl font-semibold text-gray-600 mb-2">该分类下没有可用的商品图</h2>
+                      <p className="text-gray-500">请先在套图生成页面生成该分类的商品图</p>
                     </div>
+                  </div>
+                ) : (
+                  <div className="overflow-auto">
+                    <div className="bg-white">
+                      {/* 表头 */}
+                      <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b bg-gray-50 font-medium text-sm text-gray-700 sticky top-0 z-5">
+                        <div className="col-span-1 flex items-center">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                            checked={availableImages.length > 0 && availableImages.every(imageSet =>
+                              selectedProducts.some(p => p.taskId === imageSet.taskId)
+                            )}
+                            onChange={toggleSelectAll}
+                          />
+                        </div>
+                        <div className="col-span-1">缩略图</div>
+                        <div className="col-span-4">产品分类</div>
+                        <div className="col-span-2">图片数量</div>
+                        <div className="col-span-2">创建时间</div>
+                        <div className="col-span-2">操作</div>
+                      </div>
 
-                    {/* 任务列表 */}
-                    {availableImages.map((imageSet) => {
-                      // 检查该任务是否被选中（一个任务 = 一个商品）
-                      const isTaskSelected = selectedProducts.some(p => p.taskId === imageSet.taskId);
+                      {/* 任务列表 */}
+                      {availableImages.map((imageSet) => {
+                        // 检查该任务是否被选中（一个任务 = 一个商品）
+                        const isTaskSelected = selectedProducts.some(p => p.taskId === imageSet.taskId);
 
-                      return (
-                        <div
-                          key={imageSet.taskId}
-                          className="grid grid-cols-12 gap-4 p-4 border-b hover:bg-gray-50 group"
-                        >
-                          {/* 选择框 - 选择该任务作为一个商品 */}
-                          <div className="col-span-1 flex items-center">
-                            <input
-                              type="checkbox"
-                              className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                              checked={isTaskSelected}
-                              onChange={() => {
-                                if (isTaskSelected) {
-                                  // 取消选择该任务
-                                  setSelectedProducts(prev =>
-                                    prev.filter(p => p.taskId !== imageSet.taskId)
-                                  );
-                                } else {
-                                  // 选择该任务（作为一个商品）
-                                  const newProduct: SelectedProduct = {
-                                    id: imageSet.taskId,
+                        return (
+                          <div
+                            key={imageSet.taskId}
+                            className="grid grid-cols-12 gap-4 px-6 py-3 border-b hover:bg-gray-50 group"
+                          >
+                            {/* 选择框 - 选择该任务作为一个商品 */}
+                            <div className="col-span-1 flex items-center">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                checked={isTaskSelected}
+                                onChange={() => {
+                                  if (isTaskSelected) {
+                                    // 取消选择该任务
+                                    setSelectedProducts(prev =>
+                                      prev.filter(p => p.taskId !== imageSet.taskId)
+                                    );
+                                  } else {
+                                    // 选择该任务（作为一个商品）
+                                    const newProduct: SelectedProduct = {
+                                      id: imageSet.taskId,
+                                      taskId: imageSet.taskId,
+                                      categoryName: imageSet.categoryName,
+                                      imageUrl: imageSet.images[0] || '',
+                                      thumbnailUrl: imageSet.thumbnail,
+                                      createdAt: imageSet.createdAt
+                                    };
+                                    setSelectedProducts(prev => [...prev, newProduct]);
+                                  }
+                                }}
+                              />
+                            </div>
+
+                            {/* 缩略图 */}
+                            <div className="col-span-1 flex items-center">
+                              <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
+                                {imageSet.thumbnail || imageSet.images[0] ? (
+                                  <img
+                                    src={imageSet.thumbnail || imageSet.images[0]}
+                                    alt={imageSet.categoryName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-6 h-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 产品分类 */}
+                            <div className="col-span-4 flex items-center">
+                              <div className="text-sm text-gray-700 truncate" title={imageSet.categoryName}>
+                                {imageSet.categoryName}
+                              </div>
+                            </div>
+
+                            {/* 图片数量 */}
+                            <div className="col-span-2 flex items-center">
+                              <span className="text-sm text-gray-600">{imageSet.images.length} 张图片</span>
+                            </div>
+
+                            {/* 创建时间 - 精确到秒 */}
+                            <div className="col-span-2 flex items-center text-sm text-gray-500">
+                              {new Date(imageSet.createdAt).toLocaleString('zh-CN', {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+
+                            {/* 操作 */}
+                            <div className="col-span-2 flex items-center justify-start">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
+                                  onClick={() => setPreviewImages({
                                     taskId: imageSet.taskId,
                                     categoryName: imageSet.categoryName,
-                                    imageUrl: imageSet.images[0] || '',
-                                    thumbnailUrl: imageSet.thumbnail,
-                                    createdAt: imageSet.createdAt
-                                  };
-                                  setSelectedProducts(prev => [...prev, newProduct]);
+                                    images: imageSet.images
+                                  })}
+                                >
+                                  预览
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 分页控件 */}
+                {total > 0 && (
+                  <div className="border-t bg-white p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm text-gray-500">
+                          共 {total} 个任务
+                        </div>
+
+                        {/* 每页显示数量输入 */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">每页</span>
+                          <Input
+                            type="text"
+                            value={pageSize}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, ''); // 只保留数字
+                              if (value === '' || parseInt(value) > 0) {
+                                setPageSize(value === '' ? '' : parseInt(value));
+                              }
+                            }}
+                            onBlur={() => {
+                              if (!pageSize || pageSize < 1) {
+                                setPageSize(20);
+                              } else if (pageSize > 500) {
+                                setPageSize(500);
+                              }
+                              setCurrentPage(1);
+                              fetchAvailableImages(1, selectedCategoryName);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                if (!pageSize || pageSize < 1) {
+                                  setPageSize(20);
+                                } else if (pageSize > 500) {
+                                  setPageSize(500);
+                                }
+                                setCurrentPage(1);
+                                fetchAvailableImages(1, selectedCategoryName);
+                              }
+                            }}
+                            className="w-20 h-8 text-center"
+                            placeholder="20"
+                          />
+                          <span className="text-sm text-gray-600">条</span>
+                        </div>
+                      </div>
+
+                      {total > (pageSize || 100) && (
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchAvailableImages(currentPage - 1, selectedCategoryName)}
+                            disabled={currentPage <= 1 || loading}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            上一页
+                          </Button>
+
+                          <div className="text-sm text-gray-600">
+                            {currentPage} / {Math.ceil(total / (pageSize || 100))}
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchAvailableImages(currentPage + 1, selectedCategoryName)}
+                            disabled={currentPage >= Math.ceil(total / (pageSize || 100)) || loading}
+                          >
+                            下一页
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+
+                          {/* 跳转到指定页 */}
+                          <div className="flex items-center gap-2 ml-4">
+                            <span className="text-sm text-gray-600">跳转到</span>
+                            <Input
+                              type="text"
+                              value={jumpPage}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, ''); // 只保留数字
+                                setJumpPage(value);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  const page = parseInt(jumpPage);
+                                  const maxPage = Math.ceil(total / (pageSize || 100));
+                                  if (page >= 1 && page <= maxPage) {
+                                    setCurrentPage(page);
+                                    fetchAvailableImages(page, selectedCategoryName);
+                                    setJumpPage('');
+                                  } else {
+                                    toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
+                                  }
                                 }
                               }}
+                              className="w-16 h-8 text-center"
+                              placeholder="页"
                             />
-                          </div>
-
-                          {/* 缩略图 */}
-                          <div className="col-span-1 flex items-center">
-                            <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                              {imageSet.thumbnail || imageSet.images[0] ? (
-                                <img
-                                  src={imageSet.thumbnail || imageSet.images[0]}
-                                  alt={imageSet.categoryName}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <ImageIcon className="w-6 h-6 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* 产品分类 */}
-                          <div className="col-span-3 flex items-center">
-                            <div className="text-sm text-gray-700 truncate" title={imageSet.categoryName}>
-                              {imageSet.categoryName}
-                            </div>
-                          </div>
-
-                          {/* 图片数量 */}
-                          <div className="col-span-2 flex items-center">
-                            <span className="text-sm text-gray-600">{imageSet.images.length} 张图片</span>
-                          </div>
-
-                          {/* 创建时间 - 精确到秒 */}
-                          <div className="col-span-3 flex items-center text-sm text-gray-500">
-                            {new Date(imageSet.createdAt).toLocaleString('zh-CN')}
-                          </div>
-
-                          {/* 操作 */}
-                          <div className="col-span-2 flex items-center justify-start">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-blue-500 hover:text-blue-700 text-xs"
-                                onClick={() => setPreviewImages({
-                                  taskId: imageSet.taskId,
-                                  categoryName: imageSet.categoryName,
-                                  images: imageSet.images
-                                })}
-                              >
-                                预览
-                              </Button>
-                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const page = parseInt(jumpPage);
+                                const maxPage = Math.ceil(total / (pageSize || 100));
+                                if (page >= 1 && page <= maxPage) {
+                                  setCurrentPage(page);
+                                  fetchAvailableImages(page, selectedCategoryName);
+                                  setJumpPage('');
+                                } else {
+                                  toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
+                                }
+                              }}
+                              disabled={!jumpPage || loading}
+                            >
+                              跳转
+                            </Button>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 分页控件 */}
-            {total > 0 && (
-              <div className="border-t bg-white p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-gray-500">
-                      共 {total} 个任务
-                    </div>
-
-                    {/* 每页显示数量输入 */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">每页</span>
-                      <Input
-                        type="text"
-                        value={pageSize}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, ''); // 只保留数字
-                          if (value === '' || parseInt(value) > 0) {
-                            setPageSize(value === '' ? '' : parseInt(value));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!pageSize || pageSize < 1) {
-                            setPageSize(20);
-                          } else if (pageSize > 500) {
-                            setPageSize(500);
-                          }
-                          setCurrentPage(1);
-                          fetchAvailableImages(1);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            if (!pageSize || pageSize < 1) {
-                              setPageSize(20);
-                            } else if (pageSize > 500) {
-                              setPageSize(500);
-                            }
-                            setCurrentPage(1);
-                            fetchAvailableImages(1);
-                          }
-                        }}
-                        className="w-20 h-8 text-center"
-                        placeholder="20"
-                      />
-                      <span className="text-sm text-gray-600">条</span>
+                      )}
                     </div>
                   </div>
-
-                  {total > (pageSize || 100) && (
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fetchAvailableImages(currentPage - 1)}
-                        disabled={currentPage <= 1 || loading}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        上一页
-                      </Button>
-
-                      <div className="text-sm text-gray-600">
-                        {currentPage} / {Math.ceil(total / (pageSize || 100))}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fetchAvailableImages(currentPage + 1)}
-                        disabled={currentPage >= Math.ceil(total / (pageSize || 100)) || loading}
-                      >
-                        下一页
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-
-                      {/* 跳转到指定页 */}
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-sm text-gray-600">跳转到</span>
-                        <Input
-                          type="text"
-                          value={jumpPage}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, ''); // 只保留数字
-                            setJumpPage(value);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              const page = parseInt(jumpPage);
-                              const maxPage = Math.ceil(total / (pageSize || 100));
-                              if (page >= 1 && page <= maxPage) {
-                                setCurrentPage(page);
-                                fetchAvailableImages(page);
-                                setJumpPage('');
-                              } else {
-                                toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
-                              }
-                            }
-                          }}
-                          className="w-16 h-8 text-center"
-                          placeholder="页"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const page = parseInt(jumpPage);
-                            const maxPage = Math.ceil(total / (pageSize || 100));
-                            if (page >= 1 && page <= maxPage) {
-                              setCurrentPage(page);
-                              fetchAvailableImages(page);
-                              setJumpPage('');
-                            } else {
-                              toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
-                            }
-                          }}
-                          disabled={!jumpPage || loading}
-                        >
-                          跳转
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Package className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h2 className="text-lg font-medium text-gray-600 mb-2">请先选择产品分类</h2>
+                  <p className="text-gray-500 text-sm">选择分类后将自动显示该分类下的商品图</p>
                 </div>
               </div>
             )}
           </div>
-
         </div>
       </div>
 
