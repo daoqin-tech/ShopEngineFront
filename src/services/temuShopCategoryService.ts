@@ -68,6 +68,12 @@ export interface ShowConditionItem {
   parentVids: number[];    // 只有父属性选择了这些值时，当前属性才显示
 }
 
+// 属性值父子关联关系（定义哪些子值对应哪些父值）
+export interface TemplatePropertyValueParent {
+  parentVidList: number[];  // 父属性值ID列表
+  vidList: number[];        // 当前属性值ID列表（只有父属性选择了 parentVidList 中的值时，这些值才有效）
+}
+
 // 产品属性项
 export interface ProductAttributeProperty {
   pid: number;                    // 基础属性ID
@@ -94,6 +100,7 @@ export interface ProductAttributeProperty {
   feature?: number;               // 特殊特性
   showType?: number;              // 展示字段类型
   showCondition?: ShowConditionItem[];  // 属性展示条件（父子依赖关系）
+  templatePropertyValueParentList?: TemplatePropertyValueParent[];  // 属性值父子关联关系
 }
 
 // 产品属性模板响应

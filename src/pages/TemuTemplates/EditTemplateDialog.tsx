@@ -398,10 +398,8 @@ export function EditTemplateDialog({
                 return null;
               }
 
-              // 获取所有属性用于父子依赖过滤
-              const allProperties = editAttributeFormValues.map(fv => fv.property);
               // 过滤出满足父子依赖关系的值
-              const validValues = getValidValues(item.property, editAttributeFormValues, allProperties);
+              const validValues = getValidValues(item.property, editAttributeFormValues);
 
               return (
                 <div key={item.property.templatePid} className="flex items-start gap-3">

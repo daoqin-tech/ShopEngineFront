@@ -58,11 +58,10 @@ export const shouldShowAttribute = (
 };
 
 // 过滤属性值：只返回满足父子依赖关系的值
-// parentVidList 定义了值级别的父子依赖：只有当父属性选择了 parentVidList 中的值时，该值才有效
+// templatePropertyValueParentList 定义了值级别的父子依赖关系
 export const getValidValues = (
   property: ProductAttributeProperty,
-  allFormValues: AttributeFormValue[],
-  allProperties: ProductAttributeProperty[]
+  allFormValues: AttributeFormValue[]
 ): ProductAttributeValue[] => {
   const values = property.values || [];
 
@@ -71,12 +70,8 @@ export const getValidValues = (
     return values;
   }
 
-  // 查找父属性（通过 parentTemplatePid 匹配 templatePid）
-  const parentProperty = allProperties.find(
-    p => p.templatePid === property.parentTemplatePid
-  );
-
-  if (!parentProperty) {
+  // 如果没有 templatePropertyValueParentList，也返回所有值
+  if (!property.templatePropertyValueParentList || property.templatePropertyValueParentList.length === 0) {
     return values;
   }
 
@@ -102,15 +97,25 @@ export const getValidValues = (
     return [];
   }
 
-  // 过滤值：只保留 parentVidList 为空或包含父属性选中值的值
-  return values.filter(value => {
-    // 如果没有 parentVidList，则该值对所有父值都有效
-    if (!value.parentVidList || value.parentVidList.length === 0) {
-      return true;
-    }
+  // 根据 templatePropertyValueParentList 过滤有效值
+  // 找到所有匹配父属性选中值的项，合并它们的 vidList
+  const validVids = new Set<number>();
+  for (const parentItem of property.templatePropertyValueParentList) {
     // 检查是否有任一父选中值在 parentVidList 中
-    return parentSelectedVids.some(vid => value.parentVidList!.includes(vid));
-  });
+    const matches = parentSelectedVids.some(vid => parentItem.parentVidList.includes(vid));
+    if (matches) {
+      // 将这个项的 vidList 加入有效值集合
+      parentItem.vidList.forEach(vid => validVids.add(vid));
+    }
+  }
+
+  // 如果没有找到匹配的有效值，返回空数组
+  if (validVids.size === 0) {
+    return [];
+  }
+
+  // 只返回在有效值集合中的值
+  return values.filter(value => validVids.has(value.vid));
 };
 
 // 敏感属性类型常量

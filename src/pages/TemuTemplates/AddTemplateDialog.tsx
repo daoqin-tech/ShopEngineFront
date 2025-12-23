@@ -417,10 +417,8 @@ export function AddTemplateDialog({
                     return null;
                   }
 
-                  // 获取所有属性用于父子依赖过滤
-                  const allProperties = attributeFormValues.map(fv => fv.property);
                   // 过滤出满足父子依赖关系的值
-                  const validValues = getValidValues(item.property, attributeFormValues, allProperties);
+                  const validValues = getValidValues(item.property, attributeFormValues);
 
                   return (
                     <div key={item.property.templatePid} className="flex items-start gap-3">
