@@ -727,7 +727,7 @@ export function TemuTemplates() {
     }
   };
 
-  // 打开编辑对话框
+  // 打开编辑对话框 - 先进入分类确认模式
   const handleOpenEditDialog = async (template: TemuTemplate) => {
     // 设置标志位，防止 useEffect 覆盖从数据库加载的配置
     isLoadingEditDataRef.current = true;
@@ -745,61 +745,54 @@ export function TemuTemplates() {
       const specs = template.specifications || [];
       setEditVolumeWeightConfigs(generateVolumeWeightConfigs(specs));
     }
-    setShowEditDialog(true);
-    setLoadingEditData(true);
 
-    // 在下一个事件循环中重置标志位，允许后续用户操作触发 useEffect
+    // 进入分类确认模式（用户需要先确认分类，系统才会获取最新属性）
+    setEditIsChangingCategory(true);
+    setEditTemuSearchKeyword('');
+    setEditSearchResults([]);
+    setEditIsSearchMode(false);
+    setEditPendingCategory(null);
+
+    // 构建当前分类的路径
+    const currentPath: TemuAPICategory[] = [];
+    const catIds = [
+      template.cat1Id, template.cat2Id, template.cat3Id, template.cat4Id, template.cat5Id,
+      template.cat6Id, template.cat7Id, template.cat8Id, template.cat9Id, template.cat10Id
+    ];
+    const catNames = template.fullPath?.split(' > ') || [];
+
+    for (let i = 0; i < catIds.length; i++) {
+      const catId = catIds[i];
+      if (catId) {
+        currentPath.push({
+          catId: catId,
+          catName: catNames[i] || '',
+          catLevel: i + 1,
+          parentCatId: (i > 0 ? catIds[i - 1] : 0) || 0,
+          isLeaf: i === catIds.length - 1 || !catIds[i + 1],
+          catType: template.catType || 0,
+          isHidden: false,
+          hiddenType: 0,
+        });
+      }
+    }
+    setEditSelectedPath(currentPath);
+
+    // 设置当前分类为待确认分类
+    if (currentPath.length > 0) {
+      setEditPendingCategory(currentPath[currentPath.length - 1]);
+    }
+
+    setShowEditDialog(true);
+    setLoadingEditData(false);
+
+    // 加载分类浏览器（从根分类开始）
+    loadEditTemuCategories(undefined, 0);
+
+    // 在下一个事件循环中重置标志位
     setTimeout(() => {
       isLoadingEditDataRef.current = false;
     }, 0);
-
-    try {
-      const attrsResponse = await temuCategoryAPIService.getProductAttributes(template.catId);
-
-      if (attrsResponse.properties && attrsResponse.properties.length > 0) {
-        const requiredProps = attrsResponse.properties.filter(prop => prop.required);
-
-        const formValues: AttributeFormValue[] = requiredProps.map(prop => {
-          const existingAttrs = template.productAttributes?.filter(a => a.templatePid === prop.templatePid) || [];
-
-          if (existingAttrs.length > 0) {
-            if (isMultiSelect(prop)) {
-              const selectedValues = existingAttrs
-                .map(attr => prop.values?.find(v => v.vid === attr.vid))
-                .filter((v): v is ProductAttributeValue => v !== undefined);
-              return {
-                property: prop,
-                selectedValues: selectedValues.length > 0 ? selectedValues : undefined,
-                customValue: selectedValues.length === 0 ? existingAttrs[0]?.propValue : undefined,
-              };
-            } else {
-              const existingAttr = existingAttrs[0];
-              const selectedValue = prop.values?.find(v => v.vid === existingAttr.vid);
-              return {
-                property: prop,
-                selectedValue: selectedValue,
-                customValue: !selectedValue ? existingAttr.propValue : undefined,
-              };
-            }
-          }
-          return { property: prop };
-        });
-        setEditAttributeFormValues(formValues);
-      }
-
-      setEditInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
-      setEditSingleSpecValueNum(attrsResponse.singleSpecValueNum ?? 0);
-
-      if (attrsResponse.inputMaxSpecNum && attrsResponse.inputMaxSpecNum > 0) {
-        const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(template.catId);
-        setEditParentSpecs(parentSpecsResponse.parentSpecs || []);
-      }
-    } catch (error) {
-      console.error('获取属性模板失败:', error);
-      toast.error('获取属性模板失败');
-    } finally {
-      setLoadingEditData(false);
-    }
   };
 
   // 编辑规格相关操作
@@ -1020,7 +1013,10 @@ export function TemuTemplates() {
     try {
       setEditFetchingAttributes(true);
 
-      // 获取新分类的属性
+      // 检查是否是同一个分类（刷新属性）还是切换到新分类
+      const isSameCategory = editPendingCategory.catId === editingTemplate.catId;
+
+      // 获取分类的最新属性
       const attrsResponse = await temuCategoryAPIService.getProductAttributes(editPendingCategory.catId);
 
       // 更新编辑模板的分类信息
@@ -1050,7 +1046,44 @@ export function TemuTemplates() {
       // 更新属性表单
       if (attrsResponse.properties && attrsResponse.properties.length > 0) {
         const requiredProps = attrsResponse.properties.filter(prop => prop.required);
-        setEditAttributeFormValues(requiredProps.map(prop => ({ property: prop })));
+
+        // 如果是同一个分类，尝试匹配旧的属性值
+        if (isSameCategory && editingTemplate.productAttributes) {
+          const formValues: AttributeFormValue[] = requiredProps.map(prop => {
+            // 尝试从模板的旧属性中匹配值（通过 propName 匹配，因为 templatePid 可能变了）
+            const existingAttrs = editingTemplate.productAttributes?.filter(
+              a => a.propName === prop.name
+            ) || [];
+
+            if (existingAttrs.length > 0) {
+              if (isMultiSelect(prop)) {
+                // 多选：通过 propValue 匹配
+                const selectedValues = existingAttrs
+                  .map(attr => prop.values?.find(v => v.value === attr.propValue))
+                  .filter((v): v is ProductAttributeValue => v !== undefined);
+                return {
+                  property: prop,
+                  selectedValues: selectedValues.length > 0 ? selectedValues : undefined,
+                  customValue: selectedValues.length === 0 ? existingAttrs[0]?.propValue : undefined,
+                };
+              } else {
+                // 单选：通过 propValue 匹配
+                const existingAttr = existingAttrs[0];
+                const selectedValue = prop.values?.find(v => v.value === existingAttr.propValue);
+                return {
+                  property: prop,
+                  selectedValue: selectedValue,
+                  customValue: !selectedValue ? existingAttr.propValue : undefined,
+                };
+              }
+            }
+            return { property: prop };
+          });
+          setEditAttributeFormValues(formValues);
+        } else {
+          // 切换到新分类，清空属性值
+          setEditAttributeFormValues(requiredProps.map(prop => ({ property: prop })));
+        }
       } else {
         setEditAttributeFormValues([]);
       }
@@ -1058,9 +1091,13 @@ export function TemuTemplates() {
       // 更新规格配置
       setEditInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
       setEditSingleSpecValueNum(attrsResponse.singleSpecValueNum ?? 0);
-      setEditSpecFormValues([]);
-      setEditSkuDefaultConfig({});
-      setEditVolumeWeightConfigs([]);
+
+      // 如果是同一个分类，保留规格配置；否则清空
+      if (!isSameCategory) {
+        setEditSpecFormValues([]);
+        setEditSkuDefaultConfig({});
+        setEditVolumeWeightConfigs([]);
+      }
 
       if (attrsResponse.inputMaxSpecNum && attrsResponse.inputMaxSpecNum > 0) {
         const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(editPendingCategory.catId);
@@ -1072,10 +1109,15 @@ export function TemuTemplates() {
       // 关闭分类选择模式
       setEditIsChangingCategory(false);
       setEditPendingCategory(null);
-      toast.success('分类已变更，请重新填写属性');
+
+      if (isSameCategory) {
+        toast.success('属性配置已刷新（使用最新的 Temu 属性模板）');
+      } else {
+        toast.success('分类已变更，请重新填写属性');
+      }
     } catch (error: any) {
-      console.error('获取新分类属性失败:', error);
-      toast.error(error.response?.data?.message || '获取新分类属性失败');
+      console.error('获取分类属性失败:', error);
+      toast.error(error.response?.data?.message || '获取分类属性失败');
     } finally {
       setEditFetchingAttributes(false);
     }
