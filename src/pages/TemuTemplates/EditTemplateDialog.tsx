@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, RefreshCw, Pencil, Search, ChevronRight, X, Check } from 'lucide-react';
 import type { TemuTemplate, TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import type { ParentSpecification, TemuCategoryPath, TemuAPICategory } from '@/services/temuShopCategoryService';
-import { TemuSite, AttributeFormValue, isMultiSelect } from './types';
+import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute } from './types';
 import { SkuConfigTable } from './SkuConfigTable';
 
 interface EditTemplateDialogProps {
@@ -391,86 +391,93 @@ export function EditTemplateDialog({
               />
             </div>
 
-            {/* 产品属性 */}
-            {editAttributeFormValues.map((item, index) => (
-              <div key={item.property.templatePid} className="flex items-start gap-3">
-                <Label className="text-sm w-20 shrink-0 pt-2">{item.property.name}</Label>
-                <div className="flex-1">
-                  {item.property.values && item.property.values.length > 0 ? (
-                    isMultiSelect(item.property) ? (
-                      <div className="grid grid-cols-6 gap-x-2 gap-y-1">
-                        {item.property.values.map((val) => {
-                          const isChecked = item.selectedValues?.some(v => v.vid === val.vid) ?? false;
-                          const isDisabled = !isChecked &&
-                            (item.selectedValues?.length ?? 0) >= (item.property.chooseMaxNum ?? 1);
-                          return (
-                            <div key={val.vid} className="flex items-center space-x-1">
-                              <Checkbox
-                                id={`edit-attr-${item.property.templatePid}-${val.vid}`}
-                                checked={isChecked}
-                                disabled={isDisabled}
-                                onCheckedChange={(checked) => {
-                                  const currentValues = item.selectedValues || [];
-                                  if (checked) {
-                                    updateEditAttributeValue(index, {
-                                      selectedValues: [...currentValues, val],
-                                      selectedValue: undefined,
-                                      customValue: undefined
-                                    });
-                                  } else {
-                                    updateEditAttributeValue(index, {
-                                      selectedValues: currentValues.filter(v => v.vid !== val.vid),
-                                      selectedValue: undefined,
-                                      customValue: undefined
-                                    });
-                                  }
-                                }}
-                              />
-                              <label
-                                htmlFor={`edit-attr-${item.property.templatePid}-${val.vid}`}
-                                className={`text-sm cursor-pointer truncate ${isDisabled ? 'text-gray-400' : ''}`}
-                              >
+            {/* 产品属性 - 根据 showCondition 过滤显示 */}
+            {editAttributeFormValues.map((item, index) => {
+              // 检查属性是否应该根据 showCondition 显示
+              if (!shouldShowAttribute(item.property, editAttributeFormValues)) {
+                return null;
+              }
+
+              return (
+                <div key={item.property.templatePid} className="flex items-start gap-3">
+                  <Label className="text-sm w-20 shrink-0 pt-2">{item.property.name}</Label>
+                  <div className="flex-1">
+                    {item.property.values && item.property.values.length > 0 ? (
+                      isMultiSelect(item.property) ? (
+                        <div className="grid grid-cols-6 gap-x-2 gap-y-1">
+                          {item.property.values.map((val) => {
+                            const isChecked = item.selectedValues?.some(v => v.vid === val.vid) ?? false;
+                            const isDisabled = !isChecked &&
+                              (item.selectedValues?.length ?? 0) >= (item.property.chooseMaxNum ?? 1);
+                            return (
+                              <div key={val.vid} className="flex items-center space-x-1">
+                                <Checkbox
+                                  id={`edit-attr-${item.property.templatePid}-${val.vid}`}
+                                  checked={isChecked}
+                                  disabled={isDisabled}
+                                  onCheckedChange={(checked) => {
+                                    const currentValues = item.selectedValues || [];
+                                    if (checked) {
+                                      updateEditAttributeValue(index, {
+                                        selectedValues: [...currentValues, val],
+                                        selectedValue: undefined,
+                                        customValue: undefined
+                                      });
+                                    } else {
+                                      updateEditAttributeValue(index, {
+                                        selectedValues: currentValues.filter(v => v.vid !== val.vid),
+                                        selectedValue: undefined,
+                                        customValue: undefined
+                                      });
+                                    }
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`edit-attr-${item.property.templatePid}-${val.vid}`}
+                                  className={`text-sm cursor-pointer truncate ${isDisabled ? 'text-gray-400' : ''}`}
+                                >
+                                  {val.value}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <Select
+                          value={item.selectedValue?.vid?.toString() || ''}
+                          onValueChange={(vid) => {
+                            const selectedVal = item.property.values?.find(v => v.vid.toString() === vid);
+                            updateEditAttributeValue(index, {
+                              selectedValue: selectedVal,
+                              selectedValues: undefined,
+                              customValue: undefined
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="max-w-48">
+                            <SelectValue placeholder="请选择" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {item.property.values.map((val) => (
+                              <SelectItem key={val.vid} value={val.vid.toString()}>
                                 {val.value}
-                              </label>
-                            </div>
-                          );
-                        })}
-                      </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )
                     ) : (
-                      <Select
-                        value={item.selectedValue?.vid?.toString() || ''}
-                        onValueChange={(vid) => {
-                          const selectedVal = item.property.values?.find(v => v.vid.toString() === vid);
-                          updateEditAttributeValue(index, {
-                            selectedValue: selectedVal,
-                            selectedValues: undefined,
-                            customValue: undefined
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="max-w-48">
-                          <SelectValue placeholder="请选择" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {item.property.values.map((val) => (
-                            <SelectItem key={val.vid} value={val.vid.toString()}>
-                              {val.value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )
-                  ) : (
-                    <Input
-                      placeholder="请输入"
-                      value={item.customValue || ''}
-                      onChange={(e) => updateEditAttributeValue(index, { customValue: e.target.value })}
-                      className="max-w-48"
-                    />
-                  )}
+                      <Input
+                        placeholder="请输入"
+                        value={item.customValue || ''}
+                        onChange={(e) => updateEditAttributeValue(index, { customValue: e.target.value })}
+                        className="max-w-48"
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* 规格配置 */}
             {editInputMaxSpecNum > 0 && (

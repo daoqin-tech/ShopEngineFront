@@ -1,4 +1,4 @@
-import type { ProductAttributeProperty, ProductAttributeValue } from '@/services/temuShopCategoryService';
+import type { ProductAttributeProperty, ProductAttributeValue, ShowConditionItem } from '@/services/temuShopCategoryService';
 
 // Temu 站点配置类型
 export interface TemuSite {
@@ -20,6 +20,41 @@ export interface AttributeFormValue {
 // 判断属性是否支持多选
 export const isMultiSelect = (property: ProductAttributeProperty): boolean => {
   return (property.chooseMaxNum ?? 1) > 1;
+};
+
+// 检查属性是否应该根据 showCondition 显示
+// showCondition 定义了父子属性依赖关系：只有当父属性选择了指定值时，子属性才显示
+export const shouldShowAttribute = (
+  property: ProductAttributeProperty,
+  allFormValues: AttributeFormValue[]
+): boolean => {
+  // 如果没有 showCondition，则始终显示
+  if (!property.showCondition || property.showCondition.length === 0) {
+    return true;
+  }
+
+  // 检查是否满足任一 showCondition（多个条件是 OR 关系）
+  return property.showCondition.some((condition: ShowConditionItem) => {
+    // 查找父属性的表单值（通过 refPid 匹配）
+    const parentFormValue = allFormValues.find(
+      fv => fv.property.refPid === condition.parentRefPid
+    );
+
+    if (!parentFormValue) {
+      return false;
+    }
+
+    // 获取父属性已选择的值的 vid 列表
+    let selectedVids: number[] = [];
+    if (parentFormValue.selectedValue) {
+      selectedVids = [parentFormValue.selectedValue.vid];
+    } else if (parentFormValue.selectedValues && parentFormValue.selectedValues.length > 0) {
+      selectedVids = parentFormValue.selectedValues.map(v => v.vid);
+    }
+
+    // 检查是否有任一选中的值在 parentVids 中
+    return selectedVids.some(vid => condition.parentVids.includes(vid));
+  });
 };
 
 // 敏感属性类型常量

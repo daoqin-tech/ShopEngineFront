@@ -61,6 +61,12 @@ export interface ProductAttributeGroup {
   id: number;
 }
 
+// 属性展示条件项（父子依赖关系）
+export interface ShowConditionItem {
+  parentRefPid: number;    // 父属性ID
+  parentVids: number[];    // 只有父属性选择了这些值时，当前属性才显示
+}
+
 // 产品属性项
 export interface ProductAttributeProperty {
   pid: number;                    // 基础属性ID
@@ -86,6 +92,7 @@ export interface ProductAttributeProperty {
   extendInfo?: string;            // 扩展信息
   feature?: number;               // 特殊特性
   showType?: number;              // 展示字段类型
+  showCondition?: ShowConditionItem[];  // 属性展示条件（父子依赖关系）
 }
 
 // 产品属性模板响应

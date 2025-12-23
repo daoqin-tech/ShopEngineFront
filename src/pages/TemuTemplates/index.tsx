@@ -25,7 +25,7 @@ import { temuTemplateService, type TemuTemplate, type TemuProductAttribute, type
 import { temuCategoryAPIService, type TemuCategoryPath, type TemuAPICategory, type ProductAttributeProperty, type ProductAttributeValue, type ParentSpecification } from '@/services/temuShopCategoryService';
 import { systemConfigService } from '@/services/systemConfigService';
 import { toast } from 'sonner';
-import { TemuSite, AttributeFormValue, isMultiSelect } from './types';
+import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute } from './types';
 import { AddTemplateDialog } from './AddTemplateDialog';
 import { EditTemplateDialog } from './EditTemplateDialog';
 
@@ -552,6 +552,11 @@ export function TemuTemplates() {
 
       attributeFormValues.forEach(item => {
         const prop = item.property;
+
+        // 只提交满足 showCondition 的属性
+        if (!shouldShowAttribute(prop, attributeFormValues)) {
+          return;
+        }
 
         if (isMultiSelect(prop) && item.selectedValues && item.selectedValues.length > 0) {
           item.selectedValues.forEach(val => {
@@ -1156,6 +1161,11 @@ export function TemuTemplates() {
       const productAttributes: TemuProductAttribute[] = [];
       editAttributeFormValues.forEach(item => {
         const prop = item.property;
+
+        // 只提交满足 showCondition 的属性
+        if (!shouldShowAttribute(prop, editAttributeFormValues)) {
+          return;
+        }
 
         if (isMultiSelect(prop) && item.selectedValues && item.selectedValues.length > 0) {
           item.selectedValues.forEach(val => {
