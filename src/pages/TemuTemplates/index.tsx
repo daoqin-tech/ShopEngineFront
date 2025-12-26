@@ -25,7 +25,7 @@ import { temuTemplateService, type TemuTemplate, type TemuProductAttribute, type
 import { temuCategoryAPIService, type TemuCategoryPath, type TemuAPICategory, type ProductAttributeProperty, type ProductAttributeValue, type ParentSpecification } from '@/services/temuShopCategoryService';
 import { systemConfigService } from '@/services/systemConfigService';
 import { toast } from 'sonner';
-import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute } from './types';
+import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues } from './types';
 import { AddTemplateDialog } from './AddTemplateDialog';
 import { EditTemplateDialog } from './EditTemplateDialog';
 
@@ -555,6 +555,12 @@ export function TemuTemplates() {
 
         // 只提交满足 showCondition 的属性
         if (!shouldShowAttribute(prop, attributeFormValues)) {
+          return;
+        }
+
+        // 只提交有有效值的属性
+        const validValues = getValidValues(prop, attributeFormValues);
+        if (validValues.length === 0) {
           return;
         }
 
@@ -1164,6 +1170,12 @@ export function TemuTemplates() {
 
         // 只提交满足 showCondition 的属性
         if (!shouldShowAttribute(prop, editAttributeFormValues)) {
+          return;
+        }
+
+        // 只提交有有效值的属性
+        const validValues = getValidValues(prop, editAttributeFormValues);
+        if (validValues.length === 0) {
           return;
         }
 

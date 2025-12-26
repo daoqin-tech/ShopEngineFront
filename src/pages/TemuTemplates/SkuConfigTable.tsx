@@ -70,7 +70,7 @@ export function SkuConfigTable({
   onVolumeWeightConfigChange,
 }: SkuConfigTableProps) {
   const validSpecs = specFormValues.filter(s => s.parentSpecId > 0 && s.specValues.length > 0);
-  const hasSpecs = validSpecs.length > 0 && volumeWeightConfigs.length > 0;
+  const hasConfigs = volumeWeightConfigs.length > 0;
 
   return (
     <div className="mt-6 pt-4 border-t">
@@ -79,9 +79,9 @@ export function SkuConfigTable({
         配置 SKU 的默认值，发布商品时将自动填充
       </p>
 
-      {!hasSpecs ? (
+      {!hasConfigs ? (
         <div className="text-sm text-gray-400 py-8 text-center border border-dashed rounded-lg">
-          请先添加商品规格，配置规格值后将自动生成 SKU 配置表格
+          加载 SKU 配置中...
         </div>
       ) : (
         <>
@@ -95,11 +95,15 @@ export function SkuConfigTable({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    {validSpecs.map((spec) => (
-                      <TableHead key={spec.parentSpecId} className="text-xs font-medium text-center whitespace-nowrap">
-                        {spec.parentSpecName}
-                      </TableHead>
-                    ))}
+                    {validSpecs.length > 0 ? (
+                      validSpecs.map((spec) => (
+                        <TableHead key={spec.parentSpecId} className="text-xs font-medium text-center whitespace-nowrap">
+                          {spec.parentSpecName}
+                        </TableHead>
+                      ))
+                    ) : (
+                      <TableHead className="text-xs font-medium text-center whitespace-nowrap">规格</TableHead>
+                    )}
                     <TableHead className="text-xs font-medium text-center whitespace-nowrap">
                       <span className="text-red-500">*</span>申报价格(元)
                     </TableHead>
@@ -269,11 +273,15 @@ export function SkuConfigTable({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    {validSpecs.map((spec) => (
-                      <TableHead key={spec.parentSpecId} className="text-xs font-medium text-center whitespace-nowrap">
-                        {spec.parentSpecName}
-                      </TableHead>
-                    ))}
+                    {validSpecs.length > 0 ? (
+                      validSpecs.map((spec) => (
+                        <TableHead key={spec.parentSpecId} className="text-xs font-medium text-center whitespace-nowrap">
+                          {spec.parentSpecName}
+                        </TableHead>
+                      ))
+                    ) : (
+                      <TableHead className="text-xs font-medium text-center whitespace-nowrap">规格</TableHead>
+                    )}
                     <TableHead className="text-xs font-medium text-center whitespace-nowrap">敏感属性</TableHead>
                     <TableHead className="text-xs font-medium text-center whitespace-nowrap">最长边(cm)</TableHead>
                     <TableHead className="text-xs font-medium text-center whitespace-nowrap">次长边(cm)</TableHead>

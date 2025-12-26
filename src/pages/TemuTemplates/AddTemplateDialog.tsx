@@ -420,81 +420,77 @@ export function AddTemplateDialog({
                   // 过滤出满足父子依赖关系的值
                   const validValues = getValidValues(item.property, attributeFormValues);
 
+                  // 如果没有有效值，不显示这个属性
+                  if (validValues.length === 0) {
+                    return null;
+                  }
+
                   return (
                     <div key={item.property.templatePid} className="flex items-start gap-3">
                       <Label className="text-sm w-20 shrink-0 pt-2">{item.property.name}</Label>
                       <div className="flex-1">
-                        {validValues.length > 0 ? (
-                          isMultiSelect(item.property) ? (
-                            <div className="grid grid-cols-6 gap-x-2 gap-y-1">
-                              {validValues.map((val) => {
-                                const isChecked = item.selectedValues?.some(v => v.vid === val.vid) ?? false;
-                                const isDisabled = !isChecked &&
-                                  (item.selectedValues?.length ?? 0) >= (item.property.chooseMaxNum ?? 1);
-                                return (
-                                  <div key={val.vid} className="flex items-center space-x-1">
-                                    <Checkbox
-                                      id={`attr-${item.property.templatePid}-${val.vid}`}
-                                      checked={isChecked}
-                                      disabled={isDisabled}
-                                      onCheckedChange={(checked) => {
-                                        const currentValues = item.selectedValues || [];
-                                        if (checked) {
-                                          updateAttributeValue(index, {
-                                            selectedValues: [...currentValues, val],
-                                            selectedValue: undefined,
-                                            customValue: undefined
-                                          });
-                                        } else {
-                                          updateAttributeValue(index, {
-                                            selectedValues: currentValues.filter(v => v.vid !== val.vid),
-                                            selectedValue: undefined,
-                                            customValue: undefined
-                                          });
-                                        }
-                                      }}
-                                    />
-                                    <label
-                                      htmlFor={`attr-${item.property.templatePid}-${val.vid}`}
-                                      className={`text-sm cursor-pointer truncate ${isDisabled ? 'text-gray-400' : ''}`}
-                                    >
-                                      {val.value}
-                                    </label>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <Select
-                              value={item.selectedValue?.vid?.toString() || ''}
-                              onValueChange={(vid) => {
-                                const selectedVal = validValues.find(v => v.vid.toString() === vid);
-                                updateAttributeValue(index, {
-                                  selectedValue: selectedVal,
-                                  selectedValues: undefined,
-                                  customValue: undefined
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="max-w-48">
-                                <SelectValue placeholder="请选择" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {validValues.map((val) => (
-                                  <SelectItem key={val.vid} value={val.vid.toString()}>
+                        {isMultiSelect(item.property) ? (
+                          <div className="grid grid-cols-6 gap-x-2 gap-y-1">
+                            {validValues.map((val) => {
+                              const isChecked = item.selectedValues?.some(v => v.vid === val.vid) ?? false;
+                              const isDisabled = !isChecked &&
+                                (item.selectedValues?.length ?? 0) >= (item.property.chooseMaxNum ?? 1);
+                              return (
+                                <div key={val.vid} className="flex items-center space-x-1">
+                                  <Checkbox
+                                    id={`attr-${item.property.templatePid}-${val.vid}`}
+                                    checked={isChecked}
+                                    disabled={isDisabled}
+                                    onCheckedChange={(checked) => {
+                                      const currentValues = item.selectedValues || [];
+                                      if (checked) {
+                                        updateAttributeValue(index, {
+                                          selectedValues: [...currentValues, val],
+                                          selectedValue: undefined,
+                                          customValue: undefined
+                                        });
+                                      } else {
+                                        updateAttributeValue(index, {
+                                          selectedValues: currentValues.filter(v => v.vid !== val.vid),
+                                          selectedValue: undefined,
+                                          customValue: undefined
+                                        });
+                                      }
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor={`attr-${item.property.templatePid}-${val.vid}`}
+                                    className={`text-sm cursor-pointer truncate ${isDisabled ? 'text-gray-400' : ''}`}
+                                  >
                                     {val.value}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )
+                                  </label>
+                                </div>
+                              );
+                            })}
+                          </div>
                         ) : (
-                          <Input
-                            placeholder="请输入"
-                            value={item.customValue || ''}
-                            onChange={(e) => updateAttributeValue(index, { customValue: e.target.value })}
-                            className="max-w-48"
-                          />
+                          <Select
+                            value={item.selectedValue?.vid?.toString() || ''}
+                            onValueChange={(vid) => {
+                              const selectedVal = validValues.find(v => v.vid.toString() === vid);
+                              updateAttributeValue(index, {
+                                selectedValue: selectedVal,
+                                selectedValues: undefined,
+                                customValue: undefined
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="max-w-48">
+                              <SelectValue placeholder="请选择" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {validValues.map((val) => (
+                                <SelectItem key={val.vid} value={val.vid.toString()}>
+                                  {val.value}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         )}
                       </div>
                     </div>
@@ -658,10 +654,15 @@ export function AddTemplateDialog({
                   if (!shouldShowAttribute(item.property, attributeFormValues)) {
                     return true; // 不可见的属性跳过验证
                   }
+                  // 跳过没有有效值的属性
+                  const validValues = getValidValues(item.property, attributeFormValues);
+                  if (validValues.length === 0) {
+                    return true;
+                  }
                   if (isMultiSelect(item.property)) {
                     return (item.selectedValues?.length ?? 0) > 0;
                   }
-                  return item.selectedValue || item.customValue;
+                  return !!item.selectedValue;
                 }))}
               >
                 {submitting ? '添加中...' : '确认添加'}
