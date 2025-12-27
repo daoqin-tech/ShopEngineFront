@@ -8,19 +8,17 @@ import { DateTimePicker } from '@/components/ui/date-picker'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import {
   coverProjectService,
   type TaskInfo,
-  type TemplateSearchItem,
   type RestartFailedTasksRequest
 } from '@/services/coverProjectService'
+import { productCategoryService } from '@/services/productCategoryService'
+import type { ProductCategoryWithChildren } from '@/types/productCategory'
 import { toast } from 'sonner'
 import JSZip from 'jszip'
 import TaskStatsChart from '@/components/TaskStatsChart'
@@ -43,48 +41,24 @@ export function CoverGeneration() {
 
   // 筛选状态
   const [statusFilter, setStatusFilter] = useState('')
-  const [templateFilter, setTemplateFilter] = useState('')
   const [startTime, setStartTime] = useState<Date | undefined>()
   const [endTime, setEndTime] = useState<Date | undefined>()
 
-  // 模板搜索选项状态
-  const [templatesForSearch, setTemplatesForSearch] = useState<TemplateSearchItem[]>([])
-  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  // 产品分类状态
+  const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([])
+  const [selectedParentId, setSelectedParentId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [loadingCategories, setLoadingCategories] = useState(false)
 
   // 选择和操作状态
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
   const [previewImages, setPreviewImages] = useState<{ taskId: string; images: string[] } | null>(null)
 
-  // 解析模板名称，提取分类信息
-  const parseTemplateName = (name: string): { displayName: string; category: string } => {
-    const match = name.match(/^(.+?)[(（](.+?)[)）]$/)
-    if (match) {
-      return {
-        displayName: match[1].trim(),
-        category: match[2].trim()
-      }
-    }
-    return {
-      displayName: name,
-      category: '其他'
-    }
-  }
-
-  // 按分类分组模板
-  const groupedTemplates = React.useMemo(() => {
-    const groups: { [category: string]: TemplateSearchItem[] } = {}
-    templatesForSearch.forEach(template => {
-      const { category } = parseTemplateName(template.name)
-      if (!groups[category]) {
-        groups[category] = []
-      }
-      groups[category].push(template)
-    })
-    return Object.keys(groups).sort().reduce((acc, category) => {
-      acc[category] = groups[category]
-      return acc
-    }, {} as { [category: string]: TemplateSearchItem[] })
-  }, [templatesForSearch])
+  // 获取当前选中父分类的子分类列表
+  const currentChildCategories = React.useMemo(() => {
+    const parent = parentCategories.find(p => p.id === selectedParentId)
+    return parent?.children || []
+  }, [parentCategories, selectedParentId])
 
   // 获取任务列表
   const fetchTasks = async (page: number = currentPage) => {
@@ -103,8 +77,8 @@ export function CoverGeneration() {
         params.status = statusFilter
       }
 
-      if (templateFilter && templateFilter !== 'all') {
-        params.templateId = templateFilter
+      if (categoryId) {
+        params.categoryId = categoryId
       }
 
       if (startTime) {
@@ -129,24 +103,24 @@ export function CoverGeneration() {
     }
   }
 
-  // 获取模板搜索选项
-  const fetchTemplatesForSearch = async () => {
+  // 获取产品分类
+  const fetchCategories = async () => {
     try {
-      setLoadingTemplates(true)
-      const templates = await coverProjectService.getTemplatesForSearch()
-      setTemplatesForSearch(templates)
+      setLoadingCategories(true)
+      const data = await productCategoryService.getCategoryTree()
+      setParentCategories(data)
     } catch (err) {
-      console.error('Error fetching templates for search:', err)
-      toast.error('加载模板选项失败')
+      console.error('Error fetching categories:', err)
+      toast.error('加载产品分类失败')
     } finally {
-      setLoadingTemplates(false)
+      setLoadingCategories(false)
     }
   }
 
 
   useEffect(() => {
     fetchTasks(1)
-    fetchTemplatesForSearch()
+    fetchCategories()
   }, [])
 
 
@@ -159,7 +133,8 @@ export function CoverGeneration() {
   // 重置筛选
   const handleResetFilters = () => {
     setStatusFilter('')
-    setTemplateFilter('')
+    setSelectedParentId('')
+    setCategoryId('')
     setStartTime(undefined)
     setEndTime(undefined)
     setCurrentPage(1)
@@ -421,38 +396,60 @@ export function CoverGeneration() {
       <div className="bg-gray-50 p-4 border-b">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">模板:</label>
-            <Select
-              value={templateFilter || undefined}
-              onValueChange={(value) => setTemplateFilter(value || '')}
-              disabled={loadingTemplates}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="全部模板" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[400px]">
-                <SelectItem value="all">全部模板 ({templatesForSearch.length})</SelectItem>
-                <SelectSeparator />
-                {Object.entries(groupedTemplates).map(([category, templates], index) => (
-                  <React.Fragment key={category}>
-                    {index > 0 && <SelectSeparator />}
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-bold text-gray-900 bg-gray-50 px-3 py-2 -mx-1 mb-1">
-                        {category}
-                      </SelectLabel>
-                      {templates.map((template) => {
-                        const { displayName } = parseTemplateName(template.name)
-                        return (
-                          <SelectItem key={template.id} value={template.id} className="pl-6">
-                            {displayName}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectGroup>
-                  </React.Fragment>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-sm font-medium text-gray-700">产品分类:</label>
+            {loadingCategories ? (
+              <div className="text-sm text-gray-500">加载中...</div>
+            ) : (
+              <div className="flex gap-2">
+                <Select
+                  value={selectedParentId || undefined}
+                  onValueChange={(value) => {
+                    if (value === '__all__') {
+                      setSelectedParentId('')
+                      setCategoryId('')
+                    } else {
+                      setSelectedParentId(value)
+                      setCategoryId('')
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="一级分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">全部</SelectItem>
+                    {parentCategories.map((parent) => (
+                      <SelectItem key={parent.id} value={parent.id}>
+                        {parent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={categoryId || undefined}
+                  onValueChange={(value) => {
+                    if (value === '__all__') {
+                      setCategoryId('')
+                    } else {
+                      setCategoryId(value)
+                    }
+                  }}
+                  disabled={!selectedParentId || currentChildCategories.length === 0}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="二级分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">全部</SelectItem>
+                    {currentChildCategories.map((child) => (
+                      <SelectItem key={child.id} value={child.id}>
+                        {child.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">状态:</label>
@@ -573,7 +570,7 @@ export function CoverGeneration() {
               </div>
               <div className="flex items-center justify-center">缩略图</div>
               <div className="flex items-center">项目名称</div>
-              <div className="flex items-center">模板名称</div>
+              <div className="flex items-center">分类名称</div>
               <div className="flex items-center">状态</div>
               <div className="flex items-center">创建时间</div>
               <div className="flex items-center">操作</div>
@@ -612,13 +609,13 @@ export function CoverGeneration() {
                       {task.thumbnail ? (
                         <img
                           src={task.thumbnail}
-                          alt={task.templateName || '模板缩略图'}
+                          alt={task.categoryName || '缩略图'}
                           className="w-full h-full object-cover"
                         />
                       ) : task.resultImages && task.resultImages.length > 0 ? (
                         <img
                           src={task.resultImages[0]}
-                          alt={task.templateName || '模板缩略图'}
+                          alt={task.categoryName || '缩略图'}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -636,10 +633,10 @@ export function CoverGeneration() {
                     </div>
                   </div>
 
-                  {/* 模板名称 */}
+                  {/* 分类名称 */}
                   <div className="flex items-center">
-                    <div className="text-sm text-gray-700 truncate" title={task.templateName || '暂无模板'}>
-                      {task.templateName || '暂无模板'}
+                    <div className="text-sm text-gray-700 truncate" title={task.categoryName || '暂无分类'}>
+                      {task.categoryName || '暂无分类'}
                     </div>
                   </div>
 

@@ -99,6 +99,7 @@ export const coverProjectService = {
     limit: number
     status?: string
     templateId?: string
+    categoryId?: string
     startTime?: number
     endTime?: number
     search?: string
