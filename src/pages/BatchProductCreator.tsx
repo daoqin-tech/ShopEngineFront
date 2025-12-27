@@ -263,6 +263,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     }
   }, [selectedCategoryName]);
 
+  // 当可用的 Temu 模板列表变化且当前没有选择时，自动选择第一个
+  useEffect(() => {
+    if (filteredTemuTemplates.length > 0 && !formData.productCategory) {
+      updateFormData('productCategory', filteredTemuTemplates[0].id);
+    }
+  }, [filteredTemuTemplates, formData.productCategory]);
+
   // 更新表单数据
   const updateFormData = (field: keyof ProductFormData, value: string) => {
     setFormData(prev => ({

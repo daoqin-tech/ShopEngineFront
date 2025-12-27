@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileSpreadsheet, Download, Loader2, X, FileText, Truck } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
@@ -165,7 +164,7 @@ export function SenfanExportDialog({
   };
 
   // 开始导出
-  const handleStartExport = async () => {
+  const handleStartExport = async (selectedExportType: ExportType) => {
     let skuArray: string[] = [];
 
     if (inputMode === 'file') {
@@ -184,6 +183,7 @@ export function SenfanExportDialog({
       }
     }
 
+    setExportType(selectedExportType);
     setSkuCount(skuArray.length);
     setStage('processing');
 
@@ -211,7 +211,7 @@ export function SenfanExportDialog({
 
       setProducts(allProducts);
 
-      if (exportType === 'logistics') {
+      if (selectedExportType === 'logistics') {
         // 物流信息导出：直接进入ready阶段
         setStage('ready');
       } else {
@@ -266,7 +266,12 @@ export function SenfanExportDialog({
       return;
     }
 
-    if (needsUserReorder(category)) {
+    // 判断是否需要用户排序：
+    // 1. 是日历类型（需要固定顺序）
+    // 2. 且图片尚未排序（imageSorted 为 false 或 undefined）
+    const needsReorder = needsUserReorder(category) && !product.imageSorted;
+
+    if (needsReorder) {
       setStage('reorder');
     } else {
       try {
@@ -326,92 +331,125 @@ export function SenfanExportDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
+          <div className="py-4 space-y-5">
             {/* 输入阶段 */}
             {stage === 'input' && (
               <>
-                {/* 导出类型选择 */}
-                <div className="flex gap-2">
-                  <Button
-                    variant={exportType === 'logistics' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setExportType('logistics')}
-                  >
-                    <Truck className="w-4 h-4 mr-2" />
-                    物流信息
-                  </Button>
-                  <Button
-                    variant={exportType === 'pdf' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setExportType('pdf')}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    产品图PDF
-                  </Button>
+                {/* 第一步：货号来源选择 */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">货号来源</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      className={`relative flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        inputMode === 'file'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setInputMode('file')}
+                    >
+                      <Upload className={`w-5 h-5 ${inputMode === 'file' ? 'text-primary' : 'text-gray-400'}`} />
+                      <span className={`text-sm ${inputMode === 'file' ? 'text-primary font-medium' : 'text-gray-600'}`}>
+                        上传订单文件
+                      </span>
+                      {inputMode === 'file' && (
+                        <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <div
+                      className={`relative flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        inputMode === 'manual'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => setInputMode('manual')}
+                    >
+                      <FileText className={`w-5 h-5 ${inputMode === 'manual' ? 'text-primary' : 'text-gray-400'}`} />
+                      <span className={`text-sm ${inputMode === 'manual' ? 'text-primary font-medium' : 'text-gray-600'}`}>
+                        手动输入货号
+                      </span>
+                      {inputMode === 'manual' && (
+                        <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {/* 输入方式切换 */}
-                <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as InputMode)}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="file">上传订单文件</TabsTrigger>
-                    <TabsTrigger value="manual">手动输入货号</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="file" className="mt-4">
-                    {!fileName ? (
-                      <div
-                        className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                        onClick={handleSelectFile}
-                      >
-                        <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-600 mb-1">点击上传订单文件</p>
-                        <p className="text-xs text-gray-400">支持 .xlsx、.xls 格式</p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <FileSpreadsheet className="w-8 h-8 text-gray-500 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{fileName}</p>
-                          <p className="text-xs text-gray-500">解析到 {skuCount} 个SKU</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 flex-shrink-0"
-                          onClick={() => {
-                            setFileName('');
-                            setSkuCount(0);
-                          }}
+                {/* 第二步：货号输入区域 */}
+                <div className="space-y-2">
+                  {inputMode === 'file' ? (
+                    <>
+                      {!fileName ? (
+                        <div
+                          className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                          onClick={handleSelectFile}
                         >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
+                          <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-1">点击上传订单文件</p>
+                          <p className="text-xs text-gray-400">支持 .xlsx、.xls 格式</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <FileSpreadsheet className="w-8 h-8 text-gray-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{fileName}</p>
+                            <p className="text-xs text-gray-500">解析到 {skuCount} 个SKU</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 flex-shrink-0"
+                            onClick={() => {
+                              setFileName('');
+                              setSkuCount(0);
+                              setCachedSkus([]);
+                            }}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Textarea
+                        placeholder="请输入货号，支持逗号、换行或空格分隔&#10;例如：&#10;5270A01AB001&#10;5270A01AB002&#10;5270A01AB003"
+                        value={manualInput}
+                        onChange={(e) => setManualInput(e.target.value)}
+                        className="min-h-[120px] font-mono text-sm"
+                      />
+                      {manualInput && (
+                        <p className="text-xs text-gray-500">
+                          已输入 {parseSkuList(manualInput).length} 个货号
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
 
-                  <TabsContent value="manual" className="mt-4">
-                    <Textarea
-                      placeholder="请输入货号，支持逗号、换行或空格分隔&#10;例如：&#10;5270A01AB001&#10;5270A01AB002&#10;5270A01AB003"
-                      value={manualInput}
-                      onChange={(e) => setManualInput(e.target.value)}
-                      className="min-h-[120px] font-mono text-sm"
-                    />
-                    {manualInput && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        已输入 {parseSkuList(manualInput).length} 个货号
-                      </p>
-                    )}
-                  </TabsContent>
-                </Tabs>
-
-                {/* 开始导出按钮 */}
-                <Button
-                  className="w-full"
-                  onClick={handleStartExport}
-                  disabled={(inputMode === 'file' && !fileName) || (inputMode === 'manual' && !manualInput.trim())}
-                >
-                  开始导出{exportType === 'logistics' ? '物流信息' : '产品图PDF'}
-                </Button>
+                {/* 第三步：选择导出内容 */}
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-sm font-medium text-gray-700">选择导出内容</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="h-auto py-3 flex flex-col items-center gap-1.5"
+                      onClick={() => handleStartExport('logistics')}
+                      disabled={(inputMode === 'file' && !fileName) || (inputMode === 'manual' && !manualInput.trim())}
+                    >
+                      <Truck className="w-5 h-5" />
+                      <span className="text-sm">导出物流信息</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-auto py-3 flex flex-col items-center gap-1.5"
+                      onClick={() => handleStartExport('pdf')}
+                      disabled={(inputMode === 'file' && !fileName) || (inputMode === 'manual' && !manualInput.trim())}
+                    >
+                      <FileText className="w-5 h-5" />
+                      <span className="text-sm">导出产品PDF</span>
+                    </Button>
+                  </div>
+                </div>
               </>
             )}
 

@@ -54,6 +54,7 @@ export interface Product {
   nameZh: string
   carouselImages: string[]   // 商品图(用于商品展示)
   productImages: string[]    // 产品图片(从关联的AI项目获取)
+  imageSorted?: boolean      // 图片是否已排序（用于日历等需要固定顺序的产品）
   materialImage: string
   previewImage: string
   freightTemplateId: string
