@@ -1,11 +1,18 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw, X, Image as ImageIcon, Upload, Clock, Loader2, RotateCcw } from 'lucide-react';
 import { productService, type Product, type ListingStep } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
-import { type ProductCategory } from '@/types/productCategory';
+import { type ProductCategoryWithChildren } from '@/types/productCategory';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { toast } from 'sonner';
 import { UnifiedExportDialog } from '@/components/UnifiedExportDialog';
@@ -17,9 +24,11 @@ import {
 
 export function ProductListing() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([]);
+  const [selectedParentId, setSelectedParentId] = useState('');
   const [temuShops, setTemuShops] = useState<TemuShop[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   // 森梵物流导出对话框
   const [showSenfanExportDialog, setShowSenfanExportDialog] = useState(false);
@@ -97,16 +106,25 @@ export function ProductListing() {
     }
   };
 
-  // 加载产品分类
+  // 加载产品分类（树形结构）
   const fetchCategories = async () => {
     try {
-      const categoriesData = await productCategoryService.getAllCategories();
-      setCategories(categoriesData);
+      setLoadingCategories(true);
+      const data = await productCategoryService.getCategoryTree();
+      setParentCategories(data);
     } catch (error: any) {
       console.error('获取产品分类失败:', error);
       toast.error(error.response?.data?.message || '获取产品分类失败');
+    } finally {
+      setLoadingCategories(false);
     }
   };
+
+  // 获取当前选中父分类的子分类列表
+  const currentChildCategories = React.useMemo(() => {
+    const parent = parentCategories.find(p => p.id === selectedParentId);
+    return parent?.children || [];
+  }, [parentCategories, selectedParentId]);
 
   // 加载 Temu 店铺
   const fetchTemuShops = async () => {
@@ -136,6 +154,7 @@ export function ProductListing() {
     setProductCodes('');
     setTitle('');
     setShopId('');
+    setSelectedParentId('');
     setProductCategoryId('');
     setStatus('');
     setStartTime('');
@@ -613,18 +632,59 @@ export function ProductListing() {
           {/* 产品分类选择 */}
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700 whitespace-nowrap">产品分类:</label>
-            <select
-              className="h-10 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
-              value={productCategoryId}
-              onChange={(e) => setProductCategoryId(e.target.value)}
-            >
-              <option value="">全部分类</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            {loadingCategories ? (
+              <div className="text-sm text-gray-500">加载中...</div>
+            ) : (
+              <div className="flex gap-2">
+                <Select
+                  value={selectedParentId}
+                  onValueChange={(value) => {
+                    if (value === '__all__') {
+                      setSelectedParentId('');
+                      setProductCategoryId('');
+                    } else {
+                      setSelectedParentId(value);
+                      setProductCategoryId('');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-32 h-10">
+                    <SelectValue placeholder="一级分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">全部</SelectItem>
+                    {parentCategories.map((parent) => (
+                      <SelectItem key={parent.id} value={parent.id}>
+                        {parent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={productCategoryId}
+                  onValueChange={(value) => {
+                    if (value === '__all__') {
+                      setProductCategoryId('');
+                    } else {
+                      setProductCategoryId(value);
+                    }
+                  }}
+                  disabled={!selectedParentId || currentChildCategories.length === 0}
+                >
+                  <SelectTrigger className="w-32 h-10">
+                    <SelectValue placeholder="二级分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">全部</SelectItem>
+                    {currentChildCategories.map((child) => (
+                      <SelectItem key={child.id} value={child.id}>
+                        {child.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* 状态选择 */}
