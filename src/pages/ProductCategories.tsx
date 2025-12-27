@@ -497,17 +497,7 @@ export function ProductCategories() {
                       </td>
                       <td className="p-4">
                         <div className="flex justify-center gap-1">
-                          {/* 只有没有子分类的才能配置规格 */}
-                          {(!category.children || category.children.length === 0) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenSpecConfig(category)}
-                              title="配置规格"
-                            >
-                              <Settings className="w-4 h-4 text-blue-600" />
-                            </Button>
-                          )}
+                          {/* 一级分类不能配置规格，只有二级分类才能配置 */}
                           {/* 添加子分类按钮 */}
                           <Button
                             variant="ghost"
