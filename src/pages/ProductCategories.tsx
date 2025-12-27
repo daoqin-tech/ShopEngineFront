@@ -163,7 +163,7 @@ export function ProductCategories() {
       isActive: true,
       typeCode: '',
       sizeCode: '',
-      // 子分类不需要设置制造尺寸，从父分类继承
+      // 子分类可以有自己的尺寸，没有则继承父分类
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
@@ -218,10 +218,10 @@ export function ProductCategories() {
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
           sizeCode: formData.sizeCode.trim() || undefined,
-          // 子分类不保存制造尺寸（从父分类继承）
-          manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
-          manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
-          manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
+          // 子分类可以有自己的尺寸，没有则继承父分类
+          manufacturingLength: formData.manufacturingLength,
+          manufacturingWidth: formData.manufacturingWidth,
+          manufacturingHeight: formData.manufacturingHeight,
           productSpec: formData.productSpec.trim() || undefined,
           productUsage: formData.productUsage.trim() || undefined,
           // 子分类关联Temu模板
@@ -239,10 +239,10 @@ export function ProductCategories() {
           isActive: formData.isActive,
           typeCode: formData.typeCode.trim() || undefined,
           sizeCode: formData.sizeCode.trim() || undefined,
-          // 子分类不保存制造尺寸（从父分类继承）
-          manufacturingLength: isChildCategory ? undefined : formData.manufacturingLength,
-          manufacturingWidth: isChildCategory ? undefined : formData.manufacturingWidth,
-          manufacturingHeight: isChildCategory ? undefined : formData.manufacturingHeight,
+          // 子分类可以有自己的尺寸，没有则继承父分类
+          manufacturingLength: formData.manufacturingLength,
+          manufacturingWidth: formData.manufacturingWidth,
+          manufacturingHeight: formData.manufacturingHeight,
           productSpec: formData.productSpec.trim() || undefined,
           productUsage: formData.productUsage.trim() || undefined,
           // 子分类关联Temu模板
@@ -557,8 +557,10 @@ export function ProductCategories() {
                           </span>
                         </td>
                         <td className="p-4 text-center">
-                          <span className="font-mono text-sm text-muted-foreground">
-                            继承父分类
+                          <span className={`font-mono text-sm ${child.manufacturingLength || child.manufacturingWidth ? '' : 'text-muted-foreground'}`}>
+                            {child.manufacturingLength || child.manufacturingWidth
+                              ? formatManufacturingSize(child.manufacturingLength, child.manufacturingWidth, child.manufacturingHeight)
+                              : '继承父分类'}
                           </span>
                         </td>
                         <td className="p-4 text-center">{child.sortOrder}</td>
@@ -795,7 +797,7 @@ export function ProductCategories() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    用于PDF导出尺寸，子分类会继承
+                    用于PDF导出尺寸，子分类可设置自己的尺寸或留空继承父分类
                   </p>
                 </div>
               </>

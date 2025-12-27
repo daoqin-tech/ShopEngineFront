@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import JSZip from 'jszip';
 import { PDFDocument, cmyk } from 'pdf-lib';
 import { Product } from '@/services/productService';
-import { ProductCategory } from '@/types/productCategory';
+import { ProductCategory, ProductCategoryWithChildren } from '@/types/productCategory';
 import { imageConversionService } from '@/services/imageConversionService';
 
 // Temu 分类配置类型（用于 Excel 导出时获取产品属性）
@@ -501,58 +501,24 @@ export function exportLogisticsInfo(
   });
 }
 
-/**
- * 产品分类类型枚举
- * 基于 typeCode 判断：SZ-手账纸, BZ-包装纸, HR-横版日历, SR-竖版日历, ST-手提纸袋, BJ-笔记本
- */
+// 产品分类类型（值直接使用一级分类的英文名称）
 export enum ProductCategoryType {
-  JOURNAL_PAPER = 'journal_paper',     // 手账纸 (SZ) - 40张
-  WRAPPING_PAPER = 'wrapping_paper',   // 包装纸 (BZ) - 20张
-  CALENDAR_H = 'calendar_h',           // 横版日历 (HR) - 需要用户排序
-  CALENDAR_V = 'calendar_v',           // 竖版日历 (SR) - 需要用户排序
-  PAPER_BAG = 'paper_bag',             // 手提纸袋 (ST) - CMYK处理
-  NOTEBOOK = 'notebook',               // 笔记本 (BJ) - 单张图片，货号右下角
+  JOURNAL_PAPER = 'Scrapbook Paper',   // 手账纸 - 40张
+  WRAPPING_PAPER = 'Wrapping Paper',   // 包装纸 - 20张
+  CALENDAR_H = 'Desk Calendar',        // 横版日历 - 需要用户排序
+  CALENDAR_V = 'Wall Calendar',        // 竖版日历 - 需要用户排序
+  PAPER_BAG = 'Paper Bag',             // 手提纸袋 - CMYK处理
+  NOTEBOOK = 'Notebook',               // 笔记本 - 单张图片，货号右下角
   NORMAL = 'normal',                   // 其他普通产品
 }
 
 /**
- * 获取产品分类类型（基于 typeCode）
+ * 获取产品分类类型（基于一级分类的英文名称）
+ * @param category 二级分类（必须包含 parent 信息）
  */
-export function getProductCategoryType(category: ProductCategory): ProductCategoryType {
-  switch (category.typeCode) {
-    case 'SZ':
-      return ProductCategoryType.JOURNAL_PAPER;
-    case 'BZ':
-      return ProductCategoryType.WRAPPING_PAPER;
-    case 'HR':
-      return ProductCategoryType.CALENDAR_H;
-    case 'SR':
-      return ProductCategoryType.CALENDAR_V;
-    case 'ST':
-      return ProductCategoryType.PAPER_BAG;
-    // 笔记本类型 - 所有子类型
-    case 'BJ':        // 死亡笔记本
-    case 'BZB':       // 硬核挑战打卡本
-    case 'BZD':       // 阅读计划本
-    case 'BZE':       // 魔法符印手册
-    case 'BZM':       // 温和挑战打卡本
-    case 'BZN':       // 自我关怀/心理健康手账本
-    case 'BZQ':       // 家庭生活管理手账本
-    case 'HN11A':     // 派对策划计划本
-    case 'HN9A':      // 旅行笔记本
-    case 'NWGA':      // 伊斯兰斋月笔记本
-    case 'NWGB':      // 伊斯兰斋月计划手册
-    case 'NWGC':      // 伊斯兰斋月计划本
-    case 'NWGD':      // 健身目标计划本
-    case 'NWGE':      // 心理健康手账本
-    case 'NWGF':      // 基督教祈祷日记本
-    case 'NWGG':      // 精神健康手账本
-    case 'NWGH':      // 理财规划本
-    case 'NYB3A':     // 巫术草药魔法百科手册
-      return ProductCategoryType.NOTEBOOK;
-    default:
-      return ProductCategoryType.NORMAL;
-  }
+export function getProductCategoryType(category: ProductCategory | ProductCategoryWithChildren): ProductCategoryType {
+  const parentNameEn = (category as ProductCategoryWithChildren).parent?.nameEn;
+  return (parentNameEn as ProductCategoryType) || ProductCategoryType.NORMAL;
 }
 
 /**
@@ -776,17 +742,19 @@ async function extractRightEdgeColor(imageDataUrl: string, rightPercentage: numb
  */
 async function generateNotebookPdf(
   product: Product,
-  _pageWidth: number,  // 原始宽度参数不使用，笔记本有特殊尺寸
-  _pageHeight: number  // 原始高度参数不使用
+  pageWidth: number,   // 分类的 manufacturingWidth (cm)，如 21 或 18
+  pageHeight: number   // 分类的 manufacturingLength (cm)，如 28 或 24
 ): Promise<Blob> {
   const productImages = product.productImages || [];
 
-  // 笔记本特殊尺寸：封面+封底展开（已含出血）
-  // 总宽度 432mm（已含出血）= 封面 216mm + 封底 216mm
-  // 高度 286mm（280mm + 6mm出血）
-  const actualWidth = 432; // mm（已含出血）
-  const actualHeight = 286; // mm（280mm + 6mm出血）
-  const halfWidth = actualWidth / 2; // 封面和封底各占一半 216mm
+  // 笔记本特殊尺寸：封面+封底展开（已含出血 6mm）
+  // 单面宽度 = pageWidth * 10 + 6mm出血 = (如21cm → 216mm)
+  // 总宽度 = 单面宽度 * 2（封面+封底）
+  // 高度 = pageHeight * 10 + 6mm出血
+  const singleWidth = pageWidth * 10 + 6; // 单面宽度含出血
+  const actualWidth = singleWidth * 2;     // 总宽度（封面+封底）
+  const actualHeight = pageHeight * 10 + 6; // 高度含出血
+  const halfWidth = singleWidth;            // 封面和封底各占一半
 
   // 创建 PDF（横向）
   const pdf = new jsPDF({
