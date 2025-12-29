@@ -742,18 +742,18 @@ async function extractRightEdgeColor(imageDataUrl: string, rightPercentage: numb
  */
 async function generateNotebookPdf(
   product: Product,
-  pageWidth: number,   // 分类的 manufacturingWidth (cm)，如 21 或 18
-  pageHeight: number   // 分类的 manufacturingLength (cm)，如 28 或 24
+  pageWidth: number,   // 分类的 manufacturingWidth (mm)，如 210 或 180
+  pageHeight: number   // 分类的 manufacturingLength (mm)，如 280 或 240
 ): Promise<Blob> {
   const productImages = product.productImages || [];
 
   // 笔记本特殊尺寸：封面+封底展开（已含出血 6mm）
-  // 单面宽度 = pageWidth * 10 + 6mm出血 = (如21cm → 216mm)
+  // 单面宽度 = pageWidth + 6mm出血 = (如210mm → 216mm)
   // 总宽度 = 单面宽度 * 2（封面+封底）
-  // 高度 = pageHeight * 10 + 6mm出血
-  const singleWidth = pageWidth * 10 + 6; // 单面宽度含出血
+  // 高度 = pageHeight + 6mm出血
+  const singleWidth = pageWidth + 6; // 单面宽度含出血
   const actualWidth = singleWidth * 2;     // 总宽度（封面+封底）
-  const actualHeight = pageHeight * 10 + 6; // 高度含出血
+  const actualHeight = pageHeight + 6; // 高度含出血
   const halfWidth = singleWidth;            // 封面和封底各占一半
 
   // 创建 PDF（横向）
