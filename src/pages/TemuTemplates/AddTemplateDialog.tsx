@@ -252,11 +252,9 @@ export function AddTemplateDialog({
                       <Button
                         size="sm"
                         onClick={onAddFromBrowse}
-                        disabled={!pendingName.trim() || templates.some(c => c.catId === selectedPath[selectedPath.length - 1].catId) || fetchingAttributes}
+                        disabled={!pendingName.trim() || fetchingAttributes}
                       >
-                        {templates.some(c => c.catId === selectedPath[selectedPath.length - 1].catId) ? (
-                          '已添加'
-                        ) : fetchedAttributeCount > 0 ? (
+                        {fetchedAttributeCount > 0 ? (
                           '填写属性'
                         ) : (
                           '添加'
