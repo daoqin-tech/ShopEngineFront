@@ -87,9 +87,8 @@ export function SenfanExportDialog({
     fileInputRef.current?.click();
   };
 
-  // 获取产品对应的分类（从树形结构中查找，包含 parent 信息）
+  // 获取产品对应的分类
   const getCategoryForProduct = (product: Product, cats: ProductCategory[]): ProductCategory | null => {
-    // cats 是扁平化后的分类列表，每个分类都包含 parent 信息
     return cats.find(c => c.id === product.productCategoryId) || null;
   };
 
@@ -216,35 +215,16 @@ export function SenfanExportDialog({
         // 物流信息导出：直接进入ready阶段
         setStage('ready');
       } else {
-        // PDF导出：加载分类树并扁平化（保留 parent 信息）
-        const categoryTree = await productCategoryService.getCategoryTree();
-        // 扁平化树形结构，每个子分类都包含 parent 信息
-        const flatCategories: ProductCategory[] = [];
-        for (const parent of categoryTree) {
-          // 一级分类也加入（虽然产品通常不会直接关联一级分类）
-          flatCategories.push(parent);
-          // 添加子分类，并附带 parent 信息
-          if (parent.children) {
-            for (const child of parent.children) {
-              flatCategories.push({
-                ...child,
-                parent: {
-                  id: parent.id,
-                  name: parent.name,
-                  nameEn: parent.nameEn,
-                }
-              } as ProductCategory);
-            }
-          }
-        }
-        setCategories(flatCategories);
+        // PDF导出：加载分类并开始生成
+        const categoriesData = await productCategoryService.getAllCategories();
+        setCategories(categoriesData);
 
         const zip = new JSZip();
         setZipRef(zip);
         setStage('generating');
 
         // 开始处理第一个产品
-        await processNextProduct(allProducts, 0, zip, flatCategories);
+        await processNextProduct(allProducts, 0, zip, categoriesData);
       }
     } catch (error) {
       console.error('处理失败:', error);
