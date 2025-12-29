@@ -633,7 +633,7 @@ export function TemuTemplates() {
         skuDefaultConfig: finalSkuDefaultConfig,
       };
 
-      await temuTemplateService.upsertTemplate(req);
+      await temuTemplateService.createTemplate(req);
 
       setAddStep('select');
       setPendingCategory(null);
