@@ -10,6 +10,9 @@ export interface BatchCreateProductRequest {
 
   // Temu 模板 ID（必填，包含分类链、规格、属性、SKU配置等）
   temuTemplateId: string
+
+  // 标题模板 ID（必填，用于AI生成商品标题）
+  titleTemplateId: string
 }
 
 // 批量创建商品的响应（异步上架，仅返回入队结果）

@@ -7,6 +7,7 @@ import { DateTimePicker } from '@/components/ui/date-picker';
 import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, Info, Tag, Ruler, CheckCircle2 } from 'lucide-react';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { temuTemplateService, type TemuTemplate } from '@/services/temuTemplateService';
+import { temuTitleTemplateService, type TemuTitleTemplate } from '@/services/temuTitleTemplateService';
 import { coverProjectService, type TaskInfo } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
@@ -32,7 +33,8 @@ import {
 interface ProductFormData {
   shopAccount: string;        // 店铺账号
   productSpec: string;        // 商品规格ID
-  productCategory: string;    // 商品分类ID
+  productCategory: string;    // Temu模板ID
+  titleTemplateId: string;    // 标题模板ID
   titleChinese: string;      // 产品标题（中文）
   titleEnglish: string;      // 英文标题
   origin: string;            // 产地
@@ -70,6 +72,11 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [allTemuTemplates, setAllTemuTemplates] = useState<TemuTemplate[]>([]);
   const [loadingTemuTemplates, setLoadingTemuTemplates] = useState(false);
 
+  // 标题模板数据
+  const [titleTemplates, setTitleTemplates] = useState<TemuTitleTemplate[]>([]);
+  const [loadingTitleTemplates, setLoadingTitleTemplates] = useState(false);
+  const [titleTemplateSearch, setTitleTemplateSearch] = useState('');
+
   // 数据库分类数据
   const [parentCategories, setParentCategories] = useState<ProductCategoryWithChildren[]>([]);
   const [selectedParentId, setSelectedParentId] = useState<string>('');
@@ -80,6 +87,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     shopAccount: '',
     productSpec: '',
     productCategory: '',
+    titleTemplateId: '',
     titleChinese: '',
     titleEnglish: '',
     origin: '中国-湖北省',
@@ -108,6 +116,17 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     if (!formData.productCategory) return null;
     return allTemuTemplates.find(t => t.id === formData.productCategory) || null;
   }, [allTemuTemplates, formData.productCategory]);
+
+  // 根据搜索词过滤标题模板
+  const filteredTitleTemplates = React.useMemo(() => {
+    if (!titleTemplateSearch.trim()) return titleTemplates;
+    const search = titleTemplateSearch.toLowerCase();
+    return titleTemplates.filter(t =>
+      t.name.toLowerCase().includes(search) ||
+      t.categoryKeywordsZh?.toLowerCase().includes(search) ||
+      t.categoryKeywordsEn?.toLowerCase().includes(search)
+    );
+  }, [titleTemplates, titleTemplateSearch]);
 
   // 获取当前选中的二级分类名称（用于筛选商品图）
   const selectedCategoryName = React.useMemo(() => {
@@ -169,6 +188,22 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     loadTemuTemplatesFromDB();
   }, []);
 
+  // 加载标题模板
+  useEffect(() => {
+    const loadTitleTemplates = async () => {
+      try {
+        setLoadingTitleTemplates(true);
+        const response = await temuTitleTemplateService.getAllTemplates(true); // activeOnly=true
+        setTitleTemplates(response.templates || []);
+      } catch (error) {
+        console.error('Failed to load title templates:', error);
+        setTitleTemplates([]);
+      } finally {
+        setLoadingTitleTemplates(false);
+      }
+    };
+    loadTitleTemplates();
+  }, []);
 
   const [availableImages, setAvailableImages] = useState<ProductImage[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
@@ -315,9 +350,15 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const handleCreateProducts = async () => {
     const selectedShop = temuShops.find(shop => shop.id === formData.shopAccount);
     const selectedTemuTemplate = allTemuTemplates.find(t => t.id === formData.productCategory);
+    const titleTemplate = titleTemplates.find(t => t.id === formData.titleTemplateId);
 
     if (!selectedShop || !selectedTemuTemplate) {
-      toast.error('请确保已选择店铺和模板');
+      toast.error('请确保已选择店铺和Temu模板');
+      return;
+    }
+
+    if (!titleTemplate) {
+      toast.error('请选择标题模板');
       return;
     }
 
@@ -328,6 +369,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       shopId: selectedShop.id,
       taskIds,
       temuTemplateId: selectedTemuTemplate.id,
+      titleTemplateId: titleTemplate.id,
     };
 
     try {
@@ -392,10 +434,16 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     return;
                   }
 
+                  // 检查标题模板是否已选择
+                  if (!formData.titleTemplateId) {
+                    toast.error('请选择标题模板');
+                    return;
+                  }
+
                   // 显示确认对话框
                   setShowConfirmDialog(true);
                 }}
-                disabled={creating || !formData.shopAccount || !selectedParentId || !formData.productSpec || !formData.productCategory || selectedProducts.length === 0}
+                disabled={creating || !formData.shopAccount || !selectedParentId || !formData.productSpec || !formData.productCategory || !formData.titleTemplateId || selectedProducts.length === 0}
                 className="min-w-24"
               >
                 {creating ? '创建中...' : `创建商品 (${selectedProducts.length})`}
@@ -531,6 +579,52 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                             {template.name || template.fullPath || template.catName}
                           </button>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 标题模板选择 */}
+                {formData.productCategory && (
+                  <div className="flex items-start gap-4">
+                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">标题模板</Label>
+                    {loadingTitleTemplates ? (
+                      <div className="text-sm text-muted-foreground">加载标题模板中...</div>
+                    ) : titleTemplates.length === 0 ? (
+                      <div className="text-sm text-orange-600">
+                        暂无可用标题模板，请先创建标题模板
+                      </div>
+                    ) : (
+                      <div className="flex-1 space-y-2">
+                        {/* 搜索框 */}
+                        <Input
+                          placeholder="搜索标题模板..."
+                          value={titleTemplateSearch}
+                          onChange={(e) => setTitleTemplateSearch(e.target.value)}
+                          className="w-64 h-8"
+                        />
+                        {/* 模板按钮列表 */}
+                        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                          {filteredTitleTemplates.map((template) => (
+                            <button
+                              key={template.id}
+                              type="button"
+                              onClick={() => updateFormData('titleTemplateId', template.id)}
+                              className={`
+                                px-3 py-1.5 rounded-md border text-sm transition-colors
+                                ${formData.titleTemplateId === template.id
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
+                                  : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                                }
+                              `}
+                            >
+                              {template.name}
+                            </button>
+                          ))}
+                        </div>
+                        {filteredTitleTemplates.length === 0 && titleTemplateSearch && (
+                          <div className="text-sm text-gray-500">未找到匹配的模板</div>
+                        )}
                       </div>
                     )}
                   </div>
