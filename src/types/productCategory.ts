@@ -10,8 +10,9 @@ export interface ProductCategory {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  productSpec?: string;         // 商品规格描述（Temu上架用）
-  productUsage?: string;        // 商品用途（Temu上架用）
+  productSpec?: string;         // 商品规格描述（Temu上架用）- 已废弃，请使用标题模板
+  productUsage?: string;        // 商品用途（Temu上架用）- 已废弃，请使用标题模板
+  titleTemplateId?: string;     // 关联的标题模板ID
   temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
   createdAt: string;
   updatedAt: string;
@@ -28,8 +29,9 @@ export interface CreateProductCategoryRequest {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  productSpec?: string;         // 商品规格描述（Temu上架用）
-  productUsage?: string;        // 商品用途（Temu上架用）
+  productSpec?: string;         // 商品规格描述（Temu上架用）- 已废弃
+  productUsage?: string;        // 商品用途（Temu上架用）- 已废弃
+  titleTemplateId?: string;     // 关联的标题模板ID
   temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
 }
 
@@ -44,8 +46,9 @@ export interface UpdateProductCategoryRequest {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  productSpec?: string;         // 商品规格描述（Temu上架用）
-  productUsage?: string;        // 商品用途（Temu上架用）
+  productSpec?: string;         // 商品规格描述（Temu上架用）- 已废弃
+  productUsage?: string;        // 商品用途（Temu上架用）- 已废弃
+  titleTemplateId?: string;     // 关联的标题模板ID
   temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
 }
 

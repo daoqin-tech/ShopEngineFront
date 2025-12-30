@@ -26,6 +26,7 @@ import { ProductCategories } from "@/pages/ProductCategories"
 import { SystemConfigPage } from "@/pages/SystemConfig"
 import { TemuShops } from "@/pages/TemuShops"
 import { TemuTemplates } from "@/pages/TemuTemplates"
+import { TemuTitleTemplates } from "@/pages/TemuTitleTemplates"
 import { Toaster } from "sonner"
 
 
@@ -183,6 +184,14 @@ function App() {
             <ProtectedRoute>
               <WorkspaceLayout>
                 <TemuTemplates />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/temu-title-templates" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuTitleTemplates />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />

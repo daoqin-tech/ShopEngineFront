@@ -43,7 +43,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         ],
       },
       {
-        title: "商品上架",
+        title: "Temu",
         url: "/workspace/product-management",
         icon: ShoppingCart,
         isActive: false,
@@ -55,6 +55,18 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           {
             title: "商品列表",
             url: "/workspace/batch-upload",
+          },
+          {
+            title: "Temu标题模板",
+            url: "/workspace/settings/temu-title-templates",
+          },
+          {
+            title: "Temu分类模板",
+            url: "/workspace/settings/temu-templates",
+          },
+          {
+            title: "Temu店铺",
+            url: "/workspace/settings/temu-shops",
           },
         ],
       },
@@ -99,14 +111,6 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
           {
             title: "产品分类",
             url: "/workspace/settings/categories",
-          },
-          {
-            title: "Temu模板",
-            url: "/workspace/settings/temu-templates",
-          },
-          {
-            title: "Temu店铺",
-            url: "/workspace/settings/temu-shops",
           },
           {
             title: "系统参数",
