@@ -51,8 +51,6 @@ export function ProductCategories() {
     manufacturingLength: undefined as number | undefined,
     manufacturingWidth: undefined as number | undefined,
     manufacturingHeight: undefined as number | undefined,
-    productSpec: '',        // 商品规格描述（已废弃）
-    productUsage: '',       // 商品用途（已废弃）
     titleTemplateId: '' as string,  // 关联的标题模板ID
     temuTemplateIds: [] as string[],  // 关联的Temu模板ID列表 - 子分类独有
   });
@@ -166,8 +164,6 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
-      productSpec: '',
-      productUsage: '',
       titleTemplateId: '',
       temuTemplateIds: [],
     });
@@ -191,8 +187,6 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
-      productSpec: '',
-      productUsage: '',
       titleTemplateId: '',
       temuTemplateIds: [],
     });
@@ -215,8 +209,6 @@ export function ProductCategories() {
       manufacturingLength: category.manufacturingLength,
       manufacturingWidth: category.manufacturingWidth,
       manufacturingHeight: category.manufacturingHeight,
-      productSpec: category.productSpec || '',
-      productUsage: category.productUsage || '',
       titleTemplateId: category.titleTemplateId || '',
       temuTemplateIds: category.temuTemplateIds || [],
     });
@@ -248,8 +240,6 @@ export function ProductCategories() {
           manufacturingLength: formData.manufacturingLength,
           manufacturingWidth: formData.manufacturingWidth,
           manufacturingHeight: formData.manufacturingHeight,
-          productSpec: formData.productSpec.trim() || undefined,
-          productUsage: formData.productUsage.trim() || undefined,
           // 标题模板
           titleTemplateId: formData.titleTemplateId || undefined,
           // 子分类关联Temu模板
@@ -271,8 +261,6 @@ export function ProductCategories() {
           manufacturingLength: formData.manufacturingLength,
           manufacturingWidth: formData.manufacturingWidth,
           manufacturingHeight: formData.manufacturingHeight,
-          productSpec: formData.productSpec.trim() || undefined,
-          productUsage: formData.productUsage.trim() || undefined,
           // 标题模板
           titleTemplateId: formData.titleTemplateId || undefined,
           // 子分类关联Temu模板
@@ -706,24 +694,6 @@ export function ProductCategories() {
                       maxLength={10}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="productSpec" className="text-xs">商品规格描述</Label>
-                    <Input
-                      id="productSpec"
-                      value={formData.productSpec}
-                      onChange={(e) => setFormData({ ...formData, productSpec: e.target.value })}
-                      placeholder="如: 21cm"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="productUsage" className="text-xs">商品用途</Label>
-                    <Input
-                      id="productUsage"
-                      value={formData.productUsage}
-                      onChange={(e) => setFormData({ ...formData, productUsage: e.target.value })}
-                      placeholder="如: 手账装饰"
-                    />
-                  </div>
                 </div>
               </div>
             )}
@@ -753,24 +723,6 @@ export function ProductCategories() {
                         onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
                         placeholder="如: 15, 21, 30"
                         maxLength={10}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="productSpec" className="text-xs">商品规格描述</Label>
-                      <Input
-                        id="productSpec"
-                        value={formData.productSpec}
-                        onChange={(e) => setFormData({ ...formData, productSpec: e.target.value })}
-                        placeholder="如: 21cm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="productUsage" className="text-xs">商品用途</Label>
-                      <Input
-                        id="productUsage"
-                        value={formData.productUsage}
-                        onChange={(e) => setFormData({ ...formData, productUsage: e.target.value })}
-                        placeholder="如: 手账装饰"
                       />
                     </div>
                   </div>

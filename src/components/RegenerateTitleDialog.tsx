@@ -16,7 +16,7 @@ interface RegenerateTitleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onConfirm: (productSpec: string, productUsage: string) => void;
+  onConfirm: (titleTemplateId: string) => void;
 }
 
 export function RegenerateTitleDialog({
@@ -68,15 +68,11 @@ export function RegenerateTitleDialog({
     }
 
     const selectedChild = currentChildCategories.find(c => c.id === selectedSpecId);
-    if (!selectedChild) {
+    if (!selectedChild || !selectedChild.titleTemplateId) {
       return;
     }
 
-    // 构建 productSpec 和 productUsage
-    const productSpec = selectedChild.productSpec || selectedChild.name;
-    const productUsage = selectedChild.productUsage || '';
-
-    onConfirm(productSpec, productUsage);
+    onConfirm(selectedChild.titleTemplateId);
     onOpenChange(false);
   };
 
@@ -146,7 +142,7 @@ export function RegenerateTitleDialog({
                             {child.manufacturingLength && child.manufacturingWidth ? (
                               `${child.manufacturingLength}×${child.manufacturingWidth}${child.manufacturingHeight ? `×${child.manufacturingHeight}` : ''}cm`
                             ) : (
-                              child.productSpec || '未设置尺寸'
+                              '未设置尺寸'
                             )}
                           </div>
                         </div>
