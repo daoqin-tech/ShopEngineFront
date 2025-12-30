@@ -671,31 +671,81 @@ export function ProductCategories() {
 
             {/* 子分类：货号与商品配置 */}
             {(formData.parentId || addingChildForParent) && (
-              <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
-                <Label className="text-sm font-medium">货号与商品配置</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="typeCode" className="text-xs">类型码</Label>
-                    <Input
-                      id="typeCode"
-                      value={formData.typeCode}
-                      onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
-                      placeholder="如: BJ-01"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="sizeCode" className="text-xs">尺寸码</Label>
-                    <Input
-                      id="sizeCode"
-                      value={formData.sizeCode}
-                      onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
-                      placeholder="如: 21"
-                      maxLength={10}
-                    />
+              <>
+                <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
+                  <Label className="text-sm font-medium">货号与商品配置</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="typeCode" className="text-xs">类型码</Label>
+                      <Input
+                        id="typeCode"
+                        value={formData.typeCode}
+                        onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
+                        placeholder="如: BJ-01"
+                        maxLength={10}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="sizeCode" className="text-xs">尺寸码</Label>
+                      <Input
+                        id="sizeCode"
+                        value={formData.sizeCode}
+                        onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
+                        placeholder="如: 21"
+                        maxLength={10}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+                {/* 子分类生产尺寸 */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">生产尺寸 (cm)</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="manufacturingLength" className="text-xs text-muted-foreground">长度</Label>
+                      <Input
+                        id="manufacturingLength"
+                        type="number"
+                        step="0.1"
+                        value={formData.manufacturingLength || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, manufacturingLength: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 29.7"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="manufacturingWidth" className="text-xs text-muted-foreground">宽度</Label>
+                      <Input
+                        id="manufacturingWidth"
+                        type="number"
+                        step="0.1"
+                        value={formData.manufacturingWidth || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, manufacturingWidth: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 21"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="manufacturingHeight" className="text-xs text-muted-foreground">高度</Label>
+                      <Input
+                        id="manufacturingHeight"
+                        type="number"
+                        step="0.1"
+                        value={formData.manufacturingHeight || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, manufacturingHeight: e.target.value ? parseFloat(e.target.value) : undefined })
+                        }
+                        placeholder="如: 0"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    留空则继承父分类的生产尺寸
+                  </p>
+                </div>
+              </>
             )}
 
             {/* 一级分类/父分类字段 */}
