@@ -8,7 +8,7 @@ import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Pac
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { temuTemplateService, type TemuTemplate } from '@/services/temuTemplateService';
 import { temuTitleTemplateService, type TemuTitleTemplate } from '@/services/temuTitleTemplateService';
-import { coverProjectService, type TaskInfo } from '@/services/coverProjectService';
+import { coverProjectService, type TaskInfo, type TemplateSelectionItem } from '@/services/coverProjectService';
 import { productService } from '@/services/productService';
 import { productCategoryService } from '@/services/productCategoryService';
 import type { ProductCategoryWithChildren } from '@/types/productCategory';
@@ -205,6 +205,24 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     loadTitleTemplates();
   }, []);
 
+  // 加载套图模板列表（用于筛选）
+  useEffect(() => {
+    const loadCoverTemplates = async () => {
+      try {
+        setLoadingCoverTemplates(true);
+        // 使用 getTemplates 获取完整模板信息（包含 productCategoryId）
+        const templates = await coverProjectService.getTemplates();
+        setCoverTemplates(templates || []);
+      } catch (error) {
+        console.error('Failed to load cover templates:', error);
+        setCoverTemplates([]);
+      } finally {
+        setLoadingCoverTemplates(false);
+      }
+    };
+    loadCoverTemplates();
+  }, []);
+
   const [availableImages, setAvailableImages] = useState<ProductImage[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -228,8 +246,20 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   const [startTime, setStartTime] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState<Date | undefined>();
 
+  // 套图模板筛选
+  const [coverTemplates, setCoverTemplates] = useState<TemplateSelectionItem[]>([]);
+  const [selectedCoverTemplateId, setSelectedCoverTemplateId] = useState<string>('');
+  const [loadingCoverTemplates, setLoadingCoverTemplates] = useState(false);
+
+  // 根据选中的二级分类过滤套图模板
+  const filteredCoverTemplates = React.useMemo(() => {
+    if (!formData.productSpec) return [];
+    // 返回关联当前二级分类的模板
+    return coverTemplates.filter(t => t.productCategoryId === formData.productSpec);
+  }, [coverTemplates, formData.productSpec]);
+
   // 获取可用的商品图（来自CoverGeneration）
-  const fetchAvailableImages = async (page: number = currentPage, categoryName?: string) => {
+  const fetchAvailableImages = async (page: number = currentPage, categoryName?: string, templateId?: string) => {
     try {
       setLoading(true);
 
@@ -241,6 +271,11 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       // 添加分类筛选
       if (categoryName) {
         params.categoryName = categoryName;
+      }
+
+      // 添加模板筛选
+      if (templateId) {
+        params.templateId = templateId;
       }
 
       // 添加时间筛选（转换为时间戳）
@@ -278,15 +313,16 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 应用筛选
   const handleApplyFilters = () => {
     setCurrentPage(1);
-    fetchAvailableImages(1, selectedCategoryName);
+    fetchAvailableImages(1, selectedCategoryName, selectedCoverTemplateId || undefined);
   };
 
   // 重置筛选
   const handleResetFilters = () => {
     setStartTime(undefined);
     setEndTime(undefined);
+    setSelectedCoverTemplateId('');
     setCurrentPage(1);
-    fetchAvailableImages(1, selectedCategoryName);
+    fetchAvailableImages(1, selectedCategoryName, undefined);
   };
 
   // 当选择二级分类时，自动筛选商品图
@@ -294,9 +330,19 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     if (selectedCategoryName) {
       setCurrentPage(1);
       setSelectedProducts([]); // 切换分类时清空已选
-      fetchAvailableImages(1, selectedCategoryName);
+      setSelectedCoverTemplateId(''); // 切换分类时重置模板选择
+      fetchAvailableImages(1, selectedCategoryName, undefined);
     }
   }, [selectedCategoryName]);
+
+  // 当选择套图模板时，重新加载商品图
+  useEffect(() => {
+    if (selectedCategoryName && selectedCoverTemplateId) {
+      setCurrentPage(1);
+      setSelectedProducts([]); // 切换模板时清空已选
+      fetchAvailableImages(1, selectedCategoryName, selectedCoverTemplateId);
+    }
+  }, [selectedCoverTemplateId]);
 
   // 当可用的 Temu 模板列表变化且当前没有选择时，自动选择第一个
   useEffect(() => {
@@ -630,7 +676,53 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   </div>
                 )}
 
-                {/* 第四行：时间筛选 */}
+                {/* 第四行：套图模板筛选（选中二级分类后显示） */}
+                {formData.productSpec && filteredCoverTemplates.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    <Label className="text-sm font-medium w-20 shrink-0">套图模板</Label>
+                    {loadingCoverTemplates ? (
+                      <div className="text-sm text-muted-foreground">加载中...</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCoverTemplateId('');
+                            setCurrentPage(1);
+                            fetchAvailableImages(1, selectedCategoryName, undefined);
+                          }}
+                          className={`
+                            px-3 py-1.5 rounded-md border text-sm transition-colors
+                            ${!selectedCoverTemplateId
+                              ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium'
+                              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                            }
+                          `}
+                        >
+                          全部模板
+                        </button>
+                        {filteredCoverTemplates.map((template) => (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() => setSelectedCoverTemplateId(template.id)}
+                            className={`
+                              px-3 py-1.5 rounded-md border text-sm transition-colors
+                              ${selectedCoverTemplateId === template.id
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium'
+                                : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                              }
+                            `}
+                          >
+                            {template.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 第五行：时间筛选 */}
                 {formData.productSpec && (
                   <div className="flex items-center gap-4">
                     <Label className="text-sm font-medium w-20 shrink-0">时间筛选</Label>
@@ -990,7 +1082,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 setPageSize(500);
                               }
                               setCurrentPage(1);
-                              fetchAvailableImages(1, selectedCategoryName);
+                              fetchAvailableImages(1, selectedCategoryName, selectedCoverTemplateId || undefined);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
@@ -1000,7 +1092,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                   setPageSize(500);
                                 }
                                 setCurrentPage(1);
-                                fetchAvailableImages(1, selectedCategoryName);
+                                fetchAvailableImages(1, selectedCategoryName, selectedCoverTemplateId || undefined);
                               }
                             }}
                             className="w-20 h-8 text-center"
@@ -1015,7 +1107,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => fetchAvailableImages(currentPage - 1, selectedCategoryName)}
+                            onClick={() => fetchAvailableImages(currentPage - 1, selectedCategoryName, selectedCoverTemplateId || undefined)}
                             disabled={currentPage <= 1 || loading}
                           >
                             <ChevronLeft className="w-4 h-4" />
@@ -1029,7 +1121,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => fetchAvailableImages(currentPage + 1, selectedCategoryName)}
+                            onClick={() => fetchAvailableImages(currentPage + 1, selectedCategoryName, selectedCoverTemplateId || undefined)}
                             disabled={currentPage >= Math.ceil(total / (pageSize || 100)) || loading}
                           >
                             下一页
@@ -1052,7 +1144,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                   const maxPage = Math.ceil(total / (pageSize || 100));
                                   if (page >= 1 && page <= maxPage) {
                                     setCurrentPage(page);
-                                    fetchAvailableImages(page, selectedCategoryName);
+                                    fetchAvailableImages(page, selectedCategoryName, selectedCoverTemplateId || undefined);
                                     setJumpPage('');
                                   } else {
                                     toast.error(`请输入 1 到 ${maxPage} 之间的页码`);
@@ -1070,7 +1162,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 const maxPage = Math.ceil(total / (pageSize || 100));
                                 if (page >= 1 && page <= maxPage) {
                                   setCurrentPage(page);
-                                  fetchAvailableImages(page, selectedCategoryName);
+                                  fetchAvailableImages(page, selectedCategoryName, selectedCoverTemplateId || undefined);
                                   setJumpPage('');
                                 } else {
                                   toast.error(`请输入 1 到 ${maxPage} 之间的页码`);

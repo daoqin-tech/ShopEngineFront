@@ -119,6 +119,7 @@ export const coverProjectService = {
     limit?: number
     status?: string
     categoryId?: string
+    templateId?: string
     startTime?: number
     endTime?: number
   }): Promise<{
