@@ -12,9 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Search, ChevronRight, ArrowLeft, X, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Search, ChevronRight, ArrowLeft, X, RefreshCw, Loader2, FolderTree } from 'lucide-react';
 import type { TemuTemplate, TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import type { TemuCategoryPath, TemuAPICategory, ParentSpecification } from '@/services/temuShopCategoryService';
+import type { ProductCategoryWithChildren } from '@/types/productCategory';
 import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues } from './types';
 import { SkuConfigTable } from './SkuConfigTable';
 
@@ -27,6 +28,14 @@ interface AddTemplateDialogProps {
   // Template name
   pendingName: string;
   setPendingName: (name: string) => void;
+  // Product category selection (dropdown)
+  productCategories: ProductCategoryWithChildren[];
+  loadingProductCategories: boolean;
+  selectedParentCategoryId: string;
+  setSelectedParentCategoryId: (id: string) => void;
+  selectedChildCategoryId: string;
+  setSelectedChildCategoryId: (id: string) => void;
+  currentChildCategories: ProductCategoryWithChildren[];
   // Site selection
   selectedSiteId: number | undefined;
   setSelectedSiteId: (id: number | undefined) => void;
@@ -90,6 +99,14 @@ export function AddTemplateDialog({
   // Template name
   pendingName,
   setPendingName,
+  // Product category (dropdown)
+  productCategories,
+  loadingProductCategories,
+  selectedParentCategoryId,
+  setSelectedParentCategoryId,
+  selectedChildCategoryId,
+  setSelectedChildCategoryId,
+  currentChildCategories,
   // Temu state
   selectedSiteId,
   setSelectedSiteId,
@@ -161,17 +178,67 @@ export function AddTemplateDialog({
         {addStep === 'select' && (
           <>
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-              {/* 模板名称 */}
-              <div className="flex items-center gap-3 mb-4">
-                <Label className="text-sm shrink-0">
-                  <span className="text-red-500">*</span> 模板名称
-                </Label>
-                <Input
-                  placeholder="输入模板名称"
-                  value={pendingName}
-                  onChange={(e) => setPendingName(e.target.value)}
-                  className="max-w-64 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
+              {/* 模板名称和产品分类 */}
+              <div className="flex items-center gap-6 mb-4">
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm shrink-0">
+                    <span className="text-red-500">*</span> 模板名称
+                  </Label>
+                  <Input
+                    placeholder="输入模板名称"
+                    value={pendingName}
+                    onChange={(e) => setPendingName(e.target.value)}
+                    className="w-48 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+
+                {/* 产品分类选择器（两个下拉框） */}
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm shrink-0 flex items-center gap-1">
+                    <FolderTree className="w-4 h-4" />
+                    产品分类
+                  </Label>
+                  {loadingProductCategories ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={selectedParentCategoryId}
+                        onValueChange={(value) => {
+                          setSelectedParentCategoryId(value);
+                          setSelectedChildCategoryId('');
+                        }}
+                      >
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue placeholder="一级分类" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {productCategories.map((parent) => (
+                            <SelectItem key={parent.id} value={parent.id}>
+                              {parent.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={selectedChildCategoryId}
+                        onValueChange={setSelectedChildCategoryId}
+                        disabled={!selectedParentCategoryId || currentChildCategories.length === 0}
+                      >
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue placeholder="二级分类" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currentChildCategories.map((child) => (
+                            <SelectItem key={child.id} value={child.id}>
+                              {child.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 站点选择和搜索框 */}

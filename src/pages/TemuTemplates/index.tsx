@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,6 +23,8 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, RefreshCw, Search, Pencil } from 'lucide-react';
 import { temuTemplateService, type TemuTemplate, type TemuProductAttribute, type CreateTemuTemplateRequest, type UpdateTemuTemplateRequest, type TemuSpecification, type TemuSkuDefaultConfig, type TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import { temuCategoryAPIService, type TemuCategoryPath, type TemuAPICategory, type ProductAttributeProperty, type ProductAttributeValue, type ParentSpecification } from '@/services/temuShopCategoryService';
+import { productCategoryService } from '@/services/productCategoryService';
+import type { ProductCategoryWithChildren } from '@/types/productCategory';
 import { systemConfigService } from '@/services/systemConfigService';
 import { toast } from 'sonner';
 import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues } from './types';
@@ -97,6 +99,16 @@ export function TemuTemplates() {
   // SKU 默认配置状态（编辑模板）
   const [editSkuDefaultConfig, setEditSkuDefaultConfig] = useState<TemuSkuDefaultConfig>({});
   const [editVolumeWeightConfigs, setEditVolumeWeightConfigs] = useState<TemuSpecVolumeWeightConfig[]>([]);
+
+  // 产品分类数据和选择状态（添加模板）
+  const [productCategories, setProductCategories] = useState<ProductCategoryWithChildren[]>([]);
+  const [loadingProductCategories, setLoadingProductCategories] = useState(false);
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<string>('');
+  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<string>('');
+
+  // 产品分类选择状态（编辑模板）
+  const [editSelectedParentCategoryId, setEditSelectedParentCategoryId] = useState<string>('');
+  const [editSelectedChildCategoryId, setEditSelectedChildCategoryId] = useState<string>('');
 
   // 用于防止加载编辑数据时 useEffect 覆盖已加载的配置
   const isLoadingEditDataRef = useRef(false);
@@ -213,6 +225,34 @@ export function TemuTemplates() {
     fetchTemplates();
     loadTemuSites();
   }, []);
+
+  // 加载产品分类树
+  useEffect(() => {
+    const loadProductCategories = async () => {
+      try {
+        setLoadingProductCategories(true);
+        const data = await productCategoryService.getCategoryTree(true);
+        setProductCategories(data);
+      } catch (error) {
+        console.error('加载产品分类失败:', error);
+      } finally {
+        setLoadingProductCategories(false);
+      }
+    };
+    loadProductCategories();
+  }, []);
+
+  // 获取当前选中一级分类的子分类列表（添加模板）
+  const currentChildCategories = React.useMemo(() => {
+    const parent = productCategories.find(p => p.id === selectedParentCategoryId);
+    return parent?.children || [];
+  }, [productCategories, selectedParentCategoryId]);
+
+  // 获取当前选中一级分类的子分类列表（编辑模板）
+  const editCurrentChildCategories = React.useMemo(() => {
+    const parent = productCategories.find(p => p.id === editSelectedParentCategoryId);
+    return parent?.children || [];
+  }, [productCategories, editSelectedParentCategoryId]);
 
   // 从搜索结果中提取完整路径
   const getPathFromSearchResult = (path: TemuCategoryPath): TemuAPICategory[] => {
@@ -626,6 +666,7 @@ export function TemuTemplates() {
         catType: pendingCategory.catType,
         fullPath: fullPath,
         name: pendingName.trim() || undefined,
+        productCategoryId: selectedChildCategoryId || selectedParentCategoryId || undefined,
         productAttributes: productAttributes.length > 0 ? productAttributes : undefined,
         inputMaxSpecNum: inputMaxSpecNum > 0 ? inputMaxSpecNum : undefined,
         singleSpecValueNum: singleSpecValueNum > 0 ? singleSpecValueNum : undefined,
@@ -643,6 +684,8 @@ export function TemuTemplates() {
       setPendingName('');
       setSpecFormValues([]);
       setSkuDefaultConfig({});
+      setSelectedParentCategoryId('');
+      setSelectedChildCategoryId('');
       setShowAddFromTemuDialog(false);
       await fetchTemplates();
     } catch (error: any) {
@@ -674,6 +717,8 @@ export function TemuTemplates() {
     setParentSpecs([]);
     setSpecFormValues([]);
     setSkuDefaultConfig({});
+    setSelectedParentCategoryId('');
+    setSelectedChildCategoryId('');
     loadTemuCategories(undefined, 0);
   };
 
@@ -685,6 +730,7 @@ export function TemuTemplates() {
     setAttributeFormValues([]);
     setSpecFormValues([]);
     setSkuDefaultConfig({});
+    // 保留选中的产品分类，不重置
   };
 
   // 更新属性表单值
@@ -750,6 +796,29 @@ export function TemuTemplates() {
     setEditSingleSpecValueNum(template.singleSpecValueNum || 0);
     setEditAttributeFormValues([]);
     setEditSkuDefaultConfig(template.skuDefaultConfig || {});
+    // 初始化产品分类选择（如果模板已关联分类）
+    if (template.productCategoryId) {
+      // 查找分类是一级还是二级
+      let foundParentId = '';
+      let foundChildId = '';
+      for (const parent of productCategories) {
+        if (parent.id === template.productCategoryId) {
+          foundParentId = parent.id;
+          break;
+        }
+        const child = parent.children?.find(c => c.id === template.productCategoryId);
+        if (child) {
+          foundParentId = parent.id;
+          foundChildId = child.id;
+          break;
+        }
+      }
+      setEditSelectedParentCategoryId(foundParentId);
+      setEditSelectedChildCategoryId(foundChildId);
+    } else {
+      setEditSelectedParentCategoryId('');
+      setEditSelectedChildCategoryId('');
+    }
     if (template.skuDefaultConfig?.volumeWeightConfigs && template.skuDefaultConfig.volumeWeightConfigs.length > 0) {
       setEditVolumeWeightConfigs(template.skuDefaultConfig.volumeWeightConfigs);
     } else {
@@ -1252,6 +1321,7 @@ export function TemuTemplates() {
         cat9Id: editingTemplate.cat9Id,
         cat10Id: editingTemplate.cat10Id,
         name: editName.trim() || undefined,
+        productCategoryId: editSelectedChildCategoryId || editSelectedParentCategoryId || undefined,
         productAttributes: productAttributes.length > 0 ? productAttributes : undefined,
         isActive: editingTemplate.isActive,
         inputMaxSpecNum: editInputMaxSpecNum > 0 ? editInputMaxSpecNum : undefined,
@@ -1282,6 +1352,9 @@ export function TemuTemplates() {
     setEditParentSpecs([]);
     setEditAttributeFormValues([]);
     setEditSkuDefaultConfig({});
+    // 重置产品分类相关状态
+    setEditSelectedParentCategoryId('');
+    setEditSelectedChildCategoryId('');
     // 重置分类变更相关状态
     setEditIsChangingCategory(false);
     setEditTemuSearchKeyword('');
@@ -1425,6 +1498,14 @@ export function TemuTemplates() {
         setAddStep={setAddStep}
         pendingName={pendingName}
         setPendingName={setPendingName}
+        // 产品分类相关
+        productCategories={productCategories}
+        loadingProductCategories={loadingProductCategories}
+        selectedParentCategoryId={selectedParentCategoryId}
+        setSelectedParentCategoryId={setSelectedParentCategoryId}
+        selectedChildCategoryId={selectedChildCategoryId}
+        setSelectedChildCategoryId={setSelectedChildCategoryId}
+        currentChildCategories={currentChildCategories}
         // Temu 站点和搜索相关
         selectedSiteId={selectedSiteId}
         setSelectedSiteId={setSelectedSiteId}
@@ -1506,6 +1587,13 @@ export function TemuTemplates() {
         onSave={handleSaveEdit}
         onClose={handleCloseEditDialog}
         submitting={submitting}
+        // 产品分类相关
+        productCategories={productCategories}
+        editSelectedParentCategoryId={editSelectedParentCategoryId}
+        setEditSelectedParentCategoryId={setEditSelectedParentCategoryId}
+        editSelectedChildCategoryId={editSelectedChildCategoryId}
+        setEditSelectedChildCategoryId={setEditSelectedChildCategoryId}
+        editCurrentChildCategories={editCurrentChildCategories}
         // 分类变更相关
         editIsChangingCategory={editIsChangingCategory}
         temuSites={temuSites}

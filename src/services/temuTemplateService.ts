@@ -97,6 +97,7 @@ export interface TemuTemplate {
   id: string;
   name?: string;  // 模板名称
   productCategoryId?: string;  // 产品分类ID（关联 product_categories 表）
+  productCategoryName?: string;  // 产品分类名称（从后端填充）
   catId: number;
   catName: string;
   catLevel: number;

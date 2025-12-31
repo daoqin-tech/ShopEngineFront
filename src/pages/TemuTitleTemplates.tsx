@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +30,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, RefreshCw, Search, FileText, Eye, Loader2, CheckCircle, AlertCircle, Copy } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Pencil, Trash2, RefreshCw, FileText, Eye, Loader2, CheckCircle, AlertCircle, Copy, FolderTree, Search, X } from 'lucide-react';
 import {
   temuTitleTemplateService,
   type TemuTitleTemplate,
@@ -38,6 +39,8 @@ import {
   type UpdateTemuTitleTemplateRequest,
   type TitlePreviewResponse,
 } from '@/services/temuTitleTemplateService';
+import { productCategoryService } from '@/services/productCategoryService';
+import type { ProductCategoryWithChildren } from '@/types/productCategory';
 import { toast } from 'sonner';
 
 export function TemuTitleTemplates() {
@@ -69,6 +72,11 @@ export function TemuTitleTemplates() {
   const [previewResult, setPreviewResult] = useState<TitlePreviewResponse | null>(null);
   const [sampleScene, setSampleScene] = useState('');
 
+  // 分类选择状态（下拉框）
+  const [productCategories, setProductCategories] = useState<ProductCategoryWithChildren[]>([]);
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<string>('');
+  const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<string>('');
+
   // 加载模板列表
   const fetchTemplates = async () => {
     try {
@@ -87,11 +95,31 @@ export function TemuTitleTemplates() {
     fetchTemplates();
   }, []);
 
+  // 加载产品分类树
+  useEffect(() => {
+    const loadProductCategories = async () => {
+      try {
+        const data = await productCategoryService.getCategoryTree(true);
+        setProductCategories(data);
+      } catch (error) {
+        console.error('加载产品分类失败:', error);
+      }
+    };
+    loadProductCategories();
+  }, []);
+
+  // 获取当前选中一级分类的子分类列表
+  const currentChildCategories = React.useMemo(() => {
+    const parent = productCategories.find(p => p.id === selectedParentCategoryId);
+    return parent?.children || [];
+  }, [productCategories, selectedParentCategoryId]);
+
   // 打开新建对话框
   const handleCreate = () => {
     setEditingTemplate(null);
     setFormData({
       name: '',
+      productCategoryId: undefined,
       categoryKeywordsZh: '',
       categoryKeywordsEn: '',
       productSpec: '',
@@ -102,6 +130,8 @@ export function TemuTitleTemplates() {
       maxLengthEn: 255,
       forbiddenWords: '',
     });
+    setSelectedParentCategoryId('');
+    setSelectedChildCategoryId('');
     setPreviewResult(null);
     setSampleScene('');
     setShowDialog(true);
@@ -112,6 +142,7 @@ export function TemuTitleTemplates() {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
+      productCategoryId: template.productCategoryId,
       categoryKeywordsZh: template.categoryKeywordsZh || '',
       categoryKeywordsEn: template.categoryKeywordsEn || '',
       productSpec: template.productSpec || '',
@@ -122,6 +153,28 @@ export function TemuTitleTemplates() {
       maxLengthEn: template.maxLengthEn || 255,
       forbiddenWords: template.forbiddenWords || '',
     });
+    // 如果模板已关联分类，找到对应的父子分类并设置
+    if (template.productCategoryId) {
+      // 先在一级分类中查找
+      const parentCategory = productCategories.find(p => p.id === template.productCategoryId);
+      if (parentCategory) {
+        setSelectedParentCategoryId(template.productCategoryId);
+        setSelectedChildCategoryId('');
+      } else {
+        // 在二级分类中查找
+        for (const parent of productCategories) {
+          const child = parent.children?.find(c => c.id === template.productCategoryId);
+          if (child) {
+            setSelectedParentCategoryId(parent.id);
+            setSelectedChildCategoryId(template.productCategoryId);
+            break;
+          }
+        }
+      }
+    } else {
+      setSelectedParentCategoryId('');
+      setSelectedChildCategoryId('');
+    }
     setPreviewResult(null);
     setSampleScene('');
     setShowDialog(true);
@@ -132,6 +185,7 @@ export function TemuTitleTemplates() {
     setEditingTemplate(null); // 设置为 null 表示这是新建
     setFormData({
       name: `${template.name} - 副本`,
+      productCategoryId: template.productCategoryId,
       categoryKeywordsZh: template.categoryKeywordsZh || '',
       categoryKeywordsEn: template.categoryKeywordsEn || '',
       productSpec: template.productSpec || '',
@@ -142,6 +196,28 @@ export function TemuTitleTemplates() {
       maxLengthEn: template.maxLengthEn || 255,
       forbiddenWords: template.forbiddenWords || '',
     });
+    // 如果模板已关联分类，找到对应的父子分类并设置
+    if (template.productCategoryId) {
+      // 先在一级分类中查找
+      const parentCategory = productCategories.find(p => p.id === template.productCategoryId);
+      if (parentCategory) {
+        setSelectedParentCategoryId(template.productCategoryId);
+        setSelectedChildCategoryId('');
+      } else {
+        // 在二级分类中查找
+        for (const parent of productCategories) {
+          const child = parent.children?.find(c => c.id === template.productCategoryId);
+          if (child) {
+            setSelectedParentCategoryId(parent.id);
+            setSelectedChildCategoryId(template.productCategoryId);
+            break;
+          }
+        }
+      }
+    } else {
+      setSelectedParentCategoryId('');
+      setSelectedChildCategoryId('');
+    }
     setPreviewResult(null);
     setSampleScene('');
     setShowDialog(true);
@@ -184,17 +260,24 @@ export function TemuTitleTemplates() {
     try {
       setSubmitting(true);
 
+      // 使用下拉框选择的分类ID
+      const productCategoryId = selectedChildCategoryId || selectedParentCategoryId || undefined;
+
       if (editingTemplate) {
         // 更新
         const updateData: UpdateTemuTitleTemplateRequest = {
           ...formData,
+          productCategoryId,
           isActive: editingTemplate.isActive,
         };
         await temuTitleTemplateService.updateTemplate(editingTemplate.id, updateData);
         toast.success('模板更新成功');
       } else {
         // 创建
-        await temuTitleTemplateService.createTemplate(formData);
+        await temuTitleTemplateService.createTemplate({
+          ...formData,
+          productCategoryId,
+        });
         toast.success('模板创建成功');
       }
 
@@ -213,6 +296,7 @@ export function TemuTitleTemplates() {
     try {
       const updateData: UpdateTemuTitleTemplateRequest = {
         name: template.name,
+        productCategoryId: template.productCategoryId,
         categoryKeywordsZh: template.categoryKeywordsZh,
         categoryKeywordsEn: template.categoryKeywordsEn,
         productSpec: template.productSpec,
@@ -297,6 +381,7 @@ export function TemuTitleTemplates() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-48">模板名称</TableHead>
+              <TableHead className="w-32">产品分类</TableHead>
               <TableHead>类目关键词(中文)</TableHead>
               <TableHead>类目关键词(英文)</TableHead>
               <TableHead className="w-24">中文限制</TableHead>
@@ -308,13 +393,13 @@ export function TemuTitleTemplates() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : filteredTemplates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">暂无模板</h3>
                   <p>{searchKeyword ? '没有找到匹配的模板' : '点击上方按钮创建第一个模板'}</p>
@@ -324,6 +409,9 @@ export function TemuTitleTemplates() {
               filteredTemplates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">{template.name}</TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {template.productCategoryName || <span className="text-gray-400">-</span>}
+                  </TableCell>
                   <TableCell className="text-sm text-gray-600 max-w-xs truncate" title={template.categoryKeywordsZh}>
                     {template.categoryKeywordsZh || '-'}
                   </TableCell>
@@ -393,14 +481,78 @@ export function TemuTitleTemplates() {
             {/* 基本信息 */}
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">基本信息</h4>
-              <div className="space-y-2">
-                <Label htmlFor="name">模板名称 *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="例如：礼品包装纸模板"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">模板名称 *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="例如：礼品包装纸模板"
+                  />
+                </div>
+
+                {/* 产品分类选择器 */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    <FolderTree className="h-4 w-4" />
+                    关联产品分类
+                  </Label>
+                  <div className="flex gap-2">
+                    {/* 一级分类 */}
+                    <Select
+                      value={selectedParentCategoryId}
+                      onValueChange={(value) => {
+                        setSelectedParentCategoryId(value);
+                        setSelectedChildCategoryId('');
+                      }}
+                    >
+                      <SelectTrigger className="flex-1 h-9">
+                        <SelectValue placeholder="一级分类" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productCategories.map((parent) => (
+                          <SelectItem key={parent.id} value={parent.id}>
+                            {parent.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* 二级分类 */}
+                    <Select
+                      value={selectedChildCategoryId}
+                      onValueChange={setSelectedChildCategoryId}
+                      disabled={!selectedParentCategoryId || currentChildCategories.length === 0}
+                    >
+                      <SelectTrigger className="flex-1 h-9">
+                        <SelectValue placeholder="二级分类" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentChildCategories.map((child) => (
+                          <SelectItem key={child.id} value={child.id}>
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* 清除按钮 */}
+                    {(selectedParentCategoryId || selectedChildCategoryId) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedParentCategoryId('');
+                          setSelectedChildCategoryId('');
+                        }}
+                        className="h-9 px-2"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">选择此模板适用的产品分类</p>
+                </div>
               </div>
             </div>
 

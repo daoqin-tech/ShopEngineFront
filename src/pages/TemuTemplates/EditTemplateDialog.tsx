@@ -12,9 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, RefreshCw, Pencil, Search, ChevronRight, X, Check } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Pencil, Search, ChevronRight, X, Check, FolderTree } from 'lucide-react';
 import type { TemuTemplate, TemuSpecification, TemuSkuDefaultConfig, TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import type { ParentSpecification, TemuCategoryPath, TemuAPICategory } from '@/services/temuShopCategoryService';
+import type { ProductCategoryWithChildren } from '@/types/productCategory';
 import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues } from './types';
 import { SkuConfigTable } from './SkuConfigTable';
 
@@ -50,6 +51,13 @@ interface EditTemplateDialogProps {
   onSave: () => void;
   onClose: () => void;
   submitting: boolean;
+  // Product category selection (dropdown)
+  productCategories: ProductCategoryWithChildren[];
+  editSelectedParentCategoryId: string;
+  setEditSelectedParentCategoryId: (id: string) => void;
+  editSelectedChildCategoryId: string;
+  setEditSelectedChildCategoryId: (id: string) => void;
+  editCurrentChildCategories: ProductCategoryWithChildren[];
   // Category change state
   editIsChangingCategory: boolean;
   temuSites: TemuSite[];
@@ -104,6 +112,13 @@ export function EditTemplateDialog({
   onSave,
   onClose,
   submitting,
+  // Product category props (dropdown)
+  productCategories,
+  editSelectedParentCategoryId,
+  setEditSelectedParentCategoryId,
+  editSelectedChildCategoryId,
+  setEditSelectedChildCategoryId,
+  editCurrentChildCategories,
   // Category change props
   editIsChangingCategory,
   temuSites,
@@ -389,6 +404,50 @@ export function EditTemplateDialog({
                 onChange={(e) => setEditName(e.target.value)}
                 className="max-w-48"
               />
+            </div>
+
+            {/* 产品分类选择器（两个下拉框） */}
+            <div className="flex items-center gap-3">
+              <Label className="text-sm w-20 shrink-0 flex items-center gap-1">
+                <FolderTree className="w-4 h-4" />
+                产品分类
+              </Label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={editSelectedParentCategoryId}
+                  onValueChange={(value) => {
+                    setEditSelectedParentCategoryId(value);
+                    setEditSelectedChildCategoryId('');
+                  }}
+                >
+                  <SelectTrigger className="w-32 h-8">
+                    <SelectValue placeholder="一级分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productCategories.map((parent) => (
+                      <SelectItem key={parent.id} value={parent.id}>
+                        {parent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={editSelectedChildCategoryId}
+                  onValueChange={setEditSelectedChildCategoryId}
+                  disabled={!editSelectedParentCategoryId || editCurrentChildCategories.length === 0}
+                >
+                  <SelectTrigger className="w-32 h-8">
+                    <SelectValue placeholder="二级分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {editCurrentChildCategories.map((child) => (
+                      <SelectItem key={child.id} value={child.id}>
+                        {child.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* 产品属性 - 根据 showCondition 过滤显示 */}

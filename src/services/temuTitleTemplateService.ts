@@ -4,6 +4,9 @@ import { apiClient } from '@/lib/api';
 export interface TemuTitleTemplate {
   id: string;
   name: string;
+  // 产品分类关联
+  productCategoryId?: string;
+  productCategoryName?: string;
   // 核心字段
   categoryKeywordsZh: string;
   categoryKeywordsEn: string;
@@ -31,6 +34,7 @@ export interface TemuTitleTemplateListResponse {
 // 创建标题模板请求
 export interface CreateTemuTitleTemplateRequest {
   name: string;
+  productCategoryId?: string;
   categoryKeywordsZh?: string;
   categoryKeywordsEn?: string;
   productSpec?: string;
@@ -45,6 +49,7 @@ export interface CreateTemuTitleTemplateRequest {
 // 更新标题模板请求
 export interface UpdateTemuTitleTemplateRequest {
   name: string;
+  productCategoryId?: string;
   categoryKeywordsZh?: string;
   categoryKeywordsEn?: string;
   productSpec?: string;

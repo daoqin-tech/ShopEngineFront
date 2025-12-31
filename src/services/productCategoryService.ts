@@ -79,4 +79,5 @@ export const productCategoryService = {
     const response = await apiClient.put(`/categories/${id}`, data);
     return response.data;
   },
+
 };
