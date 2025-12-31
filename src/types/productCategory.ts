@@ -10,8 +10,6 @@ export interface ProductCategory {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  titleTemplateId?: string;     // 关联的标题模板ID
-  temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
   createdAt: string;
   updatedAt: string;
 }
@@ -27,8 +25,6 @@ export interface CreateProductCategoryRequest {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  titleTemplateId?: string;     // 关联的标题模板ID
-  temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
 }
 
 // 更新分类请求
@@ -42,8 +38,6 @@ export interface UpdateProductCategoryRequest {
   manufacturingLength?: number; // 生产长度(cm) - 父分类独有
   manufacturingWidth?: number;  // 生产宽度(cm) - 父分类独有
   manufacturingHeight?: number; // 生产高度(cm) - 父分类独有
-  titleTemplateId?: string;     // 关联的标题模板ID
-  temuTemplateIds?: string[];   // 关联的Temu模板ID列表 - 子分类独有
 }
 
 // ============ 父子分类相关类型（新增） ============

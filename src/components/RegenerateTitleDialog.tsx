@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { productCategoryService } from '@/services/productCategoryService';
+import { temuTitleTemplateService, type TemuTitleTemplate } from '@/services/temuTitleTemplateService';
 import type { ProductCategoryWithChildren } from '@/types/productCategory';
 
 interface RegenerateTitleDialogProps {
@@ -30,22 +31,28 @@ export function RegenerateTitleDialog({
   const [selectedParentId, setSelectedParentId] = useState('');
   const [selectedSpecId, setSelectedSpecId] = useState('');
   const [loadingCategories, setLoadingCategories] = useState(true);
+  // 标题模板数据
+  const [titleTemplates, setTitleTemplates] = useState<TemuTitleTemplate[]>([]);
 
-  // 加载分类数据
+  // 加载分类数据和标题模板
   useEffect(() => {
     if (open) {
-      const loadCategories = async () => {
+      const loadData = async () => {
         try {
           setLoadingCategories(true);
-          const data = await productCategoryService.getCategoryTree();
-          setParentCategories(data);
+          const [categoriesData, templatesData] = await Promise.all([
+            productCategoryService.getCategoryTree(),
+            temuTitleTemplateService.getAllTemplates(),
+          ]);
+          setParentCategories(categoriesData);
+          setTitleTemplates(templatesData.templates || []);
         } catch (error) {
-          console.error('Failed to load categories:', error);
+          console.error('Failed to load data:', error);
         } finally {
           setLoadingCategories(false);
         }
       };
-      loadCategories();
+      loadData();
     }
   }, [open]);
 
@@ -61,18 +68,34 @@ export function RegenerateTitleDialog({
     setSelectedSpecId('');
   };
 
+  // 根据分类ID找到对应的标题模板
+  const findTitleTemplateByCategory = (categoryId: string): TemuTitleTemplate | undefined => {
+    // 优先找精确匹配该分类的模板
+    const exactMatch = titleTemplates.find(t => t.productCategoryId === categoryId && t.isActive);
+    if (exactMatch) return exactMatch;
+
+    // 如果没有精确匹配，找父分类的模板
+    const selectedChild = currentChildCategories.find(c => c.id === categoryId);
+    if (selectedChild?.parentId) {
+      const parentMatch = titleTemplates.find(t => t.productCategoryId === selectedChild.parentId && t.isActive);
+      if (parentMatch) return parentMatch;
+    }
+
+    return undefined;
+  };
+
   // 确认并生成
   const handleConfirm = () => {
     if (!selectedSpecId) {
       return;
     }
 
-    const selectedChild = currentChildCategories.find(c => c.id === selectedSpecId);
-    if (!selectedChild || !selectedChild.titleTemplateId) {
+    const template = findTitleTemplateByCategory(selectedSpecId);
+    if (!template) {
       return;
     }
 
-    onConfirm(selectedChild.titleTemplateId);
+    onConfirm(template.id);
     onOpenChange(false);
   };
 

@@ -101,14 +101,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 根据选中的二级分类过滤 Temu 模板
   const filteredTemuTemplates = React.useMemo(() => {
     if (!selectedParentId || !formData.productSpec) return [];
-    const parent = parentCategories.find(p => p.id === selectedParentId);
-    const selectedChild = parent?.children?.find(c => c.id === formData.productSpec);
-    if (!selectedChild?.temuTemplateIds || selectedChild.temuTemplateIds.length === 0) {
-      return [];
-    }
-    // 过滤出该分类关联的模板
-    return allTemuTemplates.filter(t => selectedChild.temuTemplateIds!.includes(t.id));
-  }, [allTemuTemplates, selectedParentId, formData.productSpec, parentCategories]);
+    // 过滤出该分类关联的模板（模板的productCategoryId匹配二级分类或一级分类）
+    return allTemuTemplates.filter(t =>
+      t.productCategoryId === formData.productSpec ||
+      t.productCategoryId === selectedParentId
+    );
+  }, [allTemuTemplates, selectedParentId, formData.productSpec]);
 
   // 获取选中的 Temu 模板详情
   const selectedTemuTemplate = React.useMemo(() => {

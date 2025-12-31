@@ -20,7 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, RefreshCw, Search, Pencil } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2, RefreshCw, Search, Pencil, X } from 'lucide-react';
 import { temuTemplateService, type TemuTemplate, type TemuProductAttribute, type CreateTemuTemplateRequest, type UpdateTemuTemplateRequest, type TemuSpecification, type TemuSkuDefaultConfig, type TemuSpecVolumeWeightConfig } from '@/services/temuTemplateService';
 import { temuCategoryAPIService, type TemuCategoryPath, type TemuAPICategory, type ProductAttributeProperty, type ProductAttributeValue, type ParentSpecification } from '@/services/temuShopCategoryService';
 import { productCategoryService } from '@/services/productCategoryService';
@@ -109,6 +110,10 @@ export function TemuTemplates() {
   // 产品分类选择状态（编辑模板）
   const [editSelectedParentCategoryId, setEditSelectedParentCategoryId] = useState<string>('');
   const [editSelectedChildCategoryId, setEditSelectedChildCategoryId] = useState<string>('');
+
+  // 列表筛选状态（产品分类筛选）
+  const [filterParentCategoryId, setFilterParentCategoryId] = useState<string>('');
+  const [filterChildCategoryId, setFilterChildCategoryId] = useState<string>('');
 
   // 用于防止加载编辑数据时 useEffect 覆盖已加载的配置
   const isLoadingEditDataRef = useRef(false);
@@ -253,6 +258,12 @@ export function TemuTemplates() {
     const parent = productCategories.find(p => p.id === editSelectedParentCategoryId);
     return parent?.children || [];
   }, [productCategories, editSelectedParentCategoryId]);
+
+  // 获取筛选用的二级分类列表
+  const filterChildCategories = React.useMemo(() => {
+    const parent = productCategories.find(p => p.id === filterParentCategoryId);
+    return parent?.children || [];
+  }, [productCategories, filterParentCategoryId]);
 
   // 从搜索结果中提取完整路径
   const getPathFromSearchResult = (path: TemuCategoryPath): TemuAPICategory[] => {
@@ -1367,12 +1378,28 @@ export function TemuTemplates() {
 
   // 过滤并按名称排序模板
   const filteredTemplates = templates
-    .filter(c => {
-      const matchesKeyword = c.catName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        c.fullPath?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        c.name?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        String(c.catId).includes(searchKeyword);
-      return matchesKeyword;
+    .filter(t => {
+      // 关键词筛选
+      const matchesKeyword = !searchKeyword || (
+        t.catName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        t.fullPath?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        t.name?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        String(t.catId).includes(searchKeyword)
+      );
+
+      // 产品分类筛选
+      let matchesCategory = true;
+      if (filterChildCategoryId) {
+        // 如果选择了二级分类，精确匹配
+        matchesCategory = t.productCategoryId === filterChildCategoryId;
+      } else if (filterParentCategoryId) {
+        // 如果只选择了一级分类，匹配该一级分类及其所有子分类
+        const parentCategory = productCategories.find(p => p.id === filterParentCategoryId);
+        const childIds = parentCategory?.children?.map(c => c.id) || [];
+        matchesCategory = t.productCategoryId === filterParentCategoryId || childIds.includes(t.productCategoryId || '');
+      }
+
+      return matchesKeyword && matchesCategory;
     })
     .sort((a, b) => {
       // 优先按模板名称排序，没有名称则按分类名称排序
@@ -1401,16 +1428,69 @@ export function TemuTemplates() {
         </div>
       </div>
 
-      {/* 搜索框 */}
-      <div className="mb-4">
-        <div className="relative w-80">
+      {/* 搜索和筛选 */}
+      <div className="mb-4 flex items-center gap-4">
+        {/* 关键词搜索 */}
+        <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="搜索模板名称、分类名称、路径或ID..."
+            placeholder="搜索模板名称、分类名称..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             className="pl-10"
           />
+        </div>
+
+        {/* 产品分类筛选 */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">分类:</span>
+          <Select
+            value={filterParentCategoryId}
+            onValueChange={(value) => {
+              setFilterParentCategoryId(value);
+              setFilterChildCategoryId('');
+            }}
+          >
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="一级分类" />
+            </SelectTrigger>
+            <SelectContent>
+              {productCategories.map((parent) => (
+                <SelectItem key={parent.id} value={parent.id}>
+                  {parent.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filterChildCategoryId}
+            onValueChange={setFilterChildCategoryId}
+            disabled={!filterParentCategoryId || filterChildCategories.length === 0}
+          >
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="二级分类" />
+            </SelectTrigger>
+            <SelectContent>
+              {filterChildCategories.map((child) => (
+                <SelectItem key={child.id} value={child.id}>
+                  {child.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterParentCategoryId || filterChildCategoryId) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterParentCategoryId('');
+                setFilterChildCategoryId('');
+              }}
+              className="h-9 px-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 

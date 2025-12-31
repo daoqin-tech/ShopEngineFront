@@ -10,11 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Settings, ChevronRight, ChevronDown, Check, FileText, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Settings, ChevronRight, ChevronDown } from 'lucide-react';
 import { productCategoryService } from '@/services/productCategoryService';
 import { productCategorySpecService } from '@/services/productCategorySpecService';
-import { temuTemplateService, type TemuTemplate } from '@/services/temuTemplateService';
-import { temuTitleTemplateService, type TemuTitleTemplate } from '@/services/temuTitleTemplateService';
 import { formatManufacturingSize } from '@/utils/formatUtils';
 import type {
   ProductCategory,
@@ -51,18 +49,7 @@ export function ProductCategories() {
     manufacturingLength: undefined as number | undefined,
     manufacturingWidth: undefined as number | undefined,
     manufacturingHeight: undefined as number | undefined,
-    titleTemplateId: '' as string,  // 关联的标题模板ID
-    temuTemplateIds: [] as string[],  // 关联的Temu模板ID列表 - 子分类独有
   });
-
-  // Temu 模板数据
-  const [allTemuTemplates, setAllTemuTemplates] = useState<TemuTemplate[]>([]);
-  const [loadingTemuTemplates, setLoadingTemuTemplates] = useState(false);
-
-  // 标题模板数据
-  const [allTitleTemplates, setAllTitleTemplates] = useState<TemuTitleTemplate[]>([]);
-  const [loadingTitleTemplates, setLoadingTitleTemplates] = useState(false);
-  const [titleTemplateSearch, setTitleTemplateSearch] = useState('');
 
   // 规格配置相关状态
   const [isSpecDialogOpen, setIsSpecDialogOpen] = useState(false);
@@ -103,38 +90,6 @@ export function ProductCategories() {
     loadCategories();
   }, []);
 
-  // 加载 Temu 模板
-  useEffect(() => {
-    const loadTemuTemplates = async () => {
-      try {
-        setLoadingTemuTemplates(true);
-        const response = await temuTemplateService.getAllTemplates(true, true);
-        setAllTemuTemplates(response.templates || []);
-      } catch (error) {
-        console.error('Failed to load temu templates:', error);
-      } finally {
-        setLoadingTemuTemplates(false);
-      }
-    };
-    loadTemuTemplates();
-  }, []);
-
-  // 加载标题模板
-  useEffect(() => {
-    const loadTitleTemplates = async () => {
-      try {
-        setLoadingTitleTemplates(true);
-        const response = await temuTitleTemplateService.getAllTemplates(true);
-        setAllTitleTemplates(response.templates || []);
-      } catch (error) {
-        console.error('Failed to load title templates:', error);
-      } finally {
-        setLoadingTitleTemplates(false);
-      }
-    };
-    loadTitleTemplates();
-  }, []);
-
   // 切换展开/折叠
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -164,8 +119,6 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
-      titleTemplateId: '',
-      temuTemplateIds: [],
     });
     setIsDialogOpen(true);
   };
@@ -187,8 +140,6 @@ export function ProductCategories() {
       manufacturingLength: undefined,
       manufacturingWidth: undefined,
       manufacturingHeight: undefined,
-      titleTemplateId: '',
-      temuTemplateIds: [],
     });
     setIsDialogOpen(true);
   };
@@ -209,8 +160,6 @@ export function ProductCategories() {
       manufacturingLength: category.manufacturingLength,
       manufacturingWidth: category.manufacturingWidth,
       manufacturingHeight: category.manufacturingHeight,
-      titleTemplateId: category.titleTemplateId || '',
-      temuTemplateIds: category.temuTemplateIds || [],
     });
     setIsDialogOpen(true);
   };
@@ -221,9 +170,6 @@ export function ProductCategories() {
       toast.error('请输入分类名称');
       return;
     }
-
-    // 判断是否为子分类
-    const isChildCategory = !!formData.parentId;
 
     try {
       if (editingCategory) {
@@ -240,10 +186,6 @@ export function ProductCategories() {
           manufacturingLength: formData.manufacturingLength,
           manufacturingWidth: formData.manufacturingWidth,
           manufacturingHeight: formData.manufacturingHeight,
-          // 标题模板
-          titleTemplateId: formData.titleTemplateId || undefined,
-          // 子分类关联Temu模板
-          temuTemplateIds: isChildCategory ? formData.temuTemplateIds : undefined,
         };
         await productCategoryService.updateCategoryWithParent(editingCategory.id, updateData);
         toast.success('更新成功');
@@ -261,10 +203,6 @@ export function ProductCategories() {
           manufacturingLength: formData.manufacturingLength,
           manufacturingWidth: formData.manufacturingWidth,
           manufacturingHeight: formData.manufacturingHeight,
-          // 标题模板
-          titleTemplateId: formData.titleTemplateId || undefined,
-          // 子分类关联Temu模板
-          temuTemplateIds: isChildCategory ? formData.temuTemplateIds : undefined,
         };
         await productCategoryService.createCategoryWithParent(createData);
         toast.success('创建成功');
@@ -626,7 +564,6 @@ export function ProductCategories() {
         setIsDialogOpen(open);
         if (!open) {
           setAddingChildForParent(null);
-          setTitleTemplateSearch('');
         }
       }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -827,141 +764,6 @@ export function ProductCategories() {
                 </div>
               </>
             )}
-
-            {/* 子分类 Temu 模板关联 */}
-            {(formData.parentId || addingChildForParent) && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>关联 Temu 模板</Label>
-                  {formData.temuTemplateIds.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      已选择 {formData.temuTemplateIds.length} 个
-                    </span>
-                  )}
-                </div>
-                {loadingTemuTemplates ? (
-                  <div className="p-4 text-center text-muted-foreground border rounded-lg">
-                    加载中...
-                  </div>
-                ) : allTemuTemplates.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground border rounded-lg">
-                    暂无可用模板
-                  </div>
-                ) : (
-                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-2">
-                      {allTemuTemplates.map((template) => {
-                        const isSelected = formData.temuTemplateIds.includes(template.id);
-                        return (
-                          <div
-                            key={template.id}
-                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted ${
-                              isSelected ? 'bg-primary/10' : ''
-                            }`}
-                            onClick={() => {
-                              if (isSelected) {
-                                setFormData({
-                                  ...formData,
-                                  temuTemplateIds: formData.temuTemplateIds.filter(id => id !== template.id)
-                                });
-                              } else {
-                                setFormData({
-                                  ...formData,
-                                  temuTemplateIds: [...formData.temuTemplateIds, template.id]
-                                });
-                              }
-                            }}
-                          >
-                            <div className={`w-4 h-4 border rounded flex items-center justify-center shrink-0 ${
-                              isSelected ? 'bg-primary border-primary' : 'border-gray-300'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 text-white" />}
-                            </div>
-                            <span className="text-sm truncate">
-                              {template.name || template.catName}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 标题模板选择（所有分类都可配置） */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <Label>标题模板</Label>
-                </div>
-                {formData.titleTemplateId && (
-                  <span className="text-xs text-muted-foreground">
-                    已选择: {allTitleTemplates.find(t => t.id === formData.titleTemplateId)?.name}
-                  </span>
-                )}
-              </div>
-              {loadingTitleTemplates ? (
-                <div className="p-4 text-center text-muted-foreground border rounded-lg">
-                  加载中...
-                </div>
-              ) : allTitleTemplates.length === 0 ? (
-                <div className="p-4 text-center text-muted-foreground border rounded-lg">
-                  暂无可用标题模板，请先在标题模板管理中创建
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {/* 搜索框 */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="搜索标题模板..."
-                      value={titleTemplateSearch}
-                      onChange={(e) => setTitleTemplateSearch(e.target.value)}
-                      className="pl-9 h-9"
-                    />
-                  </div>
-                  {/* 模板列表 */}
-                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-2">
-                      {allTitleTemplates
-                        .filter(t => {
-                          if (!titleTemplateSearch.trim()) return true;
-                          const search = titleTemplateSearch.toLowerCase();
-                          return t.name.toLowerCase().includes(search) ||
-                            t.categoryKeywordsZh?.toLowerCase().includes(search) ||
-                            t.categoryKeywordsEn?.toLowerCase().includes(search);
-                        })
-                        .map((template) => {
-                          const isSelected = formData.titleTemplateId === template.id;
-                          return (
-                            <div
-                              key={template.id}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted ${
-                                isSelected ? 'bg-primary/10' : ''
-                              }`}
-                              onClick={() => setFormData({ ...formData, titleTemplateId: template.id })}
-                            >
-                              <div className={`w-4 h-4 border rounded flex items-center justify-center shrink-0 ${
-                                isSelected ? 'bg-primary border-primary' : 'border-gray-300'
-                              }`}>
-                                {isSelected && <Check className="w-3 h-3 text-white" />}
-                              </div>
-                              <span className="text-sm truncate" title={template.name}>
-                                {template.name}
-                              </span>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                用于商品上架时 AI 生成标题
-              </p>
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="sortOrder">排序顺序</Label>

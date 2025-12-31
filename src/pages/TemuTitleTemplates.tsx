@@ -72,10 +72,14 @@ export function TemuTitleTemplates() {
   const [previewResult, setPreviewResult] = useState<TitlePreviewResponse | null>(null);
   const [sampleScene, setSampleScene] = useState('');
 
-  // 分类选择状态（下拉框）
+  // 分类选择状态（下拉框 - 用于表单）
   const [productCategories, setProductCategories] = useState<ProductCategoryWithChildren[]>([]);
   const [selectedParentCategoryId, setSelectedParentCategoryId] = useState<string>('');
   const [selectedChildCategoryId, setSelectedChildCategoryId] = useState<string>('');
+
+  // 列表筛选状态（产品分类筛选）
+  const [filterParentCategoryId, setFilterParentCategoryId] = useState<string>('');
+  const [filterChildCategoryId, setFilterChildCategoryId] = useState<string>('');
 
   // 加载模板列表
   const fetchTemplates = async () => {
@@ -108,11 +112,17 @@ export function TemuTitleTemplates() {
     loadProductCategories();
   }, []);
 
-  // 获取当前选中一级分类的子分类列表
+  // 获取当前选中一级分类的子分类列表（用于表单）
   const currentChildCategories = React.useMemo(() => {
     const parent = productCategories.find(p => p.id === selectedParentCategoryId);
     return parent?.children || [];
   }, [productCategories, selectedParentCategoryId]);
+
+  // 获取筛选用的二级分类列表
+  const filterChildCategories = React.useMemo(() => {
+    const parent = productCategories.find(p => p.id === filterParentCategoryId);
+    return parent?.children || [];
+  }, [productCategories, filterParentCategoryId]);
 
   // 打开新建对话框
   const handleCreate = () => {
@@ -334,12 +344,27 @@ export function TemuTitleTemplates() {
 
   // 过滤模板
   const filteredTemplates = templates.filter(t => {
+    // 关键词筛选
     const keyword = searchKeyword.toLowerCase();
-    return (
+    const matchesKeyword = !keyword || (
       t.name.toLowerCase().includes(keyword) ||
       t.categoryKeywordsZh?.toLowerCase().includes(keyword) ||
       t.categoryKeywordsEn?.toLowerCase().includes(keyword)
     );
+
+    // 产品分类筛选
+    let matchesCategory = true;
+    if (filterChildCategoryId) {
+      // 如果选择了二级分类，精确匹配
+      matchesCategory = t.productCategoryId === filterChildCategoryId;
+    } else if (filterParentCategoryId) {
+      // 如果只选择了一级分类，匹配该一级分类及其所有子分类
+      const parentCategory = productCategories.find(p => p.id === filterParentCategoryId);
+      const childIds = parentCategory?.children?.map(c => c.id) || [];
+      matchesCategory = t.productCategoryId === filterParentCategoryId || childIds.includes(t.productCategoryId || '');
+    }
+
+    return matchesKeyword && matchesCategory;
   });
 
   return (
@@ -362,9 +387,10 @@ export function TemuTitleTemplates() {
         </div>
       </div>
 
-      {/* 搜索框 */}
-      <div className="mb-4">
-        <div className="relative w-80">
+      {/* 搜索和筛选 */}
+      <div className="mb-4 flex items-center gap-4">
+        {/* 关键词搜索 */}
+        <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="搜索模板名称或关键词..."
@@ -372,6 +398,58 @@ export function TemuTitleTemplates() {
             onChange={(e) => setSearchKeyword(e.target.value)}
             className="pl-10"
           />
+        </div>
+
+        {/* 产品分类筛选 */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">分类:</span>
+          <Select
+            value={filterParentCategoryId}
+            onValueChange={(value) => {
+              setFilterParentCategoryId(value);
+              setFilterChildCategoryId('');
+            }}
+          >
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="一级分类" />
+            </SelectTrigger>
+            <SelectContent>
+              {productCategories.map((parent) => (
+                <SelectItem key={parent.id} value={parent.id}>
+                  {parent.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filterChildCategoryId}
+            onValueChange={setFilterChildCategoryId}
+            disabled={!filterParentCategoryId || filterChildCategories.length === 0}
+          >
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="二级分类" />
+            </SelectTrigger>
+            <SelectContent>
+              {filterChildCategories.map((child) => (
+                <SelectItem key={child.id} value={child.id}>
+                  {child.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(filterParentCategoryId || filterChildCategoryId) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterParentCategoryId('');
+                setFilterChildCategoryId('');
+              }}
+              className="h-9 px-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
