@@ -57,11 +57,11 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
             url: "/workspace/batch-upload",
           },
           {
-            title: "Temu标题模板",
+            title: "标题规则",
             url: "/workspace/settings/temu-title-templates",
           },
           {
-            title: "Temu分类模板",
+            title: "上架类目",
             url: "/workspace/settings/temu-templates",
           },
           {

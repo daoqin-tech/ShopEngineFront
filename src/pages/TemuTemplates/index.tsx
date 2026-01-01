@@ -1413,8 +1413,8 @@ export function TemuTemplates() {
       {/* 页面标题 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Temu 模板管理</h1>
-          <p className="text-gray-600">管理 Temu 平台商品模板和产品属性配置</p>
+          <h1 className="text-2xl font-bold text-gray-900">上架类目</h1>
+          <p className="text-gray-600">管理 Temu 平台商品上架类目和属性配置</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchTemplates} disabled={loading}>

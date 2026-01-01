@@ -372,8 +372,8 @@ export function TemuTitleTemplates() {
       {/* 页面标题 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Temu 标题模板</h1>
-          <p className="text-gray-600">管理 AI 生成标题的配置模板</p>
+          <h1 className="text-2xl font-bold text-gray-900">标题规则</h1>
+          <p className="text-gray-600">管理商品标题的 AI 生成规则</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchTemplates} disabled={loading}>
@@ -548,10 +548,10 @@ export function TemuTitleTemplates() {
         <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              {editingTemplate ? '编辑标题模板' : '新建标题模板'}
+              {editingTemplate ? '编辑标题规则' : '新建标题规则'}
             </DialogTitle>
             <DialogDescription>
-              {editingTemplate ? '修改标题模板配置' : '创建新的 AI 标题生成模板'}
+              {editingTemplate ? '修改标题生成规则配置' : '创建新的 AI 标题生成规则'}
             </DialogDescription>
           </DialogHeader>
 

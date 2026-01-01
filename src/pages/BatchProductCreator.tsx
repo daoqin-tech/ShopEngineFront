@@ -123,6 +123,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     );
   }, [titleTemplates, selectedParentId, formData.productSpec]);
 
+  // 获取选中的标题规则详情
+  const selectedTitleTemplate = React.useMemo(() => {
+    if (!formData.titleTemplateId) return null;
+    return titleTemplates.find(t => t.id === formData.titleTemplateId) || null;
+  }, [titleTemplates, formData.titleTemplateId]);
+
   // 获取当前选中的二级分类名称（用于筛选商品图）
   const selectedCategoryName = React.useMemo(() => {
     if (!selectedParentId || !formData.productSpec) return '';
@@ -345,6 +351,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       updateFormData('productCategory', filteredTemuTemplates[0].id);
     }
   }, [filteredTemuTemplates, formData.productCategory]);
+
+  // 当可用的标题规则列表变化且当前没有选择时，自动选择第一个
+  useEffect(() => {
+    if (filteredTitleTemplates.length > 0 && !formData.titleTemplateId) {
+      updateFormData('titleTemplateId', filteredTitleTemplates[0].id);
+    }
+  }, [filteredTitleTemplates, formData.titleTemplateId]);
 
   // 更新表单数据
   const updateFormData = (field: keyof ProductFormData, value: string) => {
@@ -662,35 +675,59 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 {formData.productSpec && (
                   <div className="flex items-start gap-4">
                     <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">标题规则</Label>
-                    {loadingTitleTemplates ? (
-                      <div className="text-sm text-muted-foreground">加载中...</div>
-                    ) : filteredTitleTemplates.length === 0 ? (
-                      <div className="text-sm text-orange-600">
-                        该分类未配置标题生成规则，
-                        <Link to="/workspace/settings/temu-title-templates" className="text-blue-600 hover:underline ml-1">
-                          去配置
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {filteredTitleTemplates.map((template) => (
-                          <button
-                            key={template.id}
-                            type="button"
-                            onClick={() => updateFormData('titleTemplateId', template.id)}
-                            className={`
-                              px-3 py-1.5 rounded-md border text-sm transition-colors
-                              ${formData.titleTemplateId === template.id
-                                ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
-                                : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                              }
-                            `}
-                          >
-                            {template.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex-1 space-y-2">
+                      {loadingTitleTemplates ? (
+                        <div className="text-sm text-muted-foreground">加载中...</div>
+                      ) : filteredTitleTemplates.length === 0 ? (
+                        <div className="text-sm text-orange-600">
+                          该分类未配置标题生成规则，
+                          <Link to="/workspace/settings/temu-title-templates" className="text-blue-600 hover:underline ml-1">
+                            去配置
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap gap-2">
+                            {filteredTitleTemplates.map((template) => (
+                              <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => updateFormData('titleTemplateId', template.id)}
+                                className={`
+                                  px-3 py-1.5 rounded-md border text-sm transition-colors
+                                  ${formData.titleTemplateId === template.id
+                                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                                  }
+                                `}
+                              >
+                                {template.name}
+                              </button>
+                            ))}
+                          </div>
+                          {/* 选中规则的详细信息 */}
+                          {selectedTitleTemplate && (
+                            <div className="bg-purple-50/50 rounded-md px-3 py-2 text-xs text-gray-600">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                {selectedTitleTemplate.categoryKeywordsZh && (
+                                  <span className="text-gray-500">类目关键词(中): <span className="text-gray-700">{selectedTitleTemplate.categoryKeywordsZh}</span></span>
+                                )}
+                                {selectedTitleTemplate.categoryKeywordsEn && (
+                                  <span className="text-gray-500">类目关键词(英): <span className="text-gray-700">{selectedTitleTemplate.categoryKeywordsEn}</span></span>
+                                )}
+                                {selectedTitleTemplate.theme && (
+                                  <span className="text-gray-500">主题: <span className="text-gray-700">{selectedTitleTemplate.theme}</span></span>
+                                )}
+                                {selectedTitleTemplate.festivalKeywords && (
+                                  <span className="text-gray-500">节日关键词: <span className="text-gray-700">{selectedTitleTemplate.festivalKeywords}</span></span>
+                                )}
+                                <span className="text-gray-500">字数限制: <span className="text-gray-700">中文{selectedTitleTemplate.maxLengthZh}字 / 英文{selectedTitleTemplate.maxLengthEn}字</span></span>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 
