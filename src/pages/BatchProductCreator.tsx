@@ -684,18 +684,27 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                             ))}
                           </div>
                           {selectedTitleTemplate && (
-                            <div className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 grid grid-cols-2 gap-x-6 gap-y-1">
-                              {selectedTitleTemplate.categoryKeywordsZh && (
-                                <div><span className="text-gray-400">类目关键词(中):</span> {selectedTitleTemplate.categoryKeywordsZh}</div>
-                              )}
-                              {selectedTitleTemplate.categoryKeywordsEn && (
-                                <div><span className="text-gray-400">类目关键词(英):</span> {selectedTitleTemplate.categoryKeywordsEn}</div>
-                              )}
-                              {selectedTitleTemplate.theme && (
-                                <div><span className="text-gray-400">主题:</span> {selectedTitleTemplate.theme}</div>
-                              )}
-                              {selectedTitleTemplate.festivalKeywords && (
-                                <div><span className="text-gray-400">节日关键词:</span> {selectedTitleTemplate.festivalKeywords}</div>
+                            <div className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 space-y-1">
+                              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                                {selectedTitleTemplate.categoryKeywordsZh && (
+                                  <div><span className="text-gray-400">类目关键词(中):</span> {selectedTitleTemplate.categoryKeywordsZh}</div>
+                                )}
+                                {selectedTitleTemplate.categoryKeywordsEn && (
+                                  <div><span className="text-gray-400">类目关键词(英):</span> {selectedTitleTemplate.categoryKeywordsEn}</div>
+                                )}
+                                {selectedTitleTemplate.festivalKeywords && (
+                                  <div><span className="text-gray-400">节日关键词:</span> {selectedTitleTemplate.festivalKeywords}</div>
+                                )}
+                              </div>
+                              {(selectedTitleTemplate.sampleTitleZh || selectedTitleTemplate.sampleTitleEn) && (
+                                <div className="border-t pt-1 mt-1 space-y-0.5">
+                                  {selectedTitleTemplate.sampleTitleZh && (
+                                    <div><span className="text-gray-400">示例标题(中):</span> <span className="text-gray-600">{selectedTitleTemplate.sampleTitleZh}</span></div>
+                                  )}
+                                  {selectedTitleTemplate.sampleTitleEn && (
+                                    <div><span className="text-gray-400">示例标题(英):</span> <span className="text-gray-600">{selectedTitleTemplate.sampleTitleEn}</span></div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           )}
