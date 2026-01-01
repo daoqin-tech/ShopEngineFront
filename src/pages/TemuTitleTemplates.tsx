@@ -31,7 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, RefreshCw, FileText, Eye, Loader2, CheckCircle, AlertCircle, Copy, FolderTree, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw, FileText, Sparkles, Loader2, Copy, FolderTree, Search, X } from 'lucide-react';
 import {
   temuTitleTemplateService,
   type TemuTitleTemplate,
@@ -62,15 +62,15 @@ export function TemuTitleTemplates() {
     productUsage: '',
     theme: '',
     festivalKeywords: '',
-    maxLengthZh: 127,
-    maxLengthEn: 255,
-    forbiddenWords: '',
   });
+
+  // 示例标题（从预览结果保存）
+  const [sampleTitleZh, setSampleTitleZh] = useState('');
+  const [sampleTitleEn, setSampleTitleEn] = useState('');
 
   // 预览状态
   const [previewing, setPreviewing] = useState(false);
   const [previewResult, setPreviewResult] = useState<TitlePreviewResponse | null>(null);
-  const [sampleScene, setSampleScene] = useState('');
 
   // 分类选择状态（下拉框 - 用于表单）
   const [productCategories, setProductCategories] = useState<ProductCategoryWithChildren[]>([]);
@@ -136,14 +136,12 @@ export function TemuTitleTemplates() {
       productUsage: '',
       theme: '',
       festivalKeywords: '',
-      maxLengthZh: 127,
-      maxLengthEn: 255,
-      forbiddenWords: '',
     });
     setSelectedParentCategoryId('');
     setSelectedChildCategoryId('');
     setPreviewResult(null);
-    setSampleScene('');
+    setSampleTitleZh('');
+    setSampleTitleEn('');
     setShowDialog(true);
   };
 
@@ -159,9 +157,6 @@ export function TemuTitleTemplates() {
       productUsage: template.productUsage || '',
       theme: template.theme || '',
       festivalKeywords: template.festivalKeywords || '',
-      maxLengthZh: template.maxLengthZh || 127,
-      maxLengthEn: template.maxLengthEn || 255,
-      forbiddenWords: template.forbiddenWords || '',
     });
     // 如果模板已关联分类，找到对应的父子分类并设置
     if (template.productCategoryId) {
@@ -186,7 +181,8 @@ export function TemuTitleTemplates() {
       setSelectedChildCategoryId('');
     }
     setPreviewResult(null);
-    setSampleScene('');
+    setSampleTitleZh(template.sampleTitleZh || '');
+    setSampleTitleEn(template.sampleTitleEn || '');
     setShowDialog(true);
   };
 
@@ -202,9 +198,6 @@ export function TemuTitleTemplates() {
       productUsage: template.productUsage || '',
       theme: template.theme || '',
       festivalKeywords: template.festivalKeywords || '',
-      maxLengthZh: template.maxLengthZh || 127,
-      maxLengthEn: template.maxLengthEn || 255,
-      forbiddenWords: template.forbiddenWords || '',
     });
     // 如果模板已关联分类，找到对应的父子分类并设置
     if (template.productCategoryId) {
@@ -229,7 +222,8 @@ export function TemuTitleTemplates() {
       setSelectedChildCategoryId('');
     }
     setPreviewResult(null);
-    setSampleScene('');
+    setSampleTitleZh(template.sampleTitleZh || '');
+    setSampleTitleEn(template.sampleTitleEn || '');
     setShowDialog(true);
     toast.info('已复制模板，请修改名称后保存');
   };
@@ -245,13 +239,12 @@ export function TemuTitleTemplates() {
         productUsage: formData.productUsage,
         theme: formData.theme,
         festivalKeywords: formData.festivalKeywords,
-        maxLengthZh: formData.maxLengthZh,
-        maxLengthEn: formData.maxLengthEn,
-        forbiddenWords: formData.forbiddenWords,
-        sampleScene: sampleScene || undefined,
       });
 
       setPreviewResult(result);
+      // 自动保存预览结果到示例标题
+      setSampleTitleZh(result.titleZh);
+      setSampleTitleEn(result.titleEn);
     } catch (error: any) {
       console.error('预览生成失败:', error);
       toast.error(error.response?.data?.message || '预览生成失败');
@@ -278,6 +271,8 @@ export function TemuTitleTemplates() {
         const updateData: UpdateTemuTitleTemplateRequest = {
           ...formData,
           productCategoryId,
+          sampleTitleZh,
+          sampleTitleEn,
           isActive: editingTemplate.isActive,
         };
         await temuTitleTemplateService.updateTemplate(editingTemplate.id, updateData);
@@ -313,9 +308,8 @@ export function TemuTitleTemplates() {
         productUsage: template.productUsage,
         theme: template.theme,
         festivalKeywords: template.festivalKeywords,
-        maxLengthZh: template.maxLengthZh,
-        maxLengthEn: template.maxLengthEn,
-        forbiddenWords: template.forbiddenWords,
+        sampleTitleZh: template.sampleTitleZh,
+        sampleTitleEn: template.sampleTitleEn,
         isActive: !template.isActive,
       };
       await temuTitleTemplateService.updateTemplate(template.id, updateData);
@@ -461,9 +455,7 @@ export function TemuTitleTemplates() {
               <TableHead className="w-48">模板名称</TableHead>
               <TableHead className="w-32">产品分类</TableHead>
               <TableHead>类目关键词(中文)</TableHead>
-              <TableHead>类目关键词(英文)</TableHead>
-              <TableHead className="w-24">中文限制</TableHead>
-              <TableHead className="w-24">英文限制</TableHead>
+              <TableHead>示例标题(中文)</TableHead>
               <TableHead className="w-20">状态</TableHead>
               <TableHead className="w-32 text-right">操作</TableHead>
             </TableRow>
@@ -471,13 +463,13 @@ export function TemuTitleTemplates() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : filteredTemplates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">暂无模板</h3>
                   <p>{searchKeyword ? '没有找到匹配的模板' : '点击上方按钮创建第一个模板'}</p>
@@ -493,11 +485,9 @@ export function TemuTitleTemplates() {
                   <TableCell className="text-sm text-gray-600 max-w-xs truncate" title={template.categoryKeywordsZh}>
                     {template.categoryKeywordsZh || '-'}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600 max-w-xs truncate" title={template.categoryKeywordsEn}>
-                    {template.categoryKeywordsEn || '-'}
+                  <TableCell className="text-sm text-gray-600 max-w-xs truncate" title={template.sampleTitleZh}>
+                    {template.sampleTitleZh || <span className="text-gray-400">未生成</span>}
                   </TableCell>
-                  <TableCell>{template.maxLengthZh} 字</TableCell>
-                  <TableCell>{template.maxLengthEn} 字符</TableCell>
                   <TableCell>
                     <Switch
                       checked={template.isActive}
@@ -547,15 +537,57 @@ export function TemuTitleTemplates() {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-xl">
-              {editingTemplate ? '编辑标题规则' : '新建标题规则'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingTemplate ? '修改标题生成规则配置' : '创建新的 AI 标题生成规则'}
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl">
+                  {editingTemplate ? '编辑标题规则' : '新建标题规则'}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingTemplate ? '修改标题生成规则配置' : '创建新的 AI 标题生成规则'}
+                </DialogDescription>
+              </div>
+              <Button
+                type="button"
+                onClick={handlePreview}
+                disabled={previewing}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              >
+                {previewing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    AI 生成示例标题
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
+            {/* 示例标题预览 - 放在最上面 */}
+            {(previewResult || sampleTitleZh || sampleTitleEn) && (
+              <div className="border rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 space-y-3">
+                <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
+                  示例标题
+                </h4>
+                <div className="space-y-2">
+                  <div className="p-3 rounded border bg-white border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">中文</p>
+                    <p className="text-sm text-gray-800">{previewResult?.titleZh || sampleTitleZh || '未生成'}</p>
+                  </div>
+                  <div className="p-3 rounded border bg-white border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">英文</p>
+                    <p className="text-sm text-gray-800">{previewResult?.titleEn || sampleTitleEn || '未生成'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 基本信息 */}
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">基本信息</h4>
@@ -719,130 +751,6 @@ export function TemuTitleTemplates() {
                   />
                   <p className="text-xs text-gray-500">提前1-2个月布局季节性关键词</p>
                 </div>
-              </div>
-            </div>
-
-            {/* 标题限制 */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-4">标题限制</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxLengthZh">中文最大长度</Label>
-                  <Input
-                    id="maxLengthZh"
-                    type="number"
-                    value={formData.maxLengthZh}
-                    onChange={(e) => setFormData({ ...formData, maxLengthZh: parseInt(e.target.value) || 127 })}
-                    min={1}
-                    max={500}
-                  />
-                  <p className="text-xs text-gray-500">默认 127 字</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxLengthEn">英文最大长度</Label>
-                  <Input
-                    id="maxLengthEn"
-                    type="number"
-                    value={formData.maxLengthEn}
-                    onChange={(e) => setFormData({ ...formData, maxLengthEn: parseInt(e.target.value) || 255 })}
-                    min={1}
-                    max={1000}
-                  />
-                  <p className="text-xs text-gray-500">默认 255 字符</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="forbiddenWords">禁用词</Label>
-                  <Input
-                    id="forbiddenWords"
-                    value={formData.forbiddenWords}
-                    onChange={(e) => setFormData({ ...formData, forbiddenWords: e.target.value })}
-                    placeholder="用逗号分隔，如：儿童, kids"
-                  />
-                  <p className="text-xs text-gray-500">多个词用逗号分隔</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 效果预览区 */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-semibold text-gray-900">效果预览</h4>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreview}
-                  disabled={previewing}
-                >
-                  {previewing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      生成中...
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="mr-2 h-4 w-4" />
-                      预览标题效果
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="sampleScene">模拟场景描述（可选）</Label>
-                  <Input
-                    id="sampleScene"
-                    value={sampleScene}
-                    onChange={(e) => setSampleScene(e.target.value)}
-                    placeholder="例如：红色圣诞树图案、粉色樱花图案"
-                  />
-                  <p className="text-xs text-gray-500">输入场景描述可生成更具体的标题预览</p>
-                </div>
-
-                {previewResult && (
-                  <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
-                    {/* 中文标题预览 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">中文标题预览</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">
-                            {previewResult.lengthZh} / {formData.maxLengthZh} 字
-                          </span>
-                          {previewResult.isValidZh ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                          )}
-                        </div>
-                      </div>
-                      <div className={`p-3 rounded border ${previewResult.isValidZh ? 'bg-white border-gray-200' : 'bg-red-50 border-red-200'}`}>
-                        <p className="text-sm text-gray-800 break-all">{previewResult.titleZh}</p>
-                      </div>
-                    </div>
-
-                    {/* 英文标题预览 */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700">英文标题预览</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">
-                            {previewResult.lengthEn} / {formData.maxLengthEn} 字符
-                          </span>
-                          {previewResult.isValidEn ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                          )}
-                        </div>
-                      </div>
-                      <div className={`p-3 rounded border ${previewResult.isValidEn ? 'bg-white border-gray-200' : 'bg-red-50 border-red-200'}`}>
-                        <p className="text-sm text-gray-800 break-all">{previewResult.titleEn}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>

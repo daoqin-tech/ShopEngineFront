@@ -14,11 +14,9 @@ export interface TemuTitleTemplate {
   productUsage: string;
   theme: string; // 主题
   festivalKeywords: string; // 节日场景
-  // 标题格式配置
-  maxLengthZh: number;
-  maxLengthEn: number;
-  // 禁用词配置
-  forbiddenWords: string;
+  // 示例标题
+  sampleTitleZh: string;
+  sampleTitleEn: string;
   // 状态
   isActive: boolean;
   createdAt: string;
@@ -41,9 +39,6 @@ export interface CreateTemuTitleTemplateRequest {
   productUsage?: string;
   theme?: string;
   festivalKeywords?: string;
-  maxLengthZh?: number;
-  maxLengthEn?: number;
-  forbiddenWords?: string;
 }
 
 // 更新标题模板请求
@@ -56,9 +51,8 @@ export interface UpdateTemuTitleTemplateRequest {
   productUsage?: string;
   theme?: string;
   festivalKeywords?: string;
-  maxLengthZh?: number;
-  maxLengthEn?: number;
-  forbiddenWords?: string;
+  sampleTitleZh?: string;
+  sampleTitleEn?: string;
   isActive: boolean;
 }
 
@@ -70,20 +64,12 @@ export interface TitlePreviewRequest {
   productUsage?: string;
   theme?: string;
   festivalKeywords?: string;
-  maxLengthZh?: number;
-  maxLengthEn?: number;
-  forbiddenWords?: string;
-  sampleScene?: string;
 }
 
 // 标题预览响应
 export interface TitlePreviewResponse {
   titleZh: string;
   titleEn: string;
-  lengthZh: number;
-  lengthEn: number;
-  isValidZh: boolean;
-  isValidEn: boolean;
 }
 
 export const temuTitleTemplateService = {
