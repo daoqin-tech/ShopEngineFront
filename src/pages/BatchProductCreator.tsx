@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -113,6 +113,15 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     if (!formData.productCategory) return null;
     return allTemuTemplates.find(t => t.id === formData.productCategory) || null;
   }, [allTemuTemplates, formData.productCategory]);
+
+  // 根据选中的分类过滤标题模板
+  const filteredTitleTemplates = React.useMemo(() => {
+    if (!selectedParentId || !formData.productSpec) return [];
+    return titleTemplates.filter(t =>
+      t.productCategoryId === formData.productSpec ||
+      t.productCategoryId === selectedParentId
+    );
+  }, [titleTemplates, selectedParentId, formData.productSpec]);
 
   // 获取当前选中的二级分类名称（用于筛选商品图）
   const selectedCategoryName = React.useMemo(() => {
@@ -583,52 +592,88 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   </div>
                 )}
 
-                {/* 第三行：Temu模板选择（选中二级分类后显示） */}
+                {/* 第三行：上架类目选择（选中二级分类后显示） */}
                 {formData.productSpec && (
                   <div className="flex items-start gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">Temu模板</Label>
-                    {loadingTemuTemplates ? (
-                      <div className="text-sm text-muted-foreground">加载Temu模板中...</div>
-                    ) : filteredTemuTemplates.length === 0 ? (
-                      <div className="text-sm text-orange-600">
-                        该分类未关联Temu模板，请在产品分类管理中配置
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {filteredTemuTemplates.map((template) => (
-                          <button
-                            key={template.id}
-                            type="button"
-                            onClick={() => updateFormData('productCategory', template.id)}
-                            className={`
-                              px-3 py-1.5 rounded-md border text-sm transition-colors
-                              ${formData.productCategory === template.id
-                                ? 'border-primary bg-primary/10 text-primary font-medium'
-                                : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                              }
-                            `}
-                          >
-                            {template.name || template.fullPath || template.catName}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">上架类目</Label>
+                    <div className="flex-1 space-y-2">
+                      {loadingTemuTemplates ? (
+                        <div className="text-sm text-muted-foreground">加载中...</div>
+                      ) : filteredTemuTemplates.length === 0 ? (
+                        <div className="text-sm text-orange-600">
+                          该分类未配置上架类目，
+                          <Link to="/workspace/settings/temu-templates" className="text-blue-600 hover:underline ml-1">
+                            去配置
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap gap-2">
+                            {filteredTemuTemplates.map((template) => (
+                              <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => updateFormData('productCategory', template.id)}
+                                className={`
+                                  px-3 py-1.5 rounded-md border text-sm transition-colors
+                                  ${formData.productCategory === template.id
+                                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                                  }
+                                `}
+                              >
+                                {template.name || template.fullPath || template.catName}
+                              </button>
+                            ))}
+                          </div>
+                          {/* 选中类目的详细信息 */}
+                          {selectedTemuTemplate && (
+                            <div className="bg-blue-50/50 rounded-md px-3 py-2 text-xs text-gray-600">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                <span className="text-gray-500">Temu分类: <span className="text-gray-700">{selectedTemuTemplate.fullPath || selectedTemuTemplate.catName}</span></span>
+                                {selectedTemuTemplate.productAttributes && selectedTemuTemplate.productAttributes.length > 0 && (
+                                  <span className="text-gray-500">属性: <span className="text-gray-700">{selectedTemuTemplate.productAttributes.map(attr => `${attr.propName}:${attr.propValue}`).join(', ')}</span></span>
+                                )}
+                                {selectedTemuTemplate.specifications && selectedTemuTemplate.specifications.length > 0 && (
+                                  <span className="text-gray-500">规格: <span className="text-gray-700">{selectedTemuTemplate.specifications.map(spec => `${spec.parentSpecName}(${spec.specValues.map(v => v.specName).join('/')})`).join(', ')}</span></span>
+                                )}
+                                {selectedTemuTemplate.skuDefaultConfig?.volumeWeightConfigs?.[0] && (() => {
+                                  const config = selectedTemuTemplate.skuDefaultConfig!.volumeWeightConfigs![0];
+                                  const parts = [];
+                                  if (config.longestSide || config.middleSide || config.shortestSide) {
+                                    parts.push(`${config.longestSide}×${config.middleSide}×${config.shortestSide}cm`);
+                                  }
+                                  if (config.weight !== undefined) parts.push(`${config.weight}g`);
+                                  if (config.supplierPrice !== undefined) parts.push(`¥${config.supplierPrice.toFixed(2)}`);
+                                  return parts.length > 0 ? (
+                                    <span className="text-gray-500">SKU: <span className="text-gray-700">{parts.join(' / ')}</span></span>
+                                  ) : null;
+                                })()}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* 标题模板选择 */}
-                {formData.productCategory && (
+                {/* 标题生成规则选择（选中二级分类后显示） */}
+                {formData.productSpec && (
                   <div className="flex items-start gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">标题模板</Label>
+                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">标题规则</Label>
                     {loadingTitleTemplates ? (
-                      <div className="text-sm text-muted-foreground">加载标题模板中...</div>
-                    ) : titleTemplates.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">加载中...</div>
+                    ) : filteredTitleTemplates.length === 0 ? (
                       <div className="text-sm text-orange-600">
-                        暂无可用标题模板，请先创建标题模板
+                        该分类未配置标题生成规则，
+                        <Link to="/workspace/settings/temu-title-templates" className="text-blue-600 hover:underline ml-1">
+                          去配置
+                        </Link>
                       </div>
                     ) : (
-                      <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                        {titleTemplates.map((template) => (
+                      <div className="flex flex-wrap gap-2">
+                        {filteredTitleTemplates.map((template) => (
                           <button
                             key={template.id}
                             type="button"
@@ -724,60 +769,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 )}
               </div>
             </div>
-
-            {/* 选中模板的详细信息展示 - 紧凑版 */}
-            {selectedTemuTemplate && (
-              <div className="border-b bg-blue-50/30 px-6 py-2">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
-                  {/* 分类路径 */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-gray-500">Temu分类:</span>
-                    <span className="text-gray-800 font-medium">
-                      {selectedTemuTemplate.fullPath || selectedTemuTemplate.catName}
-                    </span>
-                  </div>
-
-                  {/* 商品属性 - 紧凑显示 */}
-                  {selectedTemuTemplate.productAttributes && selectedTemuTemplate.productAttributes.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-500">属性:</span>
-                      <span className="text-gray-800">
-                        {selectedTemuTemplate.productAttributes.map(attr => `${attr.propName}:${attr.propValue}`).join(', ')}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* 规格配置 - 紧凑显示 */}
-                  {selectedTemuTemplate.specifications && selectedTemuTemplate.specifications.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-500">规格:</span>
-                      <span className="text-gray-800">
-                        {selectedTemuTemplate.specifications.map(spec =>
-                          `${spec.parentSpecName}(${spec.specValues.map(v => v.specName).join('/')})`
-                        ).join(', ')}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* SKU配置 - 紧凑显示第一个配置的关键信息 */}
-                  {selectedTemuTemplate.skuDefaultConfig?.volumeWeightConfigs?.[0] && (() => {
-                    const config = selectedTemuTemplate.skuDefaultConfig!.volumeWeightConfigs![0];
-                    const parts = [];
-                    if (config.longestSide || config.middleSide || config.shortestSide) {
-                      parts.push(`${config.longestSide}×${config.middleSide}×${config.shortestSide}cm`);
-                    }
-                    if (config.weight !== undefined) parts.push(`${config.weight}g`);
-                    if (config.supplierPrice !== undefined) parts.push(`¥${config.supplierPrice.toFixed(2)}`);
-                    return parts.length > 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-gray-500">SKU:</span>
-                        <span className="text-gray-800">{parts.join(' / ')}</span>
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              </div>
-            )}
 
             {/* 商品图列表 */}
             {formData.productSpec ? (
