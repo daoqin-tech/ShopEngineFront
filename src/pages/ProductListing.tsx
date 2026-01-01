@@ -622,7 +622,7 @@ export function ProductListing() {
             >
               <option value="">全部店铺</option>
               {temuShops.map(shop => (
-                <option key={shop.shopId} value={shop.shopId}>
+                <option key={shop.id} value={shop.id}>
                   {shop.name}
                 </option>
               ))}
