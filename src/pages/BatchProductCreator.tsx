@@ -517,21 +517,27 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   {loadingShops ? (
                     <div className="text-sm text-muted-foreground py-1.5">加载店铺中...</div>
                   ) : (
-                    <Select value={formData.shopAccount} onValueChange={(value) => {
-                      updateFormData('shopAccount', value);
-                      updateFormData('productSpec', '');
-                      updateFormData('productCategory', '');
-                      setSelectedParentId('');
-                    }}>
-                      <SelectTrigger className="w-48 h-9">
-                        <SelectValue placeholder="选择店铺" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {temuShops.map((shop) => (
-                          <SelectItem key={shop.id} value={shop.id}>{shop.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-wrap gap-1.5">
+                      {temuShops.map((shop) => (
+                        <button
+                          key={shop.id}
+                          type="button"
+                          onClick={() => {
+                            updateFormData('shopAccount', shop.id);
+                            updateFormData('productSpec', '');
+                            updateFormData('productCategory', '');
+                            setSelectedParentId('');
+                          }}
+                          className={`px-2.5 py-1 rounded text-sm transition-colors ${
+                            formData.shopAccount === shop.id
+                              ? 'bg-gray-900 text-white'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {shop.name}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -558,7 +564,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                               updateFormData('productCategory', '');
                             }}
                           >
-                            <SelectTrigger className="w-36 h-9">
+                            <SelectTrigger className="w-40 h-9">
                               <SelectValue placeholder="一级分类" />
                             </SelectTrigger>
                             <SelectContent>
@@ -575,7 +581,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                             }}
                             disabled={!selectedParentId || currentChildCategories.length === 0}
                           >
-                            <SelectTrigger className="w-36 h-9">
+                            <SelectTrigger className="w-48 h-9">
                               <SelectValue placeholder="二级分类" />
                             </SelectTrigger>
                             <SelectContent>
@@ -710,37 +716,25 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     {filteredCoverTemplates.length > 0 && (
                       <>
                         <Label className="text-sm font-medium text-gray-600 text-right">套图模板</Label>
-                        <div className="flex flex-wrap gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCoverTemplateId('');
-                              setCurrentPage(1);
-                              fetchAvailableImages(1, selectedCategoryName, undefined);
-                            }}
-                            className={`px-2.5 py-1 rounded text-sm transition-colors ${
-                              !selectedCoverTemplateId
-                                ? 'bg-gray-900 text-white'
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                            }`}
-                          >
-                            全部
-                          </button>
-                          {filteredCoverTemplates.map((template) => (
-                            <button
-                              key={template.id}
-                              type="button"
-                              onClick={() => setSelectedCoverTemplateId(template.id)}
-                              className={`px-2.5 py-1 rounded text-sm transition-colors ${
-                                selectedCoverTemplateId === template.id
-                                  ? 'bg-gray-900 text-white'
-                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                              }`}
-                            >
-                              {template.name}
-                            </button>
-                          ))}
-                        </div>
+                        <Select
+                          value={selectedCoverTemplateId || 'all'}
+                          onValueChange={(value) => {
+                            const newValue = value === 'all' ? '' : value;
+                            setSelectedCoverTemplateId(newValue);
+                            setCurrentPage(1);
+                            fetchAvailableImages(1, selectedCategoryName, newValue || undefined);
+                          }}
+                        >
+                          <SelectTrigger className="w-48 h-9">
+                            <SelectValue placeholder="选择套图模板" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">全部模板</SelectItem>
+                            {filteredCoverTemplates.map((template) => (
+                              <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </>
                     )}
 
