@@ -602,24 +602,25 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                         <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
                       ) : (
                         <>
-                          <div className="flex flex-wrap gap-1.5">
-                            {filteredTemuTemplates.map((template) => (
-                              <button
-                                key={template.id}
-                                type="button"
-                                onClick={() => updateFormData('productCategory', template.id)}
-                                className={`px-2.5 py-1 rounded text-sm transition-colors ${
-                                  formData.productCategory === template.id
-                                    ? 'bg-gray-900 text-white'
-                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                }`}
-                              >
-                                {template.name || template.catName}
-                              </button>
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={formData.productCategory}
+                              onValueChange={(value) => updateFormData('productCategory', value)}
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="请选择上架类目" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {filteredTemuTemplates.map((template) => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name || template.catName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Link
                               to="/workspace/settings/temu-templates"
-                              className="px-2 py-1 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
+                              className="px-2 py-2 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
                               title="配置更多上架类目"
                             >
                               <Plus className="h-4 w-4" />
@@ -661,24 +662,25 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                         <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
                       ) : (
                         <>
-                          <div className="flex flex-wrap gap-1.5">
-                            {filteredTitleTemplates.map((template) => (
-                              <button
-                                key={template.id}
-                                type="button"
-                                onClick={() => updateFormData('titleTemplateId', template.id)}
-                                className={`px-2.5 py-1 rounded text-sm transition-colors ${
-                                  formData.titleTemplateId === template.id
-                                    ? 'bg-gray-900 text-white'
-                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                }`}
-                              >
-                                {template.name}
-                              </button>
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={formData.titleTemplateId}
+                              onValueChange={(value) => updateFormData('titleTemplateId', value)}
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="请选择标题规则" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {filteredTitleTemplates.map((template) => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <Link
                               to="/workspace/settings/temu-title-templates"
-                              className="px-2 py-1 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
+                              className="px-2 py-2 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
                               title="配置更多标题规则"
                             >
                               <Plus className="h-4 w-4" />
