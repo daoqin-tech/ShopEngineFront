@@ -229,7 +229,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
   // 对话框状态
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false); // 创建成功状态
   const [createdCount, setCreatedCount] = useState(0);
 
   const navigate = useNavigate();
@@ -424,13 +424,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
     try {
       setCreating(true);
-      setShowConfirmDialog(false);
 
       await productService.batchCreate(submitData);
 
-      // 记录创建数量，显示成功对话框
+      // 记录创建数量，显示成功状态
       setCreatedCount(taskIds.length);
-      setShowSuccessDialog(true);
+      setCreateSuccess(true);
 
       // 清空选择
       setSelectedProducts([]);
@@ -524,9 +523,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                           type="button"
                           onClick={() => {
                             updateFormData('shopAccount', shop.id);
-                            updateFormData('productSpec', '');
-                            updateFormData('productCategory', '');
-                            setSelectedParentId('');
                           }}
                           className={`px-2.5 py-1 rounded text-sm transition-colors ${
                             formData.shopAccount === shop.id
@@ -1121,58 +1117,77 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       )}
 
       {/* 确认创建对话框 */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <Dialog open={showConfirmDialog} onOpenChange={(open) => {
+        if (!open) {
+          setCreateSuccess(false);
+        }
+        setShowConfirmDialog(open);
+      }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>确认创建商品</DialogTitle>
-            <DialogDescription>
-              即将创建 {selectedProducts.length} 个商品，商品标题将由 AI 自动生成。确定要继续吗？
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">店铺：</span>
-              <span className="font-medium">{temuShops.find(s => s.id === formData.shopAccount)?.name}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">商品数量：</span>
-              <span className="font-medium text-blue-600">{selectedProducts.length} 个</span>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              取消
-            </Button>
-            <Button onClick={handleCreateProducts} disabled={creating}>
-              {creating ? '创建中...' : '确认创建'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 创建成功对话框 */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
-              创建任务已提交
-            </DialogTitle>
-            <DialogDescription>
-              已成功提交 {createdCount} 个商品的创建任务，正在后台处理中。商品标题由 AI 自动生成，请稍后在商品列表中查看进度。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowSuccessDialog(false)}>
-              继续创建
-            </Button>
-            <Button onClick={() => {
-              setShowSuccessDialog(false);
-              navigate('/workspace/batch-upload');
-            }}>
-              查看商品列表
-            </Button>
-          </DialogFooter>
+          {createSuccess ? (
+            // 创建成功状态
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  创建任务已提交
+                </DialogTitle>
+                <DialogDescription>
+                  已成功提交 {createdCount} 个商品的创建任务，正在后台处理中。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-700">
+                    ⚠️ 请勿重复上架相同的商品，系统会自动检测并跳过重复项。
+                  </p>
+                </div>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => {
+                  setShowConfirmDialog(false);
+                  setCreateSuccess(false);
+                }}>
+                  继续创建
+                </Button>
+                <Button onClick={() => {
+                  setShowConfirmDialog(false);
+                  setCreateSuccess(false);
+                  navigate('/workspace/batch-upload');
+                }}>
+                  查看商品列表
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            // 确认创建状态
+            <>
+              <DialogHeader>
+                <DialogTitle>确认创建商品</DialogTitle>
+                <DialogDescription>
+                  即将创建 {selectedProducts.length} 个商品，商品标题将由 AI 自动生成。确定要继续吗？
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-500">店铺：</span>
+                  <span className="font-medium">{temuShops.find(s => s.id === formData.shopAccount)?.name}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-500">商品数量：</span>
+                  <span className="font-medium text-blue-600">{selectedProducts.length} 个</span>
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                  取消
+                </Button>
+                <Button onClick={handleCreateProducts} disabled={creating}>
+                  {creating ? '创建中...' : '确认创建'}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
