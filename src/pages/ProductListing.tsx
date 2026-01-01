@@ -792,18 +792,12 @@ export function ProductListing() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="max-w-[280px]">
-                          <div
-                            className="text-sm font-medium text-gray-900 line-clamp-2 cursor-default"
-                            title={product.nameZh || '未生成标题'}
-                          >
+                        <div className="min-w-[280px] max-w-[400px]">
+                          <div className="text-sm font-medium text-gray-900">
                             {product.nameZh || '未生成标题'}
                           </div>
                           {product.nameEn && (
-                            <div
-                              className="text-xs text-gray-500 mt-1 line-clamp-1 cursor-default"
-                              title={product.nameEn}
-                            >
+                            <div className="text-xs text-gray-500 mt-1">
                               {product.nameEn}
                             </div>
                           )}
