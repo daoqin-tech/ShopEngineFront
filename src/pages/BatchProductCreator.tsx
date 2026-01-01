@@ -612,7 +612,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 onClick={() => updateFormData('productCategory', template.id)}
                                 className={`px-2.5 py-1 rounded text-sm transition-colors ${
                                   formData.productCategory === template.id
-                                    ? 'bg-blue-600 text-white'
+                                    ? 'bg-gray-900 text-white'
                                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                                 }`}
                               >
@@ -669,7 +669,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 onClick={() => updateFormData('titleTemplateId', template.id)}
                                 className={`px-2.5 py-1 rounded text-sm transition-colors ${
                                   formData.titleTemplateId === template.id
-                                    ? 'bg-purple-600 text-white'
+                                    ? 'bg-gray-900 text-white'
                                     : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                                 }`}
                               >
@@ -720,7 +720,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                             }}
                             className={`px-2.5 py-1 rounded text-sm transition-colors ${
                               !selectedCoverTemplateId
-                                ? 'bg-orange-500 text-white'
+                                ? 'bg-gray-900 text-white'
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                             }`}
                           >
@@ -733,7 +733,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                               onClick={() => setSelectedCoverTemplateId(template.id)}
                               className={`px-2.5 py-1 rounded text-sm transition-colors ${
                                 selectedCoverTemplateId === template.id
-                                  ? 'bg-orange-500 text-white'
+                                  ? 'bg-gray-900 text-white'
                                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                               }`}
                             >
