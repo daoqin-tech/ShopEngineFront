@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateTimePicker } from '@/components/ui/date-picker';
-import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Images, Image as ImageIcon, X, ChevronLeft, ChevronRight, Package, CheckCircle2, Plus } from 'lucide-react';
 import { temuShopService, type TemuShop } from '@/services/temuShopService';
 import { temuTemplateService, type TemuTemplate } from '@/services/temuTemplateService';
 import { temuTitleTemplateService, type TemuTitleTemplate } from '@/services/temuTitleTemplateService';
@@ -603,11 +603,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     <div className="space-y-2">
                       {loadingTemuTemplates ? (
                         <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
-                      ) : filteredTemuTemplates.length === 0 ? (
-                        <div className="text-sm text-orange-600 py-1.5">
-                          该分类未配置上架类目，
-                          <Link to="/workspace/settings/temu-templates" className="text-blue-600 hover:underline ml-1">去配置</Link>
-                        </div>
                       ) : (
                         <>
                           <div className="flex flex-wrap gap-1.5">
@@ -625,6 +620,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 {template.name || template.catName}
                               </button>
                             ))}
+                            <Link
+                              to="/workspace/settings/temu-templates"
+                              className="px-2 py-1 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
+                              title="配置更多上架类目"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Link>
                           </div>
                           {selectedTemuTemplate && (
                             <div className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 grid grid-cols-2 gap-x-6 gap-y-1">
@@ -660,11 +662,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     <div className="space-y-2">
                       {loadingTitleTemplates ? (
                         <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
-                      ) : filteredTitleTemplates.length === 0 ? (
-                        <div className="text-sm text-orange-600 py-1.5">
-                          该分类未配置标题规则，
-                          <Link to="/workspace/settings/temu-title-templates" className="text-blue-600 hover:underline ml-1">去配置</Link>
-                        </div>
                       ) : (
                         <>
                           <div className="flex flex-wrap gap-1.5">
@@ -682,6 +679,13 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 {template.name}
                               </button>
                             ))}
+                            <Link
+                              to="/workspace/settings/temu-title-templates"
+                              className="px-2 py-1 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
+                              title="配置更多标题规则"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Link>
                           </div>
                           {selectedTitleTemplate && (
                             <div className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 space-y-1">
