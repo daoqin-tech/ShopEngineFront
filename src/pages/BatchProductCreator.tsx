@@ -745,14 +745,14 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                         date={startTime}
                         onDateChange={setStartTime}
                         placeholder="开始时间"
-                        className="w-40"
+                        className="w-52"
                       />
                       <span className="text-gray-400">-</span>
                       <DateTimePicker
                         date={endTime}
                         onDateChange={setEndTime}
                         placeholder="结束时间"
-                        className="w-40"
+                        className="w-52"
                       />
                       <Button size="sm" onClick={handleApplyFilters}>搜索</Button>
                       <Button size="sm" variant="outline" onClick={handleResetFilters}>重置</Button>
