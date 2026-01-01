@@ -210,15 +210,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   useEffect(() => {
     const loadCoverTemplates = async () => {
       try {
-        setLoadingCoverTemplates(true);
         // 使用 getTemplates 获取完整模板信息（包含 productCategoryId）
         const templates = await coverProjectService.getTemplates();
         setCoverTemplates(templates || []);
       } catch (error) {
         console.error('Failed to load cover templates:', error);
         setCoverTemplates([]);
-      } finally {
-        setLoadingCoverTemplates(false);
       }
     };
     loadCoverTemplates();
@@ -250,7 +247,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
   // 套图模板筛选
   const [coverTemplates, setCoverTemplates] = useState<TemplateSelectionItem[]>([]);
   const [selectedCoverTemplateId, setSelectedCoverTemplateId] = useState<string>('');
-  const [loadingCoverTemplates, setLoadingCoverTemplates] = useState(false);
 
   // 根据选中的二级分类过滤套图模板
   const filteredCoverTemplates = React.useMemo(() => {
@@ -513,298 +509,263 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
             {/* 配置区域 */}
             <div className="p-6 border-b">
-              <div className="space-y-4">
-                {/* 第一行：店铺选择 */}
-                <div className="flex items-center gap-4">
-                  <Label className="text-sm font-medium w-20 shrink-0">店铺账号</Label>
+              {/* 商品配置 */}
+              <div className="grid grid-cols-[80px_1fr] gap-x-4 gap-y-3 items-start">
+                {/* 店铺账号 */}
+                <Label className="text-sm font-medium text-gray-600 pt-1.5 text-right">店铺</Label>
+                <div>
                   {loadingShops ? (
-                    <div className="text-sm text-muted-foreground">加载店铺中...</div>
+                    <div className="text-sm text-muted-foreground py-1.5">加载店铺中...</div>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {temuShops.map((shop) => (
-                        <button
-                          key={shop.id}
-                          type="button"
-                          onClick={() => {
-                            updateFormData('shopAccount', shop.id);
-                            // 切换店铺时清空规格和分类选择
-                            updateFormData('productSpec', '');
-                            updateFormData('productCategory', '');
-                            setSelectedParentId('');
-                          }}
-                          className={`
-                            px-3 py-1.5 rounded-md border text-sm transition-colors
-                            ${formData.shopAccount === shop.id
-                              ? 'border-primary bg-primary/10 text-primary font-medium'
-                              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                            }
-                          `}
-                        >
-                          {shop.name}
-                        </button>
-                      ))}
-                    </div>
+                    <Select value={formData.shopAccount} onValueChange={(value) => {
+                      updateFormData('shopAccount', value);
+                      updateFormData('productSpec', '');
+                      updateFormData('productCategory', '');
+                      setSelectedParentId('');
+                    }}>
+                      <SelectTrigger className="w-48 h-9">
+                        <SelectValue placeholder="选择店铺" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {temuShops.map((shop) => (
+                          <SelectItem key={shop.id} value={shop.id}>{shop.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
 
-                {/* 第二行：产品分类选择（选中店铺后显示） */}
+                {/* 产品分类 */}
                 {formData.shopAccount && (
-                  <div className="flex items-center gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0">产品分类</Label>
-                    {loadingCategories ? (
-                      <div className="text-sm text-muted-foreground">加载中...</div>
-                    ) : (
-                      <div className="flex gap-3">
-                        <Select
-                          value={selectedParentId}
-                          onValueChange={(value) => {
-                            setSelectedParentId(value);
-                            // 自动选择第一个二级分类
-                            const parent = parentCategories.find(p => p.id === value);
-                            const firstChild = parent?.children?.[0];
-                            if (firstChild) {
-                              updateFormData('productSpec', firstChild.id);
-                            } else {
-                              updateFormData('productSpec', '');
-                            }
-                            updateFormData('productCategory', '');
-                          }}
-                        >
-                          <SelectTrigger className="w-40 h-9">
-                            <SelectValue placeholder="一级分类" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {parentCategories.map((parent) => (
-                              <SelectItem key={parent.id} value={parent.id}>
-                                {parent.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={formData.productSpec}
-                          onValueChange={(value) => {
-                            updateFormData('productSpec', value);
-                            updateFormData('productCategory', '');
-                          }}
-                          disabled={!selectedParentId || currentChildCategories.length === 0}
-                        >
-                          <SelectTrigger className="w-40 h-9">
-                            <SelectValue placeholder="二级分类" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {currentChildCategories.map((child) => (
-                              <SelectItem key={child.id} value={child.id}>
-                                {child.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
+                  <>
+                    <Label className="text-sm font-medium text-gray-600 pt-1.5 text-right">分类</Label>
+                    <div className="flex gap-2">
+                      {loadingCategories ? (
+                        <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
+                      ) : (
+                        <>
+                          <Select
+                            value={selectedParentId}
+                            onValueChange={(value) => {
+                              setSelectedParentId(value);
+                              const parent = parentCategories.find(p => p.id === value);
+                              const firstChild = parent?.children?.[0];
+                              if (firstChild) {
+                                updateFormData('productSpec', firstChild.id);
+                              } else {
+                                updateFormData('productSpec', '');
+                              }
+                              updateFormData('productCategory', '');
+                            }}
+                          >
+                            <SelectTrigger className="w-36 h-9">
+                              <SelectValue placeholder="一级分类" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {parentCategories.map((parent) => (
+                                <SelectItem key={parent.id} value={parent.id}>{parent.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={formData.productSpec}
+                            onValueChange={(value) => {
+                              updateFormData('productSpec', value);
+                              updateFormData('productCategory', '');
+                            }}
+                            disabled={!selectedParentId || currentChildCategories.length === 0}
+                          >
+                            <SelectTrigger className="w-36 h-9">
+                              <SelectValue placeholder="二级分类" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currentChildCategories.map((child) => (
+                                <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </>
+                      )}
+                    </div>
+                  </>
                 )}
 
-                {/* 第三行：上架类目选择（选中二级分类后显示） */}
+                {/* 上架类目 */}
                 {formData.productSpec && (
-                  <div className="flex items-start gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">上架类目</Label>
-                    <div className="flex-1 space-y-2">
+                  <>
+                    <Label className="text-sm font-medium text-gray-600 pt-1.5 text-right">上架类目</Label>
+                    <div className="space-y-2">
                       {loadingTemuTemplates ? (
-                        <div className="text-sm text-muted-foreground">加载中...</div>
+                        <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
                       ) : filteredTemuTemplates.length === 0 ? (
-                        <div className="text-sm text-orange-600">
+                        <div className="text-sm text-orange-600 py-1.5">
                           该分类未配置上架类目，
-                          <Link to="/workspace/settings/temu-templates" className="text-blue-600 hover:underline ml-1">
-                            去配置
-                          </Link>
+                          <Link to="/workspace/settings/temu-templates" className="text-blue-600 hover:underline ml-1">去配置</Link>
                         </div>
                       ) : (
                         <>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {filteredTemuTemplates.map((template) => (
                               <button
                                 key={template.id}
                                 type="button"
                                 onClick={() => updateFormData('productCategory', template.id)}
-                                className={`
-                                  px-3 py-1.5 rounded-md border text-sm transition-colors
-                                  ${formData.productCategory === template.id
-                                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                                  }
-                                `}
+                                className={`px-2.5 py-1 rounded text-sm transition-colors ${
+                                  formData.productCategory === template.id
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
                               >
-                                {template.name || template.fullPath || template.catName}
+                                {template.name || template.catName}
                               </button>
                             ))}
                           </div>
-                          {/* 选中类目的详细信息 */}
                           {selectedTemuTemplate && (
-                            <div className="bg-blue-50/50 rounded-md px-3 py-2 text-xs text-gray-600">
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                <span className="text-gray-500">Temu分类: <span className="text-gray-700">{selectedTemuTemplate.fullPath || selectedTemuTemplate.catName}</span></span>
-                                {selectedTemuTemplate.productAttributes && selectedTemuTemplate.productAttributes.length > 0 && (
-                                  <span className="text-gray-500">属性: <span className="text-gray-700">{selectedTemuTemplate.productAttributes.map(attr => `${attr.propName}:${attr.propValue}`).join(', ')}</span></span>
-                                )}
-                                {selectedTemuTemplate.specifications && selectedTemuTemplate.specifications.length > 0 && (
-                                  <span className="text-gray-500">规格: <span className="text-gray-700">{selectedTemuTemplate.specifications.map(spec => `${spec.parentSpecName}(${spec.specValues.map(v => v.specName).join('/')})`).join(', ')}</span></span>
-                                )}
-                                {selectedTemuTemplate.skuDefaultConfig?.volumeWeightConfigs?.[0] && (() => {
-                                  const config = selectedTemuTemplate.skuDefaultConfig!.volumeWeightConfigs![0];
-                                  const parts = [];
-                                  if (config.longestSide || config.middleSide || config.shortestSide) {
-                                    parts.push(`${config.longestSide}×${config.middleSide}×${config.shortestSide}cm`);
-                                  }
-                                  if (config.weight !== undefined) parts.push(`${config.weight}g`);
-                                  if (config.supplierPrice !== undefined) parts.push(`¥${config.supplierPrice.toFixed(2)}`);
-                                  return parts.length > 0 ? (
-                                    <span className="text-gray-500">SKU: <span className="text-gray-700">{parts.join(' / ')}</span></span>
-                                  ) : null;
-                                })()}
-                              </div>
+                            <div className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 grid grid-cols-2 gap-x-6 gap-y-1">
+                              <div><span className="text-gray-400">Temu分类:</span> {selectedTemuTemplate.fullPath || selectedTemuTemplate.catName}</div>
+                              {selectedTemuTemplate.productAttributes && selectedTemuTemplate.productAttributes.length > 0 && (
+                                <div><span className="text-gray-400">属性:</span> {selectedTemuTemplate.productAttributes.map(attr => `${attr.propName}:${attr.propValue}`).join(', ')}</div>
+                              )}
+                              {selectedTemuTemplate.specifications && selectedTemuTemplate.specifications.length > 0 && (
+                                <div><span className="text-gray-400">规格:</span> {selectedTemuTemplate.specifications.map(spec => `${spec.parentSpecName}(${spec.specValues.map(v => v.specName).join('/')})`).join(', ')}</div>
+                              )}
+                              {selectedTemuTemplate.skuDefaultConfig?.volumeWeightConfigs?.[0] && (() => {
+                                const config = selectedTemuTemplate.skuDefaultConfig!.volumeWeightConfigs![0];
+                                const parts = [];
+                                if (config.longestSide || config.middleSide || config.shortestSide) {
+                                  parts.push(`${config.longestSide}×${config.middleSide}×${config.shortestSide}cm`);
+                                }
+                                if (config.weight !== undefined) parts.push(`${config.weight}g`);
+                                if (config.supplierPrice !== undefined) parts.push(`¥${config.supplierPrice.toFixed(2)}`);
+                                return parts.length > 0 ? <div><span className="text-gray-400">SKU:</span> {parts.join(' / ')}</div> : null;
+                              })()}
                             </div>
                           )}
                         </>
                       )}
                     </div>
-                  </div>
+                  </>
                 )}
 
-                {/* 标题生成规则选择（选中二级分类后显示） */}
+                {/* 标题规则 */}
                 {formData.productSpec && (
-                  <div className="flex items-start gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0 pt-1.5">标题规则</Label>
-                    <div className="flex-1 space-y-2">
+                  <>
+                    <Label className="text-sm font-medium text-gray-600 pt-1.5 text-right">标题规则</Label>
+                    <div className="space-y-2">
                       {loadingTitleTemplates ? (
-                        <div className="text-sm text-muted-foreground">加载中...</div>
+                        <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
                       ) : filteredTitleTemplates.length === 0 ? (
-                        <div className="text-sm text-orange-600">
-                          该分类未配置标题生成规则，
-                          <Link to="/workspace/settings/temu-title-templates" className="text-blue-600 hover:underline ml-1">
-                            去配置
-                          </Link>
+                        <div className="text-sm text-orange-600 py-1.5">
+                          该分类未配置标题规则，
+                          <Link to="/workspace/settings/temu-title-templates" className="text-blue-600 hover:underline ml-1">去配置</Link>
                         </div>
                       ) : (
                         <>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {filteredTitleTemplates.map((template) => (
                               <button
                                 key={template.id}
                                 type="button"
                                 onClick={() => updateFormData('titleTemplateId', template.id)}
-                                className={`
-                                  px-3 py-1.5 rounded-md border text-sm transition-colors
-                                  ${formData.titleTemplateId === template.id
-                                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                                    : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                                  }
-                                `}
+                                className={`px-2.5 py-1 rounded text-sm transition-colors ${
+                                  formData.titleTemplateId === template.id
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
                               >
                                 {template.name}
                               </button>
                             ))}
                           </div>
-                          {/* 选中规则的详细信息 */}
                           {selectedTitleTemplate && (
-                            <div className="bg-purple-50/50 rounded-md px-3 py-2 text-xs text-gray-600">
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                {selectedTitleTemplate.categoryKeywordsZh && (
-                                  <span className="text-gray-500">类目关键词(中): <span className="text-gray-700">{selectedTitleTemplate.categoryKeywordsZh}</span></span>
-                                )}
-                                {selectedTitleTemplate.categoryKeywordsEn && (
-                                  <span className="text-gray-500">类目关键词(英): <span className="text-gray-700">{selectedTitleTemplate.categoryKeywordsEn}</span></span>
-                                )}
-                                {selectedTitleTemplate.theme && (
-                                  <span className="text-gray-500">主题: <span className="text-gray-700">{selectedTitleTemplate.theme}</span></span>
-                                )}
-                                {selectedTitleTemplate.festivalKeywords && (
-                                  <span className="text-gray-500">节日关键词: <span className="text-gray-700">{selectedTitleTemplate.festivalKeywords}</span></span>
-                                )}
-                                <span className="text-gray-500">字数限制: <span className="text-gray-700">中文{selectedTitleTemplate.maxLengthZh}字 / 英文{selectedTitleTemplate.maxLengthEn}字</span></span>
-                              </div>
+                            <div className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 grid grid-cols-2 gap-x-6 gap-y-1">
+                              {selectedTitleTemplate.categoryKeywordsZh && (
+                                <div><span className="text-gray-400">类目关键词(中):</span> {selectedTitleTemplate.categoryKeywordsZh}</div>
+                              )}
+                              {selectedTitleTemplate.categoryKeywordsEn && (
+                                <div><span className="text-gray-400">类目关键词(英):</span> {selectedTitleTemplate.categoryKeywordsEn}</div>
+                              )}
+                              {selectedTitleTemplate.theme && (
+                                <div><span className="text-gray-400">主题:</span> {selectedTitleTemplate.theme}</div>
+                              )}
+                              {selectedTitleTemplate.festivalKeywords && (
+                                <div><span className="text-gray-400">节日关键词:</span> {selectedTitleTemplate.festivalKeywords}</div>
+                              )}
+                              <div><span className="text-gray-400">字数限制:</span> 中文{selectedTitleTemplate.maxLengthZh}字 / 英文{selectedTitleTemplate.maxLengthEn}字</div>
                             </div>
                           )}
                         </>
                       )}
                     </div>
-                  </div>
+                  </>
                 )}
+              </div>
 
-                {/* 第四行：套图模板筛选（选中二级分类后显示） */}
-                {formData.productSpec && filteredCoverTemplates.length > 0 && (
-                  <div className="flex items-center gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0">套图模板</Label>
-                    {loadingCoverTemplates ? (
-                      <div className="text-sm text-muted-foreground">加载中...</div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedCoverTemplateId('');
-                            setCurrentPage(1);
-                            fetchAvailableImages(1, selectedCategoryName, undefined);
-                          }}
-                          className={`
-                            px-3 py-1.5 rounded-md border text-sm transition-colors
-                            ${!selectedCoverTemplateId
-                              ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium'
-                              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                            }
-                          `}
-                        >
-                          全部模板
-                        </button>
-                        {filteredCoverTemplates.map((template) => (
+              {/* 图片筛选 - 分隔线 */}
+              {formData.productSpec && (
+                <>
+                  <div className="border-t my-4"></div>
+                  <div className="grid grid-cols-[80px_1fr] gap-x-4 gap-y-3 items-center">
+                    {/* 套图模板 */}
+                    {filteredCoverTemplates.length > 0 && (
+                      <>
+                        <Label className="text-sm font-medium text-gray-600 text-right">套图模板</Label>
+                        <div className="flex flex-wrap gap-1.5">
                           <button
-                            key={template.id}
                             type="button"
-                            onClick={() => setSelectedCoverTemplateId(template.id)}
-                            className={`
-                              px-3 py-1.5 rounded-md border text-sm transition-colors
-                              ${selectedCoverTemplateId === template.id
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium'
-                                : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
-                              }
-                            `}
+                            onClick={() => {
+                              setSelectedCoverTemplateId('');
+                              setCurrentPage(1);
+                              fetchAvailableImages(1, selectedCategoryName, undefined);
+                            }}
+                            className={`px-2.5 py-1 rounded text-sm transition-colors ${
+                              !selectedCoverTemplateId
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                            }`}
                           >
-                            {template.name}
+                            全部
                           </button>
-                        ))}
-                      </div>
+                          {filteredCoverTemplates.map((template) => (
+                            <button
+                              key={template.id}
+                              type="button"
+                              onClick={() => setSelectedCoverTemplateId(template.id)}
+                              className={`px-2.5 py-1 rounded text-sm transition-colors ${
+                                selectedCoverTemplateId === template.id
+                                  ? 'bg-orange-500 text-white'
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {template.name}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
-                  </div>
-                )}
 
-                {/* 第五行：时间筛选 */}
-                {formData.productSpec && (
-                  <div className="flex items-center gap-4">
-                    <Label className="text-sm font-medium w-20 shrink-0">时间筛选</Label>
-                    <div className="flex items-center gap-3">
+                    {/* 时间筛选 */}
+                    <Label className="text-sm font-medium text-gray-600 text-right">时间</Label>
+                    <div className="flex items-center gap-2">
                       <DateTimePicker
                         date={startTime}
                         onDateChange={setStartTime}
                         placeholder="开始时间"
-                        className="w-44"
+                        className="w-40"
                       />
                       <span className="text-gray-400">-</span>
                       <DateTimePicker
                         date={endTime}
                         onDateChange={setEndTime}
                         placeholder="结束时间"
-                        className="w-44"
+                        className="w-40"
                       />
-                      <Button size="sm" onClick={handleApplyFilters}>
-                        搜索
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={handleResetFilters}>
-                        重置
-                      </Button>
+                      <Button size="sm" onClick={handleApplyFilters}>搜索</Button>
+                      <Button size="sm" variant="outline" onClick={handleResetFilters}>重置</Button>
                     </div>
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
 
             {/* 商品图列表 */}
