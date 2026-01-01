@@ -697,7 +697,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                               {selectedTitleTemplate.festivalKeywords && (
                                 <div><span className="text-gray-400">节日关键词:</span> {selectedTitleTemplate.festivalKeywords}</div>
                               )}
-                              <div><span className="text-gray-400">字数限制:</span> 中文{selectedTitleTemplate.maxLengthZh}字 / 英文{selectedTitleTemplate.maxLengthEn}字</div>
                             </div>
                           )}
                         </>
