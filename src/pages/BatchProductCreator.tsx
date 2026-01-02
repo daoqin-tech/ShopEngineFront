@@ -392,7 +392,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
     }
   };
 
-  // 执行创建商品
+  // 执行批量上架
   const handleCreateProducts = async () => {
     const selectedShop = temuShops.find(shop => shop.id === formData.shopAccount);
     const selectedTemuTemplate = allTemuTemplates.find(t => t.id === formData.productCategory);
@@ -431,12 +431,12 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
 
       // 显示成功通知
       toast.success(`已提交 ${taskIds.length} 个商品的创建任务`, {
-        description: '商品标题由 AI 自动生成，请稍后在商品列表中查看',
+        description: '商品标题由 AI 自动生成，请稍后在上架记录中查看',
         duration: 5000,
       });
     } catch (error: any) {
-      console.error('批量创建商品失败:', error);
-      toast.error(error.response?.data?.message || '创建商品失败，请重试');
+      console.error('批量上架失败:', error);
+      toast.error(error.response?.data?.message || '上架失败，请重试');
     } finally {
       setCreating(false);
     }
@@ -450,7 +450,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold">创建商品</h1>
+              <h1 className="text-2xl font-bold">批量上架</h1>
               <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-3 py-1.5 rounded-full">
                 <Sparkles className="w-4 h-4" />
                 <span className="font-medium">商品标题将由AI自动生成</span>
@@ -496,7 +496,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                 disabled={creating || !formData.shopAccount || !selectedParentId || !formData.productSpec || !formData.productCategory || !formData.titleTemplateId || selectedProducts.length === 0}
                 className="min-w-24"
               >
-                {creating ? '创建中...' : `创建商品 (${selectedProducts.length})`}
+                {creating ? '上架中...' : `上架商品 (${selectedProducts.length})`}
               </Button>
             </div>
           </div>
@@ -1120,7 +1120,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>确认创建商品</DialogTitle>
+            <DialogTitle>确认上架商品</DialogTitle>
             <DialogDescription>
               即将创建 {selectedProducts.length} 个商品，商品标题将由 AI 自动生成。
             </DialogDescription>

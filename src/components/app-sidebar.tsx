@@ -49,28 +49,28 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
         isActive: false,
         items: [
           {
-            title: "创建商品",
+            title: "批量上架",
             url: "/workspace/batch-upload/create",
           },
           {
-            title: "商品列表",
+            title: "上架记录",
             url: "/workspace/batch-upload",
           },
           {
-            title: "订单统计",
+            title: "销量分析",
             url: "/workspace/order-stats",
           },
           {
-            title: "标题规则",
-            url: "/workspace/settings/temu-title-templates",
+            title: "店铺管理",
+            url: "/workspace/settings/temu-shops",
           },
           {
             title: "上架类目",
             url: "/workspace/settings/temu-templates",
           },
           {
-            title: "Temu店铺",
-            url: "/workspace/settings/temu-shops",
+            title: "标题模板",
+            url: "/workspace/settings/temu-title-templates",
           },
         ],
       },

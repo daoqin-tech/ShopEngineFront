@@ -246,7 +246,7 @@ export default function OrderStats() {
     <div className="p-6 space-y-6 bg-zinc-50 min-h-screen">
       {/* 页面标题 */}
       <div>
-        <h1 className="text-xl font-semibold text-zinc-900">订单统计</h1>
+        <h1 className="text-xl font-semibold text-zinc-900">销量分析</h1>
         <p className="text-sm text-zinc-500 mt-0.5">查看销售数据，分析热销商品</p>
       </div>
 

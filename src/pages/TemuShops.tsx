@@ -413,7 +413,7 @@ export function TemuShops() {
       {/* 页面标题 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Temu 店铺管理</h1>
+          <h1 className="text-2xl font-bold text-gray-900">店铺管理</h1>
           <p className="text-gray-600">管理 Temu 平台店铺信息和 API 配置</p>
         </div>
         <div className="flex items-center gap-3">

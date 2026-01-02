@@ -497,8 +497,8 @@ export function ProductListing() {
       {/* 页面标题 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">商品列表</h1>
-          <p className="text-gray-600">商品信息管理</p>
+          <h1 className="text-2xl font-bold text-gray-900">上架记录</h1>
+          <p className="text-gray-600">查看商品上架状态</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
