@@ -39,7 +39,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Upload, TrendingUp, Package, ShoppingCart, Image as ImageIcon, X, Search, LayoutGrid, LayoutList } from 'lucide-react'
+import { Upload, TrendingUp, Package, ShoppingCart, Image as ImageIcon, X, Search, LayoutGrid, LayoutList, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type {
   OrderImportItem,
   OrderStatsResponse,
@@ -51,6 +52,8 @@ import * as orderService from '@/services/orderService'
 import { temuShopService, TemuShop } from '@/services/temuShopService'
 
 export default function OrderStats() {
+  const navigate = useNavigate()
+
   // 统计数据状态
   const [stats, setStats] = useState<OrderStatsResponse | null>(null)
   const [topSKUs, setTopSKUs] = useState<SKUSalesItem[]>([])
@@ -451,10 +454,29 @@ export default function OrderStats() {
 
                     {/* 商品信息 */}
                     <div className="p-3 space-y-1">
-                      <p className="text-xs font-mono text-zinc-400 truncate">{item.sku}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-mono text-zinc-400 truncate flex-1">{item.sku}</p>
+                        {item.aiProjectId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/materials/project/${item.aiProjectId}/edit`)
+                            }}
+                            className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors"
+                            title={`查看生图项目: ${item.aiProjectName || item.aiProjectId}`}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                       <p className="text-sm text-zinc-900 truncate" title={item.productName}>
                         {item.productName || '未知商品'}
                       </p>
+                      {item.productNameEn && (
+                        <p className="text-xs text-zinc-500 truncate" title={item.productNameEn}>
+                          {item.productNameEn}
+                        </p>
+                      )}
                       <div className="flex items-center justify-between pt-1">
                         <span className="text-xs text-zinc-400 truncate max-w-[70%]" title={item.shopName}>
                           {item.shopName}
@@ -505,10 +527,29 @@ export default function OrderStats() {
 
                         {/* SKU和名称 */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-mono text-zinc-400 truncate">{item.sku}</p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs font-mono text-zinc-400 truncate">{item.sku}</p>
+                            {item.aiProjectId && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/materials/project/${item.aiProjectId}/edit`)
+                                }}
+                                className="p-0.5 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors flex-shrink-0"
+                                title={`查看生图项目: ${item.aiProjectName || item.aiProjectId}`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                           <p className="text-sm text-zinc-900 truncate" title={item.productName}>
                             {item.productName || '未知商品'}
                           </p>
+                          {item.productNameEn && (
+                            <p className="text-xs text-zinc-500 truncate" title={item.productNameEn}>
+                              {item.productNameEn}
+                            </p>
+                          )}
                         </div>
 
                         {/* 店铺 */}

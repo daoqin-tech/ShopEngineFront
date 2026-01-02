@@ -46,12 +46,15 @@ export interface SKUSalesItem {
   rank: number;
   sku: string;
   productName: string;
+  productNameEn: string;
   previewImage: string;
   productImages: string[];
   totalSales: number;
   orderCount: number;
   shopId: string;
   shopName: string;
+  aiProjectId: string;
+  aiProjectName: string;
 }
 
 export interface TopSKUsResponse {
