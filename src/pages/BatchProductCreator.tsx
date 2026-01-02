@@ -600,6 +600,16 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                     <div className="space-y-2">
                       {loadingTemuTemplates ? (
                         <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
+                      ) : filteredTemuTemplates.length === 0 ? (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 rounded px-3 py-2">
+                          <span>暂无上架类目配置</span>
+                          <Link
+                            to="/workspace/settings/temu-templates"
+                            className="text-blue-600 hover:text-blue-700 underline"
+                          >
+                            去配置
+                          </Link>
+                        </div>
                       ) : (
                         <>
                           <div className="flex items-center gap-2">
@@ -607,7 +617,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                               value={formData.productCategory}
                               onValueChange={(value) => updateFormData('productCategory', value)}
                             >
-                              <SelectTrigger className="flex-1">
+                              <SelectTrigger className="w-64">
                                 <SelectValue placeholder="请选择上架类目" />
                               </SelectTrigger>
                               <SelectContent>
@@ -653,13 +663,23 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                   </>
                 )}
 
-                {/* 标题规则 */}
+                {/* 标题模板 */}
                 {formData.productSpec && (
                   <>
-                    <Label className="text-sm font-medium text-gray-600 pt-1.5 text-right">标题规则</Label>
+                    <Label className="text-sm font-medium text-gray-600 pt-1.5 text-right">标题模板</Label>
                     <div className="space-y-2">
                       {loadingTitleTemplates ? (
                         <div className="text-sm text-muted-foreground py-1.5">加载中...</div>
+                      ) : filteredTitleTemplates.length === 0 ? (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 rounded px-3 py-2">
+                          <span>暂无标题模板配置</span>
+                          <Link
+                            to="/workspace/settings/temu-title-templates"
+                            className="text-blue-600 hover:text-blue-700 underline"
+                          >
+                            去配置
+                          </Link>
+                        </div>
                       ) : (
                         <>
                           <div className="flex items-center gap-2">
@@ -667,8 +687,8 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                               value={formData.titleTemplateId}
                               onValueChange={(value) => updateFormData('titleTemplateId', value)}
                             >
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="请选择标题规则" />
+                              <SelectTrigger className="w-64">
+                                <SelectValue placeholder="请选择标题模板" />
                               </SelectTrigger>
                               <SelectContent>
                                 {filteredTitleTemplates.map((template) => (
@@ -681,7 +701,7 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                             <Link
                               to="/workspace/settings/temu-title-templates"
                               className="px-2 py-2 rounded text-sm transition-colors bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center"
-                              title="配置更多标题规则"
+                              title="配置更多标题模板"
                             >
                               <Plus className="h-4 w-4" />
                             </Link>
