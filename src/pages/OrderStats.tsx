@@ -417,9 +417,9 @@ export default function OrderStats() {
                     key={item.sku}
                     className="bg-white rounded-lg border border-zinc-200 overflow-hidden hover:shadow-md transition-shadow group"
                   >
-                    {/* 商品图片 */}
+                    {/* 商品图片 - 改为 3:2 比例，更小 */}
                     <div
-                      className="aspect-square bg-zinc-50 overflow-hidden cursor-pointer relative"
+                      className="aspect-[3/2] bg-zinc-50 overflow-hidden cursor-pointer relative"
                       onClick={() => handleOpenImagePreview(item.productImages || [item.previewImage])}
                     >
                       {item.previewImage ? (
@@ -437,7 +437,7 @@ export default function OrderStats() {
                         </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon className="w-12 h-12 text-zinc-200" />
+                          <ImageIcon className="w-10 h-10 text-zinc-200" />
                         </div>
                       )}
 
@@ -446,42 +446,39 @@ export default function OrderStats() {
                         #{item.rank}
                       </div>
 
-                      {/* 销量标签 */}
-                      <div className="absolute top-2 right-2 bg-white/90 text-zinc-900 text-xs font-medium px-2 py-0.5 rounded">
+                      {/* 销量标签 - 更大更明显 */}
+                      <div className="absolute bottom-2 right-2 bg-orange-500 text-white text-sm font-bold px-2.5 py-1 rounded-md shadow-sm">
                         {item.totalSales} 件
                       </div>
                     </div>
 
                     {/* 商品信息 */}
-                    <div className="p-3 space-y-1">
-                      <div className="flex items-center gap-1">
-                        <p className="text-xs font-mono text-zinc-400 truncate flex-1">{item.sku}</p>
+                    <div className="p-3 space-y-2">
+                      {/* 英文名 - 完整显示 */}
+                      {item.productNameEn && (
+                        <p className="text-sm text-zinc-900 leading-snug line-clamp-3">
+                          {item.productNameEn}
+                        </p>
+                      )}
+
+                      {/* 底部：店铺 + 生图项目按钮 */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-xs text-zinc-400 truncate max-w-[60%]" title={item.shopName}>
+                          {item.shopName}
+                        </span>
                         {item.aiProjectId && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              navigate(`/materials/project/${item.aiProjectId}/edit`)
+                              navigate(`/workspace/project/${item.aiProjectId}/image-generation`)
                             }}
-                            className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors"
-                            title={`查看生图项目: ${item.aiProjectName || item.aiProjectId}`}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                            title={`查看生图项目: ${item.aiProjectName || ''}`}
                           >
                             <ExternalLink className="w-3 h-3" />
+                            生图
                           </button>
                         )}
-                      </div>
-                      <p className="text-sm text-zinc-900 truncate" title={item.productName}>
-                        {item.productName || '未知商品'}
-                      </p>
-                      {item.productNameEn && (
-                        <p className="text-xs text-zinc-500 truncate" title={item.productNameEn}>
-                          {item.productNameEn}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-xs text-zinc-400 truncate max-w-[70%]" title={item.shopName}>
-                          {item.shopName}
-                        </span>
-                        <span className="text-xs text-zinc-500">{item.orderCount} 单</span>
                       </div>
                     </div>
                   </div>
@@ -525,43 +522,39 @@ export default function OrderStats() {
                           )}
                         </div>
 
-                        {/* SKU和名称 */}
+                        {/* 英文名称 */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <p className="text-xs font-mono text-zinc-400 truncate">{item.sku}</p>
-                            {item.aiProjectId && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  navigate(`/materials/project/${item.aiProjectId}/edit`)
-                                }}
-                                className="p-0.5 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors flex-shrink-0"
-                                title={`查看生图项目: ${item.aiProjectName || item.aiProjectId}`}
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-sm text-zinc-900 truncate" title={item.productName}>
-                            {item.productName || '未知商品'}
+                          <p className="text-sm text-zinc-900 line-clamp-2" title={item.productNameEn}>
+                            {item.productNameEn || item.productName || '未知商品'}
                           </p>
-                          {item.productNameEn && (
-                            <p className="text-xs text-zinc-500 truncate" title={item.productNameEn}>
-                              {item.productNameEn}
-                            </p>
-                          )}
                         </div>
 
                         {/* 店铺 */}
-                        <span className="text-xs text-zinc-400 w-28 truncate text-right" title={item.shopName}>
+                        <span className="text-xs text-zinc-400 w-24 truncate text-right" title={item.shopName}>
                           {item.shopName}
                         </span>
 
-                        {/* 销量和订单数 */}
-                        <div className="text-right w-20">
-                          <p className="text-sm font-semibold text-zinc-900">{item.totalSales}</p>
-                          <p className="text-xs text-zinc-400">{item.orderCount} 单</p>
+                        {/* 销量 - 更明显 */}
+                        <div className="w-20 text-right">
+                          <span className="inline-block bg-orange-500 text-white text-sm font-bold px-2 py-0.5 rounded">
+                            {item.totalSales} 件
+                          </span>
                         </div>
+
+                        {/* 生图按钮 */}
+                        {item.aiProjectId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/workspace/project/${item.aiProjectId}/image-generation`)
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors flex-shrink-0"
+                            title={`查看生图项目: ${item.aiProjectName || ''}`}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            生图
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
