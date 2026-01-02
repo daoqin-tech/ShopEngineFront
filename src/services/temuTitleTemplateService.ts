@@ -12,8 +12,6 @@ export interface TemuTitleTemplate {
   categoryKeywordsEn: string;
   productSpec: string;
   productUsage: string;
-  theme: string; // 主题
-  festivalKeywords: string; // 节日场景
   // 示例标题
   sampleTitleZh: string;
   sampleTitleEn: string;
@@ -37,8 +35,6 @@ export interface CreateTemuTitleTemplateRequest {
   categoryKeywordsEn?: string;
   productSpec?: string;
   productUsage?: string;
-  theme?: string;
-  festivalKeywords?: string;
 }
 
 // 更新标题模板请求
@@ -49,8 +45,6 @@ export interface UpdateTemuTitleTemplateRequest {
   categoryKeywordsEn?: string;
   productSpec?: string;
   productUsage?: string;
-  theme?: string;
-  festivalKeywords?: string;
   sampleTitleZh?: string;
   sampleTitleEn?: string;
   isActive: boolean;
@@ -62,8 +56,6 @@ export interface TitlePreviewRequest {
   categoryKeywordsEn?: string;
   productSpec?: string;
   productUsage?: string;
-  theme?: string;
-  festivalKeywords?: string;
 }
 
 // 标题预览响应

@@ -60,8 +60,6 @@ export function TemuTitleTemplates() {
     categoryKeywordsEn: '',
     productSpec: '',
     productUsage: '',
-    theme: '',
-    festivalKeywords: '',
   });
 
   // 示例标题（从预览结果保存）
@@ -134,8 +132,6 @@ export function TemuTitleTemplates() {
       categoryKeywordsEn: '',
       productSpec: '',
       productUsage: '',
-      theme: '',
-      festivalKeywords: '',
     });
     setSelectedParentCategoryId('');
     setSelectedChildCategoryId('');
@@ -155,8 +151,6 @@ export function TemuTitleTemplates() {
       categoryKeywordsEn: template.categoryKeywordsEn || '',
       productSpec: template.productSpec || '',
       productUsage: template.productUsage || '',
-      theme: template.theme || '',
-      festivalKeywords: template.festivalKeywords || '',
     });
     // 如果模板已关联分类，找到对应的父子分类并设置
     if (template.productCategoryId) {
@@ -196,8 +190,6 @@ export function TemuTitleTemplates() {
       categoryKeywordsEn: template.categoryKeywordsEn || '',
       productSpec: template.productSpec || '',
       productUsage: template.productUsage || '',
-      theme: template.theme || '',
-      festivalKeywords: template.festivalKeywords || '',
     });
     // 如果模板已关联分类，找到对应的父子分类并设置
     if (template.productCategoryId) {
@@ -237,8 +229,6 @@ export function TemuTitleTemplates() {
         categoryKeywordsEn: formData.categoryKeywordsEn,
         productSpec: formData.productSpec,
         productUsage: formData.productUsage,
-        theme: formData.theme,
-        festivalKeywords: formData.festivalKeywords,
       });
 
       setPreviewResult(result);
@@ -306,8 +296,6 @@ export function TemuTitleTemplates() {
         categoryKeywordsEn: template.categoryKeywordsEn,
         productSpec: template.productSpec,
         productUsage: template.productUsage,
-        theme: template.theme,
-        festivalKeywords: template.festivalKeywords,
         sampleTitleZh: template.sampleTitleZh,
         sampleTitleEn: template.sampleTitleEn,
         isActive: !template.isActive,
@@ -537,34 +525,12 @@ export function TemuTitleTemplates() {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-3xl w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-xl">
-                  {editingTemplate ? '编辑标题规则' : '新建标题规则'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingTemplate ? '修改标题生成规则配置' : '创建新的 AI 标题生成规则'}
-                </DialogDescription>
-              </div>
-              <Button
-                type="button"
-                onClick={handlePreview}
-                disabled={previewing}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              >
-                {previewing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    AI 生成示例标题
-                  </>
-                )}
-              </Button>
-            </div>
+            <DialogTitle className="text-xl">
+              {editingTemplate ? '编辑标题规则' : '新建标题规则'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTemplate ? '修改标题生成规则配置' : '创建新的 AI 标题生成规则'}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
@@ -723,45 +689,38 @@ export function TemuTitleTemplates() {
                     rows={2}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="theme" className="flex items-center gap-1">
-                    主题
-                    <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">推荐填写</span>
-                  </Label>
-                  <Textarea
-                    id="theme"
-                    value={formData.theme}
-                    onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
-                    placeholder="例如：简约风格、卡通图案、复古风"
-                    rows={2}
-                  />
-                  <p className="text-xs text-gray-500">描述产品的风格或主题特点</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="festivalKeywords" className="flex items-center gap-1">
-                    节日场景
-                    <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">蹭流量</span>
-                  </Label>
-                  <Textarea
-                    id="festivalKeywords"
-                    value={formData.festivalKeywords}
-                    onChange={(e) => setFormData({ ...formData, festivalKeywords: e.target.value })}
-                    placeholder="例如：Christmas, Valentine's Day, Birthday"
-                    rows={2}
-                  />
-                  <p className="text-xs text-gray-500">提前1-2个月布局季节性关键词</p>
-                </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               取消
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? '保存中...' : '保存'}
+            <Button
+              type="button"
+              onClick={handlePreview}
+              disabled={previewing}
+              variant="outline"
+              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+            >
+              {previewing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  生成中
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  生成示例
+                </>
+              )}
             </Button>
+            {(previewResult || sampleTitleZh || editingTemplate) && (
+              <Button onClick={handleSubmit} disabled={submitting}>
+                {submitting ? '保存中...' : '保存'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -695,9 +695,6 @@ export function BatchProductCreator({}: BatchProductCreatorProps) {
                                 {selectedTitleTemplate.categoryKeywordsEn && (
                                   <div><span className="text-gray-400">类目关键词(英):</span> {selectedTitleTemplate.categoryKeywordsEn}</div>
                                 )}
-                                {selectedTitleTemplate.festivalKeywords && (
-                                  <div><span className="text-gray-400">节日关键词:</span> {selectedTitleTemplate.festivalKeywords}</div>
-                                )}
                               </div>
                               {(selectedTitleTemplate.sampleTitleZh || selectedTitleTemplate.sampleTitleEn) && (
                                 <div className="border-t pt-1 mt-1 space-y-0.5">
