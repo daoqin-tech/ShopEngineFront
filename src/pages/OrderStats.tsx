@@ -54,10 +54,12 @@ export default function OrderStats() {
   // 统计数据状态
   const [stats, setStats] = useState<OrderStatsResponse | null>(null)
   const [topSKUs, setTopSKUs] = useState<SKUSalesItem[]>([])
+  const [recentTopSKUs, setRecentTopSKUs] = useState<SKUSalesItem[]>([]) // 近7天热销
   const [shopStats, setShopStats] = useState<ShopSalesItem[]>([])
   const [dailySales, setDailySales] = useState<DailySalesItem[]>([])
   const [shops, setShops] = useState<TemuShop[]>([])
   const [loading, setLoading] = useState(true)
+  const [rankingTab, setRankingTab] = useState<'all' | 'recent'>('recent') // 热销排行子Tab
 
   // 筛选条件
   const [startDate, setStartDate] = useState('')
@@ -87,6 +89,17 @@ export default function OrderStats() {
     }
   }, [])
 
+  // 计算近7天的日期范围
+  const getRecent7DaysRange = () => {
+    const today = new Date()
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(today.getDate() - 6) // 包括今天共7天
+    return {
+      startDate: sevenDaysAgo.toISOString().split('T')[0],
+      endDate: today.toISOString().split('T')[0],
+    }
+  }
+
   // 获取统计数据
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -97,15 +110,25 @@ export default function OrderStats() {
         shopId: selectedShopId || undefined,
       }
 
-      const [statsRes, topSKUsRes, shopStatsRes, dailySalesRes] = await Promise.all([
+      // 近7天参数
+      const recent7Days = getRecent7DaysRange()
+      const recentParams = {
+        startDate: recent7Days.startDate,
+        endDate: recent7Days.endDate,
+        shopId: selectedShopId || undefined,
+      }
+
+      const [statsRes, topSKUsRes, recentTopSKUsRes, shopStatsRes, dailySalesRes] = await Promise.all([
         orderService.getStats(params),
         orderService.getTopSKUs({ ...params, limit: 20 }),
+        orderService.getTopSKUs({ ...recentParams, limit: 20 }), // 近7天热销
         orderService.getShopStats(params),
         orderService.getDailySales(params),
       ])
 
       setStats(statsRes)
       setTopSKUs(topSKUsRes?.items || [])
+      setRecentTopSKUs(recentTopSKUsRes?.items || [])
       setShopStats(shopStatsRes?.items || [])
       setDailySales(dailySalesRes?.items || [])
     } catch (error) {
@@ -334,8 +357,29 @@ export default function OrderStats() {
 
         {/* 热销排行 Tab */}
         <TabsContent value="ranking" className="space-y-4">
-          {/* 视图切换按钮 */}
-          <div className="flex justify-end">
+          {/* 工具栏：子Tab切换 + 视图切换 */}
+          <div className="flex items-center justify-between">
+            {/* 近7天/总榜切换 */}
+            <div className="flex items-center bg-zinc-100 rounded-lg p-1">
+              <button
+                onClick={() => setRankingTab('recent')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  rankingTab === 'recent' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                近7天
+              </button>
+              <button
+                onClick={() => setRankingTab('all')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  rankingTab === 'all' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                总榜
+              </button>
+            </div>
+
+            {/* 视图切换按钮 */}
             <div className="flex items-center bg-zinc-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('grid')}
@@ -358,11 +402,14 @@ export default function OrderStats() {
             </div>
           </div>
 
-          {topSKUs.length > 0 ? (
+          {/* 当前显示的SKU列表 */}
+          {(() => {
+            const currentSKUs = rankingTab === 'recent' ? recentTopSKUs : topSKUs
+            return currentSKUs.length > 0 ? (
             viewMode === 'grid' ? (
               /* 网格视图 - 大图展示 */
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {topSKUs.map((item) => (
+                {currentSKUs.map((item) => (
                   <div
                     key={item.sku}
                     className="bg-white rounded-lg border border-zinc-200 overflow-hidden hover:shadow-md transition-shadow group"
@@ -423,7 +470,7 @@ export default function OrderStats() {
               <Card className="border-zinc-200">
                 <CardContent className="p-0">
                   <div className="divide-y divide-zinc-100">
-                    {topSKUs.map((item) => (
+                    {currentSKUs.map((item) => (
                       <div
                         key={item.sku}
                         className="flex items-center gap-4 px-4 py-3 hover:bg-zinc-50 transition-colors group"
@@ -485,11 +532,12 @@ export default function OrderStats() {
               <CardContent className="p-0">
                 <div className="h-48 flex flex-col items-center justify-center text-zinc-400">
                   <Package className="w-10 h-10 mb-2 opacity-30" />
-                  <p className="text-sm">暂无数据</p>
+                  <p className="text-sm">{rankingTab === 'recent' ? '近7天暂无销售数据' : '暂无数据'}</p>
                 </div>
               </CardContent>
             </Card>
-          )}
+          )
+          })()}
         </TabsContent>
 
         {/* 销售趋势 Tab */}
