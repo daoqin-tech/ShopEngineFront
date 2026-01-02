@@ -27,6 +27,7 @@ import { SystemConfigPage } from "@/pages/SystemConfig"
 import { TemuShops } from "@/pages/TemuShops"
 import { TemuTemplates } from "@/pages/TemuTemplates"
 import { TemuTitleTemplates } from "@/pages/TemuTitleTemplates"
+import OrderStats from "@/pages/OrderStats"
 import { Toaster } from "sonner"
 
 
@@ -200,6 +201,14 @@ function App() {
             <ProtectedRoute>
               <WorkspaceLayout>
                 <TemuShops />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/order-stats" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <OrderStats />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />
