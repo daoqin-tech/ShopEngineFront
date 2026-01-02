@@ -269,7 +269,8 @@ export function SenfanExportDialog({
     // 判断是否需要用户排序：
     // 1. 是日历类型（需要固定顺序）
     // 2. 且图片尚未排序（imageSorted 为 false 或 undefined）
-    const needsReorder = needsUserReorder(category) && !product.imageSorted;
+    // 注：暂时注释掉 imageSorted 判断，强制每次都弹出排序对话框
+    const needsReorder = needsUserReorder(category); // && !product.imageSorted;
 
     if (needsReorder) {
       setStage('reorder');
