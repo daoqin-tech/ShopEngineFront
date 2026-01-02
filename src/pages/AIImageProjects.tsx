@@ -1191,7 +1191,7 @@ export function AIImageProjects() {
             <Image className="w-4 h-4" />
             {isProcessing ? '替换中...' : '模板替换'}
           </Button>
-          {/* <Button
+          <Button
             onClick={handleOpenFixCalendarDialog}
             disabled={selectedProjectIds.size === 0 || fixCalendarProcessing}
             variant="outline"
@@ -1199,7 +1199,7 @@ export function AIImageProjects() {
           >
             <Calendar className="w-4 h-4" />
             {fixCalendarProcessing ? '修改中...' : '修改日历'}
-          </Button> */}
+          </Button>
           <Button onClick={handleNewProject} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             新建商品制图
