@@ -269,7 +269,9 @@ export function SenfanExportDialog({
     // 判断是否需要用户排序：
     // 1. 是日历类型（需要固定顺序）
     // 2. 且图片尚未排序（imageSorted 为 false 或 undefined）
-    const needsReorder = needsUserReorder(category) && !product.imageSorted;
+    // 注释掉 imageSorted 检查，让已排序的产品也弹出排序对话框
+    // const needsReorder = needsUserReorder(category) && !product.imageSorted;
+    const needsReorder = needsUserReorder(category);
 
     if (needsReorder) {
       setStage('reorder');
@@ -302,7 +304,17 @@ export function SenfanExportDialog({
       toast.error(`生成日历PDF失败: ${product.newProductCode || product.id}`);
     }
 
-    await processNextProduct(products, currentIndex + 1, zipRef, categories);
+    // 更新本地状态：将相同货号的产品都标记为已排序，避免重复弹窗
+    const sortedProductCode = product.newProductCode;
+    if (sortedProductCode) {
+      const updatedProducts = products.map(p =>
+        p.newProductCode === sortedProductCode ? { ...p, imageSorted: true } : p
+      );
+      setProducts(updatedProducts);
+      await processNextProduct(updatedProducts, currentIndex + 1, zipRef, categories);
+    } else {
+      await processNextProduct(products, currentIndex + 1, zipRef, categories);
+    }
   };
 
   // 下载物流信息
