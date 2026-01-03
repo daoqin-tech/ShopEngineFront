@@ -538,15 +538,21 @@ export function EditTemplateDialog({
             })}
 
             {/* 规格配置 */}
-            {editInputMaxSpecNum > 0 && (
-              <div className="mt-6 pt-4 border-t">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <Label className="text-sm font-medium">商品规格配置</Label>
+            <div className="mt-6 pt-4 border-t">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <Label className="text-sm font-medium">商品规格配置</Label>
+                  {editInputMaxSpecNum > 0 ? (
                     <p className="text-xs text-gray-500 mt-0.5">
                       最多可添加 {editInputMaxSpecNum} 个规格，每个规格最多 {editSingleSpecValueNum} 个值
                     </p>
-                  </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      此分类暂不支持规格配置
+                    </p>
+                  )}
+                </div>
+                {editInputMaxSpecNum > 0 && (
                   <Button
                     type="button"
                     variant="outline"
@@ -557,9 +563,11 @@ export function EditTemplateDialog({
                     <Plus className="w-4 h-4 mr-1" />
                     添加规格
                   </Button>
-                </div>
+                )}
+              </div>
 
-                {editSpecFormValues.length === 0 ? (
+              {editInputMaxSpecNum > 0 ? (
+                editSpecFormValues.length === 0 ? (
                   <div className="text-sm text-gray-400 py-4 text-center border border-dashed rounded-lg">
                     暂未配置规格，点击"添加规格"开始配置
                   </div>
@@ -662,9 +670,13 @@ export function EditTemplateDialog({
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
+                )
+              ) : (
+                <div className="text-sm text-gray-400 py-4 text-center border border-dashed rounded-lg">
+                  此分类不支持规格配置
+                </div>
+              )}
+            </div>
 
             {/* SKU 默认配置 */}
             <SkuConfigTable

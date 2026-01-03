@@ -563,15 +563,21 @@ export function AddTemplateDialog({
                 })}
 
                 {/* 规格配置 */}
-                {inputMaxSpecNum > 0 && (
-                  <div className="mt-6 pt-4 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <Label className="text-sm font-medium">商品规格配置</Label>
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <Label className="text-sm font-medium">商品规格配置</Label>
+                      {inputMaxSpecNum > 0 ? (
                         <p className="text-xs text-gray-500 mt-0.5">
                           最多可添加 {inputMaxSpecNum} 个规格，每个规格最多 {singleSpecValueNum} 个值
                         </p>
-                      </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          此分类暂不支持规格配置
+                        </p>
+                      )}
+                    </div>
+                    {inputMaxSpecNum > 0 && (
                       <Button
                         type="button"
                         variant="outline"
@@ -582,9 +588,11 @@ export function AddTemplateDialog({
                         <Plus className="w-4 h-4 mr-1" />
                         添加规格
                       </Button>
-                    </div>
+                    )}
+                  </div>
 
-                    {fetchingParentSpecs ? (
+                  {inputMaxSpecNum > 0 ? (
+                    fetchingParentSpecs ? (
                       <div className="text-sm text-gray-500 flex items-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         加载规格选项中...
@@ -692,9 +700,13 @@ export function AddTemplateDialog({
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                )}
+                    )
+                  ) : (
+                    <div className="text-sm text-gray-400 py-4 text-center border border-dashed rounded-lg">
+                      此分类不支持规格配置
+                    </div>
+                  )}
+                </div>
 
                 {/* SKU 默认配置 */}
                 <SkuConfigTable
