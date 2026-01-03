@@ -342,6 +342,9 @@ export function TemuTemplates() {
         setFetchingAttributes(true);
         setFetchedAttributeCount(0);
         setAttributeProperties([]);
+        setInputMaxSpecNum(0);
+        setSingleSpecValueNum(0);
+        setParentSpecs([]);
 
         const attrsResponse = await temuCategoryAPIService.getProductAttributes(leafCategory.catId);
 
@@ -349,6 +352,20 @@ export function TemuTemplates() {
           const requiredProps = attrsResponse.properties.filter(prop => prop.required);
           setAttributeProperties(requiredProps);
           setFetchedAttributeCount(requiredProps.length);
+        }
+
+        setInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
+        setSingleSpecValueNum(attrsResponse.singleSpecValueNum ?? 0);
+
+        // 获取父规格列表
+        setFetchingParentSpecs(true);
+        try {
+          const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(leafCategory.catId);
+          setParentSpecs(parentSpecsResponse.parentSpecs || []);
+        } catch (specError: any) {
+          console.error('获取父规格列表失败:', specError);
+        } finally {
+          setFetchingParentSpecs(false);
         }
       } catch (attrError: any) {
         console.error('获取产品属性失败:', attrError);
