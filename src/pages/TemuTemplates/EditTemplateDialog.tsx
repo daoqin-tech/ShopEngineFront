@@ -542,36 +542,27 @@ export function EditTemplateDialog({
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <Label className="text-sm font-medium">商品规格配置</Label>
-                  {editInputMaxSpecNum > 0 ? (
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      最多可添加 {editInputMaxSpecNum} 个规格，每个规格最多 {editSingleSpecValueNum} 个值
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      此分类暂不支持规格配置
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    最多可添加 {editInputMaxSpecNum || 3} 个规格，每个规格最多 {editSingleSpecValueNum || 20} 个值
+                  </p>
                 </div>
-                {editInputMaxSpecNum > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onEditAddSpec}
-                    disabled={editSpecFormValues.length >= editInputMaxSpecNum}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    添加规格
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onEditAddSpec}
+                  disabled={editSpecFormValues.length >= (editInputMaxSpecNum || 3)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  添加规格
+                </Button>
               </div>
 
-              {editInputMaxSpecNum > 0 ? (
-                editSpecFormValues.length === 0 ? (
-                  <div className="text-sm text-gray-400 py-4 text-center border border-dashed rounded-lg">
-                    暂未配置规格，点击"添加规格"开始配置
-                  </div>
-                ) : (
+              {editSpecFormValues.length === 0 ? (
+                <div className="text-sm text-gray-400 py-4 text-center border border-dashed rounded-lg">
+                  暂未配置规格，点击"添加规格"开始配置
+                </div>
+              ) : (
                   <div className="space-y-4">
                     {editSpecFormValues.map((spec, specIndex) => (
                       <div key={specIndex} className="border rounded-lg overflow-hidden">
@@ -670,11 +661,6 @@ export function EditTemplateDialog({
                       </div>
                     ))}
                   </div>
-                )
-              ) : (
-                <div className="text-sm text-gray-400 py-4 text-center border border-dashed rounded-lg">
-                  此分类不支持规格配置
-                </div>
               )}
             </div>
 
