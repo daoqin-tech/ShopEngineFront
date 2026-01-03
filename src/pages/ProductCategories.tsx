@@ -688,32 +688,6 @@ export function ProductCategories() {
             {/* 一级分类/父分类字段 */}
             {!formData.parentId && !addingChildForParent && (
               <>
-                {/* 货号与商品配置 */}
-                <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
-                  <Label className="text-sm font-medium">货号与商品配置</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="typeCode" className="text-xs">类型码</Label>
-                      <Input
-                        id="typeCode"
-                        value={formData.typeCode}
-                        onChange={(e) => setFormData({ ...formData, typeCode: e.target.value.toUpperCase() })}
-                        placeholder="如: SZ, BZ, HR"
-                        maxLength={10}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="sizeCode" className="text-xs">尺寸码</Label>
-                      <Input
-                        id="sizeCode"
-                        value={formData.sizeCode}
-                        onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
-                        placeholder="如: 15, 21, 30"
-                        maxLength={10}
-                      />
-                    </div>
-                  </div>
-                </div>
                 {/* 生产尺寸（只有一级分类/父分类才有） */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">生产尺寸 (cm)</Label>
