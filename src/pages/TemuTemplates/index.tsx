@@ -455,16 +455,15 @@ export function TemuTemplates() {
         setInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
         setSingleSpecValueNum(attrsResponse.singleSpecValueNum ?? 0);
 
-        if (attrsResponse.inputMaxSpecNum && attrsResponse.inputMaxSpecNum > 0) {
-          setFetchingParentSpecs(true);
-          try {
-            const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(category.catId);
-            setParentSpecs(parentSpecsResponse.parentSpecs || []);
-          } catch (specError: any) {
-            console.error('获取父规格列表失败:', specError);
-          } finally {
-            setFetchingParentSpecs(false);
-          }
+        // 始终获取父规格列表，不再检查 inputMaxSpecNum
+        setFetchingParentSpecs(true);
+        try {
+          const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(category.catId);
+          setParentSpecs(parentSpecsResponse.parentSpecs || []);
+        } catch (specError: any) {
+          console.error('获取父规格列表失败:', specError);
+        } finally {
+          setFetchingParentSpecs(false);
         }
       } catch (attrError: any) {
         console.error('获取产品属性失败:', attrError);
@@ -1192,10 +1191,12 @@ export function TemuTemplates() {
         setEditVolumeWeightConfigs([]);
       }
 
-      if (attrsResponse.inputMaxSpecNum && attrsResponse.inputMaxSpecNum > 0) {
+      // 始终获取父规格列表，不再检查 inputMaxSpecNum
+      try {
         const parentSpecsResponse = await temuCategoryAPIService.getParentSpecifications(editPendingCategory.catId);
         setEditParentSpecs(parentSpecsResponse.parentSpecs || []);
-      } else {
+      } catch (specError: any) {
+        console.error('获取父规格列表失败:', specError);
         setEditParentSpecs([]);
       }
 
