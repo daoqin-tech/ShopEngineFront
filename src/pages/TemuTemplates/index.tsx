@@ -493,8 +493,9 @@ export function TemuTemplates() {
 
   // 添加规格配置
   const handleAddSpec = () => {
-    if (specFormValues.length >= inputMaxSpecNum) {
-      toast.error(`最多只能添加 ${inputMaxSpecNum} 个规格`);
+    const maxSpecs = inputMaxSpecNum || 3; // 默认允许3个规格
+    if (specFormValues.length >= maxSpecs) {
+      toast.error(`最多只能添加 ${maxSpecs} 个规格`);
       return;
     }
     setSpecFormValues(prev => [...prev, {
@@ -888,8 +889,9 @@ export function TemuTemplates() {
 
   // 编辑规格相关操作
   const handleEditAddSpec = () => {
-    if (editSpecFormValues.length >= editInputMaxSpecNum) {
-      toast.error(`最多只能添加 ${editInputMaxSpecNum} 个规格`);
+    const maxSpecs = editInputMaxSpecNum || 3; // 默认允许3个规格
+    if (editSpecFormValues.length >= maxSpecs) {
+      toast.error(`最多只能添加 ${maxSpecs} 个规格`);
       return;
     }
     setEditSpecFormValues(prev => [...prev, {
