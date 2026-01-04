@@ -133,15 +133,35 @@ async function generatePaperBagPdfWithCMYK(
     height: imgDisplayHeightPt,
   });
 
-  // 在底部中心位置添加货号 (使用CMYK黑色)
+  // ========== 旧方案：货号在整个画面底部居中（已注释）==========
+  // const productCode = product.newProductCode || product.id;
+  // const fontSize = 12;
+  // const font = await pdfDoc.embedFont('Helvetica-Bold');
+  // const textWidth = font.widthOfTextAtSize(productCode, fontSize);
+  // const textX = (pageWidthPt - textWidth) / 2;
+  // const textY = 8 * mmToPoints; // 距离底部8mm
+  // page.drawText(productCode, {
+  //   x: textX,
+  //   y: textY,
+  //   size: fontSize,
+  //   font: font,
+  //   color: cmyk(0, 0, 0, 1),
+  // });
+
+  // ========== 新方案：货号在纸袋正面底部居中 ==========
+  // 平铺布局预估：背面(220mm) | 侧面(100mm) | 正面(220mm) | 侧面(100mm) = 640mm
+  // 正面区域：320mm - 540mm，正面中心：430mm
+  const frontStartMm = 320;  // 正面起始位置 (mm)
+  const frontWidthMm = 220;  // 正面宽度 (mm)
+  const frontCenterMm = frontStartMm + frontWidthMm / 2; // 正面中心 = 430mm
+
   const productCode = product.newProductCode || product.id;
   const fontSize = 12;
-
-  // 获取文本宽度
   const font = await pdfDoc.embedFont('Helvetica-Bold');
   const textWidth = font.widthOfTextAtSize(productCode, fontSize);
-  const textX = (pageWidthPt - textWidth) / 2;
-  const textY = 8 * mmToPoints; // 距离底部8mm
+
+  const textX = frontCenterMm * mmToPoints - textWidth / 2; // 正面中心居中
+  const textY = 0 * mmToPoints; // 距离底部0mm
 
   page.drawText(productCode, {
     x: textX,
@@ -787,8 +807,8 @@ async function generateNotebookPdf(
         pdf.setTextColor(220, 220, 220); // 浅色文字
       }
       const fullProductCode = product.newProductCode || product.id;
-      // 去掉前7位
-      const productCode = fullProductCode.length > 7 ? fullProductCode.substring(7) : fullProductCode;
+      // 去掉前5位
+      const productCode = fullProductCode.length > 5 ? fullProductCode.substring(5) : fullProductCode;
       // 封底左下角，padding 20mm
       pdf.text(productCode, halfWidth + 20, actualHeight - 20);
     }
