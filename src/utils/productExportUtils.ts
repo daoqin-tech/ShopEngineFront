@@ -6,6 +6,7 @@ import { PDFDocument, cmyk } from 'pdf-lib';
 import { Product } from '@/services/productService';
 import { ProductCategory, ProductCategoryWithChildren } from '@/types/productCategory';
 import { imageConversionService } from '@/services/imageConversionService';
+import { imageEnhancementService } from '@/services/imageEnhancementService';
 
 // Temu 分类配置类型（用于 Excel 导出时获取产品属性）
 export interface TemuCategoryConfig {
@@ -565,11 +566,33 @@ export function needsUserReorder(category: ProductCategory): boolean {
 
 /**
  * 生成单个产品的PDF Blob（公开函数，供外部调用）
+ * 自动进行画质增强（超分2倍），纸袋类型除外
  * @param product 产品
  * @param category 产品分类（用于获取生产尺寸）
  * @returns PDF Blob
  */
-export async function generateSingleProductPdf(product: Product, category: ProductCategory): Promise<Blob> {
+export async function generateSingleProductPdf(
+  product: Product,
+  category: ProductCategory
+): Promise<Blob> {
+  // 纸袋类型不需要画质增强（已有CMYK转换处理）
+  if (isPaperBagType(category)) {
+    return generateProductPdfBlob(product, category);
+  }
+
+  // 画质增强：获取超分后的图片URL
+  if (product.productImages && product.productImages.length > 0) {
+    const enhancedUrlMap = await imageEnhancementService.getEnhancedUrlMap(product.productImages);
+
+    // 创建一个新的产品对象，使用增强后的图片URL
+    const enhancedProduct = {
+      ...product,
+      productImages: product.productImages.map(url => enhancedUrlMap.get(url) || url)
+    };
+
+    return generateProductPdfBlob(enhancedProduct, category);
+  }
+
   return generateProductPdfBlob(product, category);
 }
 

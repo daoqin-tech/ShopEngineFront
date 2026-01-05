@@ -437,7 +437,7 @@ export function SenfanExportDialog({
                 </div>
 
                 {/* 第三步：选择导出内容 */}
-                <div className="space-y-2 pt-2 border-t">
+                <div className="space-y-3 pt-2 border-t">
                   <p className="text-sm font-medium text-gray-700">选择导出内容</p>
                   <div className="grid grid-cols-2 gap-3">
                     <Button
