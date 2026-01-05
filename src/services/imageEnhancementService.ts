@@ -35,6 +35,7 @@ export const imageEnhancementService = {
    * 获取超分后的图片URL映射
    * @param imageUrls 原图URL数组
    * @returns Map<原图URL, 超分后URL>
+   * @throws 如果有任何图片增强失败，抛出错误
    */
   getEnhancedUrlMap: async (imageUrls: string[]): Promise<Map<string, string>> => {
     const urlMap = new Map<string, string>();
@@ -43,25 +44,22 @@ export const imageEnhancementService = {
       return urlMap;
     }
 
-    try {
-      const response = await imageEnhancementService.batchEnhance(imageUrls);
-      console.log('画质增强响应:', response);
+    const response = await imageEnhancementService.batchEnhance(imageUrls);
+    console.log('画质增强响应:', response);
 
-      for (const [originalUrl, result] of Object.entries(response.results)) {
-        console.log('映射:', originalUrl, '->', result.enhancedUrl);
-        if (result.success && result.enhancedUrl) {
-          urlMap.set(originalUrl, result.enhancedUrl);
-        } else {
-          // 失败时使用原图
-          urlMap.set(originalUrl, originalUrl);
-        }
-      }
-      console.log('最终URL映射:', Object.fromEntries(urlMap));
-    } catch (error) {
-      console.error('图片超分增强失败，使用原图:', error);
-      // 失败时全部使用原图
-      imageUrls.forEach(url => urlMap.set(url, url));
+    // 检查是否有失败的图片
+    if (response.failed > 0) {
+      const failedUrls = Object.entries(response.results)
+        .filter(([, result]) => !result.success)
+        .map(([url, result]) => `${url}: ${result.error || '未知错误'}`);
+      throw new Error(`画质增强失败 (${response.failed}/${response.total}):\n${failedUrls.join('\n')}`);
     }
+
+    for (const [originalUrl, result] of Object.entries(response.results)) {
+      console.log('映射:', originalUrl, '->', result.enhancedUrl);
+      urlMap.set(originalUrl, result.enhancedUrl);
+    }
+    console.log('最终URL映射:', Object.fromEntries(urlMap));
 
     return urlMap;
   }
