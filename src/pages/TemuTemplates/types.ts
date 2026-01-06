@@ -128,3 +128,69 @@ export const SENSITIVE_TYPES = [
   { id: 160001, name: '膏体' },
   { id: 170001, name: '刀具' },
 ] as const;
+
+/**
+ * 过滤出需要显示的属性
+ * 包括：
+ * 1. 必填属性 (required: true)
+ * 2. 必填属性的父属性（即使它们本身不是必填的）
+ *
+ * 这样可以确保当子属性依赖父属性时，父属性也会显示在界面上供用户选择
+ */
+export const filterPropertiesWithDependencies = (
+  properties: ProductAttributeProperty[]
+): ProductAttributeProperty[] => {
+  // 第一步：收集所有必填属性
+  const requiredProps = properties.filter(prop => prop.required);
+
+  // 第二步：收集所有必填属性依赖的父属性的 templatePid
+  const requiredParentTemplatePids = new Set<number>();
+  for (const prop of requiredProps) {
+    // 如果属性有 parentTemplatePid，说明它依赖父属性
+    if (prop.parentTemplatePid && prop.parentTemplatePid > 0) {
+      requiredParentTemplatePids.add(prop.parentTemplatePid);
+    }
+    // 如果属性有 showCondition，收集其中的父属性
+    if (prop.showCondition && prop.showCondition.length > 0) {
+      for (const condition of prop.showCondition) {
+        // 通过 parentRefPid 找到父属性
+        const parentProp = properties.find(p => p.refPid === condition.parentRefPid);
+        if (parentProp) {
+          requiredParentTemplatePids.add(parentProp.templatePid);
+        }
+      }
+    }
+  }
+
+  // 第三步：递归收集父属性的父属性（处理多级依赖）
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const prop of properties) {
+      if (requiredParentTemplatePids.has(prop.templatePid)) {
+        // 这个属性被标记为需要显示，检查它的父属性
+        if (prop.parentTemplatePid && prop.parentTemplatePid > 0) {
+          if (!requiredParentTemplatePids.has(prop.parentTemplatePid)) {
+            requiredParentTemplatePids.add(prop.parentTemplatePid);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  // 第四步：合并必填属性和它们的父属性
+  const result: ProductAttributeProperty[] = [];
+  const addedTemplatePids = new Set<number>();
+
+  for (const prop of properties) {
+    if (prop.required || requiredParentTemplatePids.has(prop.templatePid)) {
+      if (!addedTemplatePids.has(prop.templatePid)) {
+        result.push(prop);
+        addedTemplatePids.add(prop.templatePid);
+      }
+    }
+  }
+
+  return result;
+};

@@ -28,7 +28,7 @@ import { productCategoryService } from '@/services/productCategoryService';
 import type { ProductCategoryWithChildren } from '@/types/productCategory';
 import { systemConfigService } from '@/services/systemConfigService';
 import { toast } from 'sonner';
-import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues } from './types';
+import { TemuSite, AttributeFormValue, isMultiSelect, shouldShowAttribute, getValidValues, filterPropertiesWithDependencies } from './types';
 import { AddTemplateDialog } from './AddTemplateDialog';
 import { EditTemplateDialog } from './EditTemplateDialog';
 
@@ -349,9 +349,10 @@ export function TemuTemplates() {
         const attrsResponse = await temuCategoryAPIService.getProductAttributes(leafCategory.catId);
 
         if (attrsResponse.properties && attrsResponse.properties.length > 0) {
-          const requiredProps = attrsResponse.properties.filter(prop => prop.required);
-          setAttributeProperties(requiredProps);
-          setFetchedAttributeCount(requiredProps.length);
+          // 过滤出需要显示的属性（必填属性 + 必填属性的父属性）
+          const propsToShow = filterPropertiesWithDependencies(attrsResponse.properties);
+          setAttributeProperties(propsToShow);
+          setFetchedAttributeCount(propsToShow.length);
         }
 
         setInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
@@ -464,9 +465,10 @@ export function TemuTemplates() {
         const attrsResponse = await temuCategoryAPIService.getProductAttributes(category.catId);
 
         if (attrsResponse.properties && attrsResponse.properties.length > 0) {
-          const requiredProps = attrsResponse.properties.filter(prop => prop.required);
-          setAttributeProperties(requiredProps);
-          setFetchedAttributeCount(requiredProps.length);
+          // 过滤出需要显示的属性（必填属性 + 必填属性的父属性）
+          const propsToShow = filterPropertiesWithDependencies(attrsResponse.properties);
+          setAttributeProperties(propsToShow);
+          setFetchedAttributeCount(propsToShow.length);
         }
 
         setInputMaxSpecNum(attrsResponse.inputMaxSpecNum ?? 0);
@@ -1154,11 +1156,12 @@ export function TemuTemplates() {
 
       // 更新属性表单
       if (attrsResponse.properties && attrsResponse.properties.length > 0) {
-        const requiredProps = attrsResponse.properties.filter(prop => prop.required);
+        // 过滤出需要显示的属性（必填属性 + 必填属性的父属性）
+        const propsToShow = filterPropertiesWithDependencies(attrsResponse.properties);
 
         // 如果是同一个分类，尝试匹配旧的属性值
         if (isSameCategory && editingTemplate.productAttributes) {
-          const formValues: AttributeFormValue[] = requiredProps.map(prop => {
+          const formValues: AttributeFormValue[] = propsToShow.map(prop => {
             // 尝试从模板的旧属性中匹配值（通过 propName 匹配，因为 templatePid 可能变了）
             const existingAttrs = editingTemplate.productAttributes?.filter(
               a => a.propName === prop.name
@@ -1191,7 +1194,7 @@ export function TemuTemplates() {
           setEditAttributeFormValues(formValues);
         } else {
           // 切换到新分类，清空属性值
-          setEditAttributeFormValues(requiredProps.map(prop => ({ property: prop })));
+          setEditAttributeFormValues(propsToShow.map(prop => ({ property: prop })));
         }
       } else {
         setEditAttributeFormValues([]);
