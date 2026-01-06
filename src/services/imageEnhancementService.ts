@@ -32,7 +32,7 @@ export const imageEnhancementService = {
   },
 
   /**
-   * 获取超分后的图片URL映射（逐张处理，避免超时）
+   * 获取超分后的图片URL映射（并发处理，控制QPS）
    * @param imageUrls 原图URL数组
    * @param onProgress 进度回调 (current, total)
    * @returns Map<原图URL, 超分后URL>
@@ -48,15 +48,12 @@ export const imageEnhancementService = {
       return urlMap;
     }
 
-    // 逐张处理，避免Cloudflare 524超时
-    for (let i = 0; i < imageUrls.length; i++) {
-      const imageUrl = imageUrls[i];
+    const CONCURRENCY = 2; // 腾讯云 QPS 限制
+    let completed = 0;
 
-      if (onProgress) {
-        onProgress(i + 1, imageUrls.length);
-      }
-
-      console.log(`画质增强 (${i + 1}/${imageUrls.length}):`, imageUrl);
+    // 处理单张图片的函数
+    const processOne = async (imageUrl: string) => {
+      console.log(`画质增强 (${completed + 1}/${imageUrls.length}):`, imageUrl);
 
       const result = await imageEnhancementService.enhanceSingle(imageUrl);
 
@@ -66,7 +63,23 @@ export const imageEnhancementService = {
 
       urlMap.set(imageUrl, result.enhancedUrl);
       console.log('映射:', imageUrl, '->', result.enhancedUrl);
+
+      completed++;
+      onProgress?.(completed, imageUrls.length);
+    };
+
+    // 并发控制：同时最多处理 CONCURRENCY 张
+    const executing: Promise<void>[] = [];
+    for (const url of imageUrls) {
+      const p = processOne(url).then(() => {
+        executing.splice(executing.indexOf(p), 1);
+      });
+      executing.push(p);
+      if (executing.length >= CONCURRENCY) {
+        await Promise.race(executing);
+      }
     }
+    await Promise.all(executing);
 
     console.log('最终URL映射:', Object.fromEntries(urlMap));
     return urlMap;
