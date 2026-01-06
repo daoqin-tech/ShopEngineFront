@@ -816,8 +816,10 @@ export function AIImageProjects() {
         }
 
         // 处理完月份图后，设置封面的 sortOrder = 0
-        // 封面特征：generated-images 路径，未被模板替换
-        const coverImage = images.find(img => img.imageUrl.includes('generated-images'));
+        // 封面特征：尺寸为输出尺寸（横版: 1440x1120, 竖版: 1024x1440）
+        const coverImage = images.find(img =>
+          img.width === outputWidth && img.height === outputHeight
+        );
         if (coverImage) {
           try {
             await AIImageSessionsAPI.batchUpdateImages([{
@@ -827,7 +829,7 @@ export function AIImageProjects() {
               height: coverImage.height,
               sortOrder: 0, // 封面排第一
             }]);
-            console.log(`  封面 ${coverImage.id} 已设置 sortOrder: 0`);
+            console.log(`  封面 ${coverImage.id} (${outputWidth}x${outputHeight}) 已设置 sortOrder: 0`);
           } catch (error) {
             console.error(`  设置封面排序失败:`, error);
           }
