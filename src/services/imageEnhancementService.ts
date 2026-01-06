@@ -26,7 +26,7 @@ export const imageEnhancementService = {
     const response = await apiClient.post(
       '/image-enhancement/batch',
       { imageUrls },
-      { timeout: 300000 } // 5分钟超时，因为超分处理可能需要较长时间
+      { timeout: 600000 } // 10分钟超时，串行处理多张图片耗时较长
     );
     return response.data;
   },
