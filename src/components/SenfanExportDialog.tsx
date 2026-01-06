@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,7 @@ export function SenfanExportDialog({
   getShopName,
 }: SenfanExportDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef<boolean>(false); // 取消标志，用于中止异步任务
 
   // 输入模式和导出类型
   const [inputMode, setInputMode] = useState<InputMode>('file');
@@ -63,6 +64,7 @@ export function SenfanExportDialog({
 
   // 重置状态
   const resetState = () => {
+    cancelRef.current = true; // 取消正在执行的任务
     setStage('input');
     setFileName('');
     setManualInput('');
@@ -165,6 +167,7 @@ export function SenfanExportDialog({
 
   // 开始导出
   const handleStartExport = async (selectedExportType: ExportType) => {
+    cancelRef.current = false; // 重置取消标志
     let skuArray: string[] = [];
 
     if (inputMode === 'file') {
@@ -240,6 +243,12 @@ export function SenfanExportDialog({
     zip: JSZip,
     cats: ProductCategory[]
   ) => {
+    // 检查是否已取消
+    if (cancelRef.current) {
+      console.log('任务已取消，停止处理');
+      return;
+    }
+
     if (index >= productList.length) {
       try {
         await downloadZip(zip);

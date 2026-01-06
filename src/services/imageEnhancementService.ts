@@ -24,12 +24,11 @@ export const imageEnhancementService = {
    */
   enhanceSingle: async (imageUrl: string): Promise<EnhanceResultItem> => {
     const response = await apiClient.post(
-      '/image-enhancement/batch',
-      { imageUrls: [imageUrl] },
+      '/image-enhancement/enhance',
+      { imageUrl },
       { timeout: 60000 } // 单张图片60秒超时
     );
-    const data = response.data as BatchEnhanceResponse;
-    return data.results[imageUrl];
+    return response.data as EnhanceResultItem;
   },
 
   /**
