@@ -776,7 +776,10 @@ export function AIImageProjects() {
               templateItem.templateId
             );
 
-            console.log(`  处理第 ${i + 1}/${processCount} 张图片，使用模板 ${i + 1}`);
+            // 从模板的 regions[0].order 获取月份顺序
+            const monthOrder = templateDetail.regions[0]?.order || (i + 1);
+
+            console.log(`  处理第 ${i + 1}/${processCount} 张图片，使用模板 ${i + 1}，月份顺序: ${monthOrder}`);
 
             // 合成图片
             const { blob, width, height } = await compositeImages(
@@ -792,22 +795,41 @@ export function AIImageProjects() {
             const file = new File([blob], fileName, { type: 'image/jpeg' });
             const uploadedUrl = await FileUploadAPI.uploadFile(file);
 
-            // 更新数据库
+            // 更新数据库，同时设置排序顺序
             await AIImageSessionsAPI.batchUpdateImages([{
               imageId: image.id,
               imageUrl: uploadedUrl,
               width,
               height,
+              sortOrder: monthOrder, // 使用模板的 order 作为月份排序
             }]);
 
             successCount++;
             setQueueProgress(prev => ({ ...prev, successCount }));
-            console.log(`  图片 ${image.id} 处理成功，使用了模板 ${i + 1}`);
+            console.log(`  图片 ${image.id} 处理成功，使用了模板 ${i + 1}，sortOrder: ${monthOrder}`);
 
           } catch (error) {
             console.error(`  图片 ${image.id} 处理失败:`, error);
             failedCount++;
             setQueueProgress(prev => ({ ...prev, failedCount }));
+          }
+        }
+
+        // 处理完月份图后，设置封面的 sortOrder = 0
+        // 封面特征：generated-images 路径，未被模板替换
+        const coverImage = images.find(img => img.imageUrl.includes('generated-images'));
+        if (coverImage) {
+          try {
+            await AIImageSessionsAPI.batchUpdateImages([{
+              imageId: coverImage.id,
+              imageUrl: coverImage.imageUrl,
+              width: coverImage.width,
+              height: coverImage.height,
+              sortOrder: 0, // 封面排第一
+            }]);
+            console.log(`  封面 ${coverImage.id} 已设置 sortOrder: 0`);
+          } catch (error) {
+            console.error(`  设置封面排序失败:`, error);
           }
         }
 

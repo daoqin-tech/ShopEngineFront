@@ -164,6 +164,7 @@ export class AIImageSessionsAPI {
     imageUrl: string;
     width: number;
     height: number;
+    sortOrder?: number;  // 可选：排序顺序（0=封面，1-12=月份）
   }>): Promise<{ updated_count: number }> {
     const response = await apiClient.post('/images/batch-update', {
       images
