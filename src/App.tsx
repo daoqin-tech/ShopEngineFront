@@ -28,6 +28,9 @@ import { TemuShops } from "@/pages/TemuShops"
 import { TemuTemplates } from "@/pages/TemuTemplates"
 import { TemuTitleTemplates } from "@/pages/TemuTitleTemplates"
 import OrderStats from "@/pages/OrderStats"
+import { TemuActivities } from "@/pages/TemuActivities"
+import { TemuActivityEnroll } from "@/pages/TemuActivityEnroll"
+import { TemuBatchEnroll } from "@/pages/TemuBatchEnroll"
 import { Toaster } from "sonner"
 
 
@@ -161,6 +164,30 @@ function App() {
             <ProtectedRoute>
               <WorkspaceLayout>
                 <BatchProductCreator />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/temu-activities" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuActivities />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/temu-activities/enroll" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuActivityEnroll />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/temu-activities/batch-enroll" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuBatchEnroll />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />
