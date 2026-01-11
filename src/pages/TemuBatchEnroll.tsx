@@ -486,7 +486,7 @@ export function TemuBatchEnroll() {
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="font-medium mb-4">活动申报价格</h3>
-                  <RadioGroup value={priceStrategy} onValueChange={(v) => setPriceStrategy(v as PriceStrategy)} className="space-y-3">
+                  <RadioGroup value={priceStrategy} onValueChange={(v: string) => setPriceStrategy(v as PriceStrategy)} className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="suggest" id="price-suggest" />
                       <Label htmlFor="price-suggest">{priceStrategyNames.suggest}（推荐）</Label>
@@ -584,7 +584,7 @@ export function TemuBatchEnroll() {
               <Card>
                 <CardContent className="pt-6">
                   <h3 className="font-medium mb-4">活动库存</h3>
-                  <RadioGroup value={stockStrategy} onValueChange={(v) => setStockStrategy(v as StockStrategy)} className="space-y-3">
+                  <RadioGroup value={stockStrategy} onValueChange={(v: string) => setStockStrategy(v as StockStrategy)} className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="suggest" id="stock-suggest" />
                       <Label htmlFor="stock-suggest">{stockStrategyNames.suggest}（推荐）</Label>

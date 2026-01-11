@@ -702,6 +702,17 @@ export function TemuTemplates() {
         singleSpecValueNum: singleSpecValueNum > 0 ? singleSpecValueNum : undefined,
         specifications: validSpecifications.length > 0 ? validSpecifications : undefined,
         skuDefaultConfig: finalSkuDefaultConfig,
+        // 保存分类链
+        cat1Id: selectedPath[0]?.catId,
+        cat2Id: selectedPath[1]?.catId,
+        cat3Id: selectedPath[2]?.catId,
+        cat4Id: selectedPath[3]?.catId,
+        cat5Id: selectedPath[4]?.catId,
+        cat6Id: selectedPath[5]?.catId,
+        cat7Id: selectedPath[6]?.catId,
+        cat8Id: selectedPath[7]?.catId,
+        cat9Id: selectedPath[8]?.catId,
+        cat10Id: selectedPath[9]?.catId,
       };
 
       await temuTemplateService.createTemplate(req);
