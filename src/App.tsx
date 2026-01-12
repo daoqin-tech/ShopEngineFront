@@ -30,7 +30,9 @@ import { TemuTitleTemplates } from "@/pages/TemuTitleTemplates"
 import OrderStats from "@/pages/OrderStats"
 import { TemuActivities } from "@/pages/TemuActivities"
 import { TemuActivityEnroll } from "@/pages/TemuActivityEnroll"
-import { TemuBatchEnroll } from "@/pages/TemuBatchEnroll"
+import { TemuMultiShopEnroll } from "@/pages/TemuMultiShopEnroll"
+import { CreateJob as TemuMultiShopEnrollCreateJob } from "@/pages/TemuMultiShopEnroll/CreateJob"
+import { JobDetail as TemuMultiShopEnrollJobDetail } from "@/pages/TemuMultiShopEnroll/JobDetail"
 import { Toaster } from "sonner"
 
 
@@ -184,10 +186,26 @@ function App() {
             </ProtectedRoute>
           } />
 
-          <Route path="/workspace/temu-activities/batch-enroll" element={
+          <Route path="/workspace/temu-multi-shop-enroll" element={
             <ProtectedRoute>
               <WorkspaceLayout>
-                <TemuBatchEnroll />
+                <TemuMultiShopEnroll />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/temu-multi-shop-enroll/create" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuMultiShopEnrollCreateJob />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/temu-multi-shop-enroll/:id" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <TemuMultiShopEnrollJobDetail />
               </WorkspaceLayout>
             </ProtectedRoute>
           } />

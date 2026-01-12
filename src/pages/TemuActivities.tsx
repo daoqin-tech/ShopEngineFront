@@ -812,41 +812,22 @@ export function TemuActivities() {
           {/* 底部固定按钮 */}
           {activityDetail && selectedActivity && (
             <div className="p-4 border-t bg-background">
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1 h-11 text-base"
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      shopId: selectedShopId,
-                      activityType: String(selectedActivity.activityType),
-                      activityName: selectedActivity.activityName || selectedActivity.thematicName || '',
-                    });
-                    if (selectedActivity.thematicId) {
-                      params.set('activityThematicId', String(selectedActivity.thematicId));
-                    }
-                    navigate(`/workspace/temu-activities/enroll?${params.toString()}`);
-                  }}
-                >
-                  手动报名
-                </Button>
-                <Button
-                  className="flex-1 h-11 text-base"
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      shopId: selectedShopId,
-                      activityType: String(selectedActivity.activityType),
-                      activityName: selectedActivity.activityName || selectedActivity.thematicName || '',
-                    });
-                    if (selectedActivity.thematicId) {
-                      params.set('activityThematicId', String(selectedActivity.thematicId));
-                    }
-                    navigate(`/workspace/temu-activities/batch-enroll?${params.toString()}`);
-                  }}
-                >
-                  批量报名
-                </Button>
-              </div>
+              <Button
+                className="w-full h-11 text-base"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    shopId: selectedShopId,
+                    activityType: String(selectedActivity.activityType),
+                    activityName: selectedActivity.activityName || selectedActivity.thematicName || '',
+                  });
+                  if (selectedActivity.thematicId) {
+                    params.set('activityThematicId', String(selectedActivity.thematicId));
+                  }
+                  navigate(`/workspace/temu-activities/enroll?${params.toString()}`);
+                }}
+              >
+                报名
+              </Button>
             </div>
           )}
         </SheetContent>
