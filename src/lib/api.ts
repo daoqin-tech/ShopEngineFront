@@ -25,6 +25,15 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // 添加工作空间ID（如果存在且未被手动设置）
+    if (!config.headers['X-Workspace-ID']) {
+      const workspaceId = localStorage.getItem('currentWorkspaceId');
+      if (workspaceId) {
+        config.headers['X-Workspace-ID'] = workspaceId;
+      }
+    }
+
     return config;
   },
   (error) => {

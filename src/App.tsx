@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { WorkspaceLayout } from "@/components/WorkspaceLayout"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/contexts/AuthContext"
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext"
 import { Home } from "@/pages/Home"
 import { Login } from "@/pages/Login"
 import { WechatCallback } from "@/pages/WechatCallback"
@@ -26,6 +27,7 @@ import { ProductCategories } from "@/pages/ProductCategories"
 import { SystemConfigPage } from "@/pages/SystemConfig"
 import { TemuShops } from "@/pages/TemuShops"
 import { TemuTemplates } from "@/pages/TemuTemplates"
+import { WorkspaceSettings, Members, Roles, InviteAccept } from "@/pages/workspace"
 import { Toaster } from "sonner"
 
 
@@ -37,8 +39,9 @@ function TemplateEditorWrapper() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
+      <WorkspaceProvider>
+        <Router>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/auth/wechat/callback" element={<WechatCallback />} />
           <Route path="/" element={<Home />} />
@@ -195,10 +198,37 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/workspace/settings/workspace" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <WorkspaceSettings />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/members" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <Members />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/workspace/settings/roles" element={
+            <ProtectedRoute>
+              <WorkspaceLayout>
+                <Roles />
+              </WorkspaceLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/invite/:inviteCode" element={<InviteAccept />} />
+
           <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster position="top-right" richColors duration={2000} />
-      </Router>
+          </Routes>
+          <Toaster position="top-right" richColors duration={2000} />
+        </Router>
+      </WorkspaceProvider>
     </AuthProvider>
   )
 }
